@@ -1,4 +1,4 @@
-# TraceAdvisor: Trace-Driven Pre-Execution Resource Recommendations for Cloud & AI Jobs
+# TraceAdvisor: Pre-Execution Resource Recommendations for Recurring Cluster Workloads
 
 ## Project Summary
 TraceAdvisor is a pre-execution advisory system that uses historical cluster execution traces to recommend safe-minimum CPU, memory, and GPU requests for recurring batch and machine learning jobs. It summarizes job-level peak usage and variability to produce risk-aware recommendations that operate alongside existing schedulers. TraceAdvisor is evaluated offline using time-aware trace replay to measure fit (violation rate) and efficiency gains (slack reduction).
