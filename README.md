@@ -55,7 +55,7 @@ Cloud and AI workloads are consistently over-provisioned because users must choo
 ---
 
 ## Team & Advisor
-Advisor: Professor Gheorghi Guzun
+Advisor: Dr. Gheorghi Guzun
 
 Team Members (4):
 - Sofia Silva: Trace Pipeline
