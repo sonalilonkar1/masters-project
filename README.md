@@ -8,7 +8,7 @@ Abstract: see `docs/abstract/Project_Abstract.docx`.
 ---
 
 ## Important Links
-- Project board (GitHub Projects): 
+- Project board (GitHub Projects): https://github.com/users/sonalilonkar1/projects/2
 - Meeting logs folder: `docs/meeting-logs/`
 - References/Zotero export: `docs/references/`
 
