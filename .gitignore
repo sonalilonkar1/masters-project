@@ -8,4 +8,5 @@
 .vscode/
 .idea/
 
-
+data/
+*.parquet

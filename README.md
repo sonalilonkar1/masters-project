@@ -9,7 +9,7 @@ Abstract: see `docs/abstract/Project_Abstract.docx`.
 
 ## Important Links
 - Project board (GitHub Projects): https://github.com/users/sonalilonkar1/projects/2
-- Meeting logs folder: `docs/meeting-logs/`
+- Meeting logs folder: `docs/meetings/`
 - References/Zotero export: `docs/references/`
 
 ---
@@ -105,7 +105,7 @@ Optional validation dataset:
 ## Meetings & Task Tracking
 - Team sync: 2x/week (1 hour)
 - Advisor sync: 1x/week
-- Meeting logs: `docs/meeting-logs/`
+- Meeting logs: `docs/meetings/`
 - Task tracking: GitHub Issues + GitHub Projects (board)
 
 ## Repository Structure 
