@@ -8,5 +8,11 @@
 .vscode/
 .idea/
 
-data/
+# Ignore dataset files
+data/raw/*
+data/processed/*
+
+# Keep folder structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
 *.parquet
