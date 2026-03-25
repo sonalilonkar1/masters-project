@@ -11,7 +11,7 @@
 # Ignore dataset files
 data/raw/*
 data/processed/*
-
+mastersvenv/
 # Keep folder structure
 !data/raw/.gitkeep
 !data/processed/.gitkeep
