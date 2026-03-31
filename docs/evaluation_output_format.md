@@ -3,9 +3,9 @@
 This document defines the v0 output artifacts produced by the offline evaluator.
 All methods (Baseline 0/1/2/3 and TraceAdvisor) must use the same output schema to ensure fair comparisons.
 
-## Output Artifacts (minimum)
+## Output Artifacts 
 
-### 1) Per-execution results (recommended for debugging)
+### 1) Per-execution results
 **File:** `reports/eval/per_execution_<method>_<split>.csv`
 
 Purpose: record the recommendation, observed peak, and violation/slack outcomes for each execution. Useful for debugging anomalies and producing plots.
