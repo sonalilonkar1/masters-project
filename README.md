@@ -93,9 +93,8 @@ Optional validation dataset:
   https://github.com/alibaba/clusterdata
 
 ### Subset Setup
-The dataset is not included in this repository due to its large size.
-To download and configure the subset used in this project, follow:
-[Subset Setup Instructions](docs/subsetSetup.md)
+- The dataset is not included in this repository due to its large size.
+- Subset setup instructions: `docs/subsetSetup.md`
 ---
 
 ## 295A Sprint Plan 
