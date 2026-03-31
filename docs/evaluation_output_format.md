@@ -19,7 +19,7 @@ Required columns:
 Observed (ground truth from traces):
 - `peak_cpu`
 - `peak_mem_gb`
-- `peak_gpu` *(optional; include if available)*
+- `peak_gpu` *(optional; include only if available in dataset)*
 
 Requests (status quo):
 - `req_cpu`
@@ -47,11 +47,21 @@ Waste values (positive slack only):
 - `waste_rec_mem_gb` = `max(0, slack_rec_mem_gb)`
 - `waste_rec_gpu` *(optional)*
 
+Under-provisioning (severity):
+- `under_prov_cpu` = `max(0, peak_cpu - rec_cpu)`
+- `under_prov_mem_gb` = `max(0, peak_mem_gb - rec_mem_gb)`
+- `under_prov_gpu` *(optional)*
+
 Violation indicators (binary):
 - `viol_cpu` = `1` if `peak_cpu > rec_cpu` else `0`
 - `viol_mem` = `1` if `peak_mem_gb > rec_mem_gb` else `0`
 - `viol_gpu` *(optional)*
 - `viol_any` = `1` if any resource violation else `0`
+
+Utilization:
+- `util_cpu` = `peak_cpu / rec_cpu` *(if rec_cpu > 0)*
+- `util_mem` = `peak_mem_gb / rec_mem_gb` *(if rec_mem_gb > 0)*
+- `util_gpu` *(optional)*
 
 Optional columns *(helpful later, not required for v0)*:
 - `n_history` — number of prior runs used for recommendation
@@ -73,7 +83,7 @@ Each row corresponds to one (method, tier) combination.
 
 Required columns:
 - `split` — {validation, test}
-- `method` — e.g., `baseline0_as_is`, `baseline1_percentile_margin`, `baseline2_jobclass`, `baseline3_ml_point`, `traceadvisor`
+- `method` — e.g., `baseline0_as_is`, `baseline1_percentile`, `baseline_p50`, `baseline_p90`, `baseline_p95`, `baseline_p99`, `traceadvisor`
 - `tier` — {all, high, medium, low}
 - `n_exec` — number of executions evaluated in that tier
 
@@ -96,25 +106,37 @@ Slack reduction (%):
 - `slack_reduction_mem_pct`
 - `slack_reduction_gpu_pct` *(optional)*
 
+Under-provisioning (aggregated):
+- `avg_under_prov_cpu`
+- `avg_under_prov_mem_gb`
+- `avg_under_prov_gpu` *(optional)*
+
+Utilization (aggregated):
+- `avg_util_cpu`
+- `avg_util_mem`
+- `avg_util_gpu` *(optional)*
+
 > **Calculation notes:** totals should use waste (positive slack only) when computing slack reduction:
 > ```
 > TotalSlack_req(r) = sum max(0, req - peak)
 > TotalSlack_rec(r) = sum max(0, rec - peak)
 > ```
 
+> If `TotalSlack_req(r)` is negligible, `slack_reduction_r_pct` should be reported as NA.
+
 ---
 
 ### 3) Tradeoff sweep summary *(optional in v0, required later)*
 **File:** `reports/eval/tradeoff_<method>_<split>.csv`
 
-Purpose: support risk–efficiency tradeoff curves by sweeping percentile or margin values.
+Purpose: support risk–efficiency tradeoff curves by sweeping percentile values.
 
 Required columns:
 - `method`
 - `split`
 - `tier` — {all, high, medium, low}
-- `sweep_param_name` — e.g., `percentile`, `margin`, `headroom`
-- `sweep_param_value` — e.g., `0.90`, `0.95`, `0.99`
+- `sweep_param_name` — e.g., `percentile`
+- `sweep_param_value` — e.g., `0.50`, `0.90`, `0.95`, `0.99`
 - `n_exec`
 - `vr_any`
 - `slack_reduction_cpu_pct`
@@ -127,9 +149,10 @@ Required columns:
 
 Recommended method IDs:
 - `baseline0_as_is`
-- `baseline1_percentile_margin`
-- `baseline2_jobclass_multiplier`
-- `baseline3_ml_point_margin`
+- `baseline_p50`
+- `baseline_p90`
+- `baseline_p95`
+- `baseline_p99`
 - `traceadvisor_quantile_calibrated` *(or `traceadvisor_v1`)*
 
 Recommended split IDs:
