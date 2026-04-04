@@ -90,7 +90,53 @@ We filter usage rows by `start_time >= T0 AND start_time < T1`.
 
 ---
 
-## 6) Canonical recurrence key (recurring_job_id)
+## 6) Subset-first strategy (Tiny vs Reportable)
+### Tiny subset (fast debugging / correctness checks)
+- **Selection method:** 1-day time window (time-based slice)
+- **Time window:** `T0 = min_start + 2*day_len`, `T1 = T0 + 1*day_len` (microseconds)
+
+**Tables needed (BigQuery derived):**
+- `traceadvisor-295a.traceadvisor_eda.instance_usage_1d`
+- `traceadvisor-295a.traceadvisor_eda.instances_in_1d`
+- `traceadvisor-295a.traceadvisor_eda.instance_requests_anytime_1d`
+- `traceadvisor-295a.traceadvisor_eda.collection_meta_1d`
+- `traceadvisor-295a.traceadvisor_eda.borg_traces_1d_skinny`
+- `traceadvisor-295a.traceadvisor_eda.borg_traces_1d_jobmetrics` (canonical input)
+
+**Expected size (rough):**
+- `borg_traces_1d_jobmetrics`: ~300–400 MB Parquet export (observed ~335 MB)
+
+**How to load (Colab/local):**
+```python
+pd.read_parquet("gs://traceadvisor-exports-295a/clusterdata2019/1d_jobmetrics/")
+```
+
+### Reportable subset (~1 week for baseline results)
+- **Selection method:** 7-day time window (time-based slice)
+- **Time window:** `T0 = min_start + 2*day_len`, `T1 = T0 + 7*day_len`
+
+**Tables needed (BigQuery derived):**
+- `traceadvisor-295a.traceadvisor_eda.instance_usage_1w`
+- `traceadvisor-295a.traceadvisor_eda.instances_in_1w`
+- `traceadvisor-295a.traceadvisor_eda.instance_requests_anytime_1w`
+- `traceadvisor-295a.traceadvisor_eda.collection_meta_1w` (or anytime meta)
+- `traceadvisor-295a.traceadvisor_eda.borg_traces_1w_skinny`
+- `traceadvisor-295a.traceadvisor_eda.borg_traces_1w_jobmetrics` (canonical input)
+
+**Expected size (rough):**
+- `borg_traces_1w_jobmetrics`: ~2–5 GB Parquet export (depends on shard count; confirm in GCS)
+
+**How to load (Colab/local):**
+```python
+pd.read_parquet("gs://traceadvisor-exports-295a/clusterdata2019/1w_jobmetrics/")
+```
+
+### Why this strategy works for evaluation
+Percentile baselines (P95/P99) require enough history. The week subset yields more recurring jobs with `n_hist >= 5`, enabling stable per-job percentiles; the tiny subset is primarily for pipeline correctness and quick iteration.
+
+---
+
+## 7) Canonical recurrence key (recurring_job_id)
 We define a stable recurrence key using collection metadata:
 
 recurring_job_id =
@@ -100,7 +146,7 @@ This matches our project intent: group recurring workloads by stable logical nam
 
 ---
 
-## 7) Data quality rules (why we filter NULLs)
+## 8) Data quality rules (why we filter NULLs)
 ### Why requests can be NULL in a slice
 In ClusterData2019, usage events may fall in the 1-day window even if the corresponding
 request event was recorded outside that window. If we only join on events within the same day,
@@ -120,7 +166,7 @@ We drop rows failing any of the above.
 
 ---
 
-## 8) GCS exports (repeatable inputs)
+## 9) GCS exports (repeatable inputs)
 We export the canonical jobmetrics tables to GCS as Parquet datasets:
 
 - 1-day jobmetrics:
@@ -133,7 +179,7 @@ These folder URIs work reliably with pandas/pyarrow.
 
 ---
 
-## 9) What is committed to GitHub vs not
+## 10) What is committed to GitHub vs not
 ### Not committed
 - Raw data
 - BigQuery exports (parquet)
@@ -148,6 +194,6 @@ These folder URIs work reliably with pandas/pyarrow.
 
 ---
 
-## 10) Optional dataset (future validation)
+## 11) Optional dataset (future validation)
 Alibaba cluster traces may be used later for generalization.
 Not required for 295A baseline results.
