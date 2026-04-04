@@ -18,3 +18,9 @@ mastersvenv/
 !data/processed/.gitkeep
 *.parquet
 subset/borg_traces_data.csv
+
+# Generated evaluation artifacts (large)
+reports/eval/per_execution_*.csv
+
+__pycache__/
+*.pyc
