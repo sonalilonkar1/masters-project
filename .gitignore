@@ -20,7 +20,11 @@ mastersvenv/
 subset/borg_traces_data.csv
 
 # Generated evaluation artifacts (large)
-reports/eval/per_execution_*.csv
+reports/eval/GoogleCluster2019/per_execution_*.csv
 
 __pycache__/
 *.pyc
+
+# Ignore past results (large)
+#for comparison with new results, not needed to be tracked
+reports/Past results 
