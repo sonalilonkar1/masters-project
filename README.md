@@ -98,7 +98,8 @@ Optional validation dataset:
 - Subset setup instructions: `docs/subsetSetup.md`
 
 ---
-Quick Start
+
+## Quick Start
 
 To reproduce the baseline experiments and evaluation:
 
@@ -112,10 +113,11 @@ To reproduce the baseline experiments and evaluation:
 ## 295A Sprint Plan 
 - Sprint 1–2: subset-first data plan, repo scaffolding, evaluation metric definitions
 - Sprint 3–4: job-level dataset v0.1 → v1 (subset), recurrence grouping, sanity checks
-- ✅ Sprint 5–6: baseline recommenders + offline replay evaluation + initial tradeoff curves
+- Sprint 5–6: baseline recommenders + offline replay evaluation + initial tradeoff curves
 - Sprint 7: demo-ready TraceAdvisor v1 (baseline/statistics-based) + reproducible runbook
 
-(Full sprint/issue breakdown is tracked in the GitHub Project board. Latest: Sprint 2 baseline experiments and evaluation framework complete
+(Full sprint/issue breakdown is tracked in the GitHub Project board. Latest: Sprint 2 baseline experiments and evaluation framework complete)
+
 ### New Documentation
 - **`docs/experiments.md`** — Complete pipeline documentation covering BigQuery-based trace derivation, dataset rationale, and experiments on 1-day/1-week Google ClusterData2019 subsets
 - **`docs/runbook.md`** — Reproducible instructions for: BigQuery queries, GCS exports, baseline execution, and evaluation output generation
@@ -126,14 +128,6 @@ To reproduce the baseline experiments and evaluation:
 - Decision quality metrics: violation rate (safety) and slack (efficiency proxy)
 
 ---
-
-## 295A Sprint Plan 
-- Sprint 1–2: subset-first data plan, repo scaffolding, evaluation metric definitions
-- Sprint 3–4: job-level dataset v0.1 → v1 (subset), recurrence grouping, sanity checks
-- Sprint 5–6: baseline recommenders + offline replay evaluation + initial tradeoff curves
-- Sprint 7: demo-ready TraceAdvisor v1 (baseline/statistics-based) + reproducible runbook
-
-(Full sprint/issue breakdown is tracked in the GitHub Project board.)
 
 ## Meetings & Task Tracking
 - Team sync: 2x/week (1 hour)
