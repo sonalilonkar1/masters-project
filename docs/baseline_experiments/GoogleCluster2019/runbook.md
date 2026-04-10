@@ -230,6 +230,32 @@ Outputs:
 - `reports/eval/summary_1w.csv`
 - per-execution CSVs (ignored by git)
 
+### 7.3 Output Schema
+
+Per-execution and summary CSVs align with the format defined in `docs/evaluation_output_format.md`:
+
+**Per-execution CSV** (`per_execution_<method>_<split>.csv`):
+- `execution_id`, `recurring_job_id`, `timestamp` (execution start time)
+- `confidence_tier` — {high, medium, low} based on n_hist (≥10 high, 3–9 medium, <3 or fallback low)
+- Request (status quo): `req_cpu`, `req_mem`
+- Peak (observed): `peak_cpu`, `peak_mem`
+- Recommendations: `rec_cpu`, `rec_mem`
+- Slack & waste accounting:
+  - `slack_req_cpu`, `slack_req_mem` (request slack)
+  - `slack_rec_cpu`, `slack_rec_mem` (recommendation slack)
+  - `waste_req_cpu`, `waste_req_mem` (max(0, slack_req_*))
+  - `waste_rec_cpu`, `waste_rec_mem` (max(0, slack_rec_*))
+- Violations: `viol_cpu`, `viol_mem`, `viol_any` (binary indicators)
+- Under-provisioning: `under_prov_cpu`, `under_prov_mem`
+
+**Summary CSV** (`summary_<split>.csv`):
+- One row per (method, tier) combination
+- Columns: `method`, `split`, `tier`, `n_exec`, violation rates (`vr_cpu`, `vr_mem`, `vr_any`), waste aggregates, slack reduction %
+
+**Note on confidence tiers:**
+- Jobs with insufficient training history (n_hist < min_history) use fallback to requested values and are marked as low confidence
+- This ensures confidence tiers truthfully reflect recommendation source
+
 ## 8) GitHub guidance (avoid large files)
 
 Do not commit:

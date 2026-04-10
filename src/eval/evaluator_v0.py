@@ -98,7 +98,7 @@ def main() -> None:
     df["execution_id"] = df["collection_id"].astype(str) + "_" + df["instance_index"].astype(str)
 
     # Filter to valid rows (important)
-    df = df.dropna(subset=["start_time", "req_cpu", "req_mem", "peak_cpu", "peak_mem"])
+    df = df.dropna(subset=["start_time", "end_time", "req_cpu", "req_mem", "peak_cpu", "peak_mem"])
     df = df.sort_values("start_time").reset_index(drop=True)
 
     # Time-aware split
@@ -127,20 +127,35 @@ def main() -> None:
     def write_per_exec(method_name: str, df_eval: pd.DataFrame, rec_cpu: pd.Series, rec_mem: pd.Series,
                        tier: Optional[pd.Series] = None) -> None:
         out = df_eval[[
-            "execution_id", "recurring_job_id", "start_time", "end_time",
+            "execution_id", "recurring_job_id", "start_time",
             "req_cpu", "req_mem", "peak_cpu", "peak_mem"
         ]].copy()
+        out = out.rename(columns={"start_time": "timestamp"})
         out["rec_cpu"] = rec_cpu.values
         out["rec_mem"] = rec_mem.values
+        
+        # Slack and waste calculations (aligned to v0 spec)
+        out["slack_req_cpu"] = out["req_cpu"] - out["peak_cpu"]
+        out["slack_req_mem"] = out["req_mem"] - out["peak_mem"]
+        out["slack_rec_cpu"] = out["rec_cpu"] - out["peak_cpu"]
+        out["slack_rec_mem"] = out["rec_mem"] - out["peak_mem"]
+        out["waste_req_cpu"] = np.maximum(0.0, out["slack_req_cpu"])
+        out["waste_req_mem"] = np.maximum(0.0, out["slack_req_mem"])
+        out["waste_rec_cpu"] = np.maximum(0.0, out["slack_rec_cpu"])
+        out["waste_rec_mem"] = np.maximum(0.0, out["slack_rec_mem"])
+        
+        # Violations and under-provisioning
         out["viol_cpu"] = (out["peak_cpu"] > out["rec_cpu"]).astype(int)
         out["viol_mem"] = (out["peak_mem"] > out["rec_mem"]).astype(int)
         out["viol_any"] = ((out["viol_cpu"] == 1) | (out["viol_mem"] == 1)).astype(int)
-        out["waste_cpu"] = np.maximum(0.0, out["rec_cpu"] - out["peak_cpu"])
-        out["waste_mem"] = np.maximum(0.0, out["rec_mem"] - out["peak_mem"])
+        out["under_prov_cpu"] = np.maximum(0.0, out["peak_cpu"] - out["rec_cpu"])
+        out["under_prov_mem"] = np.maximum(0.0, out["peak_mem"] - out["rec_mem"])
+        
+        # Confidence tier
         if tier is not None:
-            out["tier"] = tier.values
+            out["confidence_tier"] = tier.values
         else:
-            out["tier"] = "all"
+            out["confidence_tier"] = "all"
 
         out_path = os.path.join(args.out_dir, f"per_execution_{method_name}_{args.split}.csv")
         out.to_csv(out_path, index=False)
@@ -197,6 +212,11 @@ def main() -> None:
                 if not mask.any():
                     continue
                 m = compute_metrics(test.loc[mask], rec_cpu.loc[mask], rec_mem.loc[mask])
+                
+                # Compute baseline0 waste for the same tier subset for fair comparison
+                base0_tier_waste_cpu = np.maximum(0.0, test.loc[mask, "req_cpu"] - test.loc[mask, "peak_cpu"]).sum()
+                base0_tier_waste_mem = np.maximum(0.0, test.loc[mask, "req_mem"] - test.loc[mask, "peak_mem"]).sum()
+                
                 summary_rows.append(EvalResult(
                     method=method,
                     split=args.split,
@@ -207,8 +227,8 @@ def main() -> None:
                     vr_any=m["vr_any"],
                     waste_cpu=m["waste_cpu"],
                     waste_mem=m["waste_mem"],
-                    slack_reduction_cpu_pct=slack_reduction(base0_waste_cpu, m["waste_cpu"]),
-                    slack_reduction_mem_pct=slack_reduction(base0_waste_mem, m["waste_mem"]),
+                    slack_reduction_cpu_pct=slack_reduction(base0_tier_waste_cpu, m["waste_cpu"]),
+                    slack_reduction_mem_pct=slack_reduction(base0_tier_waste_mem, m["waste_mem"]),
                 ))
         else:
             raise ValueError(f"Unknown method: {method}")

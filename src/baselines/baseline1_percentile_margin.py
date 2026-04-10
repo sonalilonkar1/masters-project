@@ -34,16 +34,22 @@ class Baseline1PercentileMargin:
         if missing:
             raise ValueError(f"train_df missing columns: {sorted(missing)}")
 
-        # Compute quantiles and history counts on TRAIN only.
-        grp = train_df.groupby("recurring_job_id", as_index=False)
-        quant = grp.agg(
-            rec_cpu=("peak_cpu", lambda x: float(np.quantile(x.to_numpy(), q))),
-            rec_mem=("peak_mem", lambda x: float(np.quantile(x.to_numpy(), q))),
-            n_hist=("peak_cpu", "size"),
-        )
+        # Compute quantiles and history counts on TRAIN only using vectorized groupby ops.
+        grp = train_df.groupby("recurring_job_id")
+        quant = pd.concat(
+            [
+                grp["peak_cpu"].quantile(q).rename("rec_cpu"),
+                grp["peak_mem"].quantile(q).rename("rec_mem"),
+                grp.size().rename("n_hist"),
+            ],
+            axis=1,
+        ).reset_index()
 
-        # Enforce minimum history: jobs with insufficient history will not have quantiles.
-        quant.loc[quant["n_hist"] < min_history, ["rec_cpu", "rec_mem"]] = np.nan
+        # Enforce minimum history: jobs with insufficient history will not have quantiles
+        # and should report zero usable history so downstream confidence reflects fallback use.
+        insufficient_history = quant["n_hist"] < min_history
+        quant.loc[insufficient_history, ["rec_cpu", "rec_mem"]] = np.nan
+        quant.loc[insufficient_history, "n_hist"] = 0
 
         self.quantiles_ = quant
         return self
