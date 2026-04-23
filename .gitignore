@@ -27,4 +27,4 @@ __pycache__/
 
 # Ignore past results (large)
 #for comparison with new results, not needed to be tracked
-reports/Past results 
+reports/eval/subset/figures/*.png
