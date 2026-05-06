@@ -296,6 +296,17 @@ The full dataset is not included in this repository due to its large size. See [
    - Modserve: [notebooks/modserve/](notebooks/modserve/) - EDA, baselines, replay evaluation
    - Splitwise & Resource Central: Check [docs/baseline_experiments/](docs/baseline_experiments/)
 5. **Review Results**: [reports/eval/](reports/eval/) contains all baseline evaluation outputs
+6. **TraceAdvisor CLI** *(query subset-06 final-recommender outputs from the terminal)*:
+   ```
+   python scripts/traceadvisor.py summary                  # full pipeline overview
+   python scripts/traceadvisor.py metrics                  # paper-style ML vs Hybrid table
+   python scripts/traceadvisor.py top-jobs --limit 10      # most-run recurring jobs
+   python scripts/traceadvisor.py recommend --job <key>    # developer-facing recommendation
+   ```
+   The CLI reads pre-generated artifacts from `data/processed/` and
+   `reports/eval/subset/tables/`. If those files are missing, run
+   [notebooks/subset/subset-06-final-recommender.ipynb](notebooks/subset/subset-06-final-recommender.ipynb)
+   first. Tests: `python -m pytest tests/test_traceadvisor.py`.
 
 ### 💡 Understanding Baselines
 See [docs/baseline_experiments/GoogleCluster2019/runbook.md](docs/baseline_experiments/GoogleCluster2019/runbook.md) for step-by-step baseline reproduction and **Chapter 3 (Baseline Approaches)** of the Project Workbook for detailed baseline rationale and design decisions.
