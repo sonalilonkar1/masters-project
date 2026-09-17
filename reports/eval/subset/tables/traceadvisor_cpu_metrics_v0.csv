@@ -1,0 +1,3 @@
+Workload,Method,Safety (%),Violation (%),Utilization capped (%),Utilization median (%)
+TraceAdvisor,ML Only,61.6,38.4,63.9,71.3
+TraceAdvisor,Hybrid,97.6,2.4,54.0,51.0

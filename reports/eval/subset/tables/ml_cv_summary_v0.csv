@@ -1,0 +1,4 @@
+model,cv,mean_rmse,std_rmse,min_rmse,max_rmse
+CPU / RandomForest (tuned),TimeSeriesSplit(5),0.030778,0.003807,0.024193,0.035119
+CPU / XGBoost (tuned),TimeSeriesSplit(5),0.029773,0.003969,0.023777,0.033474
+MEM / XGBoost (tuned),TimeSeriesSplit(5),0.007519,0.003803,0.004489,0.014954
