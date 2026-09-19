@@ -1,0 +1,5 @@
+resource,model,split,best_params,mae,rmse,r2
+cpu,RandomForest,val,"{""max_depth"": 16, ""min_samples_leaf"": 5, ""n_estimators"": 100}",0.019167,0.039151,0.383513
+cpu,XGBoost,val,"{""colsample_bytree"": 1.0, ""learning_rate"": 0.05, ""max_depth"": 4, ""n_estimators"": 200, ""subsample"": 0.8}",0.017724,0.033787,0.540862
+mem,RandomForest,val,"{""max_depth"": 10, ""min_samples_leaf"": 5, ""n_estimators"": 200}",0.001842,0.005168,0.699408
+mem,XGBoost,val,"{""colsample_bytree"": 0.8, ""learning_rate"": 0.05, ""max_depth"": 6, ""n_estimators"": 400, ""subsample"": 0.8}",0.002279,0.005640,0.641958

@@ -1,0 +1,9 @@
+model,cv,mean_rmse,std_rmse,min_rmse,max_rmse
+CPU / RandomForest (tuned),TimeSeriesSplit(5),0.045027,0.014681,0.029644,0.072555
+CPU / RandomForest (tuned),GroupKFold(5),0.047993,0.012693,0.035652,0.072352
+CPU / XGBoost (tuned),TimeSeriesSplit(5),0.047842,0.020422,0.033947,0.088152
+CPU / XGBoost (tuned),GroupKFold(5),0.046365,0.011058,0.036343,0.067893
+MEM / RandomForest (tuned),TimeSeriesSplit(5),0.013127,0.007518,0.007099,0.026895
+MEM / RandomForest (tuned),GroupKFold(5),0.012504,0.007010,0.005768,0.025351
+MEM / XGBoost (tuned),TimeSeriesSplit(5),0.011155,0.005058,0.006865,0.020551
+MEM / XGBoost (tuned),GroupKFold(5),0.013434,0.006815,0.007482,0.025560
