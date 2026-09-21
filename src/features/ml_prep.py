@@ -172,33 +172,51 @@ def get_available_features(
     feature_cols: Optional[List[str]] = None,
 ) -> List[str]:
     """
-    Filter the canonical feature list to only features present in all splits.
+    Return the canonical ML feature list only if all expected features
+    are present in every split.
 
-    Parameters
-    ----------
-    train_df, val_df, test_df : pd.DataFrame
-        Source DataFrames for each split.
-    feature_cols : list[str], optional
-        Feature list to filter. Defaults to FEATURE_COLS.
-
-    Returns
-    -------
-    list[str]
-        Features available in all three splits.
+    The standardized feature schema must remain identical across train,
+    validation, and test. Missing canonical features therefore raise an
+    error instead of being silently dropped.
     """
     if feature_cols is None:
         feature_cols = FEATURE_COLS
 
-    available = [
-        c for c in feature_cols
-        if c in train_df.columns
-        and c in val_df.columns
-        and c in test_df.columns
-    ]
+    missing_by_split = {
+        "train": [
+            c for c in feature_cols
+            if c not in train_df.columns
+        ],
+        "val": [
+            c for c in feature_cols
+            if c not in val_df.columns
+        ],
+        "test": [
+            c for c in feature_cols
+            if c not in test_df.columns
+        ],
+    }
 
-    dropped = set(feature_cols) - set(available)
-    if dropped:
-        print(f"Warning: {len(dropped)} features not available in all splits: {sorted(dropped)}")
+    missing_by_split = {
+        split: missing
+        for split, missing in missing_by_split.items()
+        if missing
+    }
 
-    print(f"Using {len(available)} / {len(feature_cols)} features")
-    return available
+    if missing_by_split:
+        details = "; ".join(
+            f"{split}: {missing}"
+            for split, missing in missing_by_split.items()
+        )
+
+        raise ValueError(
+            "Canonical ML feature schema mismatch. "
+            f"Missing features -> {details}"
+        )
+
+    print(
+        f"Using canonical ML feature schema: "
+        f"{len(feature_cols)} features"
+    )
+
+    return list(feature_cols)
