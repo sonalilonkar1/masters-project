@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from evaluation.evaluator import RecommendationEvaluator
 from evaluation.metrics import (
@@ -129,6 +130,71 @@ def test_zero_recommendation_can_still_be_a_violation():
     )
 
     assert bool(result[0])
+
+
+def test_zero_recommendation_is_included_in_violation_summary():
+    """
+    A zero recommendation should still count in the violation rate,
+    while its utilization remains undefined.
+    """
+    data = pd.DataFrame(
+        {
+            "peak_cpu": [2, 1],
+            "peak_memory": [1, 1],
+            "recommended_cpu": [0, 2],
+            "recommended_memory": [2, 2],
+        }
+    )
+
+    evaluator = RecommendationEvaluator()
+
+    evaluated = evaluator.evaluate(
+        data=data,
+        actual_cpu_col="peak_cpu",
+        actual_memory_col="peak_memory",
+        recommended_cpu_col="recommended_cpu",
+        recommended_memory_col="recommended_memory",
+    )
+
+    summary = evaluator.summarize(evaluated)
+
+    # First row violates CPU: 2 > 0.
+    # Second row does not: 1 <= 2.
+    assert np.isclose(
+        summary["cpu_violation_pct"],
+        50.0,
+    )
+
+    # The first row has undefined utilization.
+    # Only the second row contributes: 1 / 2 = 0.5.
+    assert np.isclose(
+        summary["average_cpu_utilization"],
+        0.5,
+    )
+
+
+def test_evaluator_rejects_missing_required_columns():
+    """
+    The evaluator should clearly report missing required columns.
+    """
+    data = pd.DataFrame(
+        {
+            "actual_cpu": [2],
+            "actual_memory": [4],
+            "recommended_cpu": [4],
+        }
+    )
+
+    evaluator = RecommendationEvaluator()
+
+    with pytest.raises(ValueError, match="missing"):
+        evaluator.evaluate(
+            data=data,
+            actual_cpu_col="actual_cpu",
+            actual_memory_col="actual_memory",
+            recommended_cpu_col="recommended_cpu",
+            recommended_memory_col="recommended_memory",
+        )
 
 
 def test_waste():

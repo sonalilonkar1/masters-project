@@ -36,9 +36,8 @@ class RecommendationEvaluator:
     """
     Apply the shared metrics to actual and recommended resources.
 
-    The evaluator receives column names instead of assuming fixed dataset
-    column names. This allows the same evaluator to work with Google,
-    Alibaba, and other datasets.
+    Column names are passed into evaluate(), so this class can support
+    different datasets without changing the evaluator implementation.
     """
 
     def __init__(self, epsilon: float = 1e-12):
@@ -70,7 +69,8 @@ class RecommendationEvaluator:
             actual_memory_col: Column containing observed peak memory.
             recommended_cpu_col: Column containing recommended CPU.
             recommended_memory_col: Column containing recommended memory.
-            policy_name: Optional name such as Request, P95, ML, or Hybrid.
+            policy_name: Optional policy name such as Request, P95, ML,
+                or Hybrid.
             id_cols: Optional identifier columns to preserve, such as
                 execution_id, recurrence_key, or evaluation_unit_id.
 
@@ -78,7 +78,8 @@ class RecommendationEvaluator:
             A copy of the input DataFrame with standardized metric columns.
         """
 
-        # Collect the columns required for evaluation.
+        # Identify the actual and recommended resource columns needed
+        # for evaluation.
         required_columns = [
             actual_cpu_col,
             actual_memory_col,
@@ -86,16 +87,18 @@ class RecommendationEvaluator:
             recommended_memory_col,
         ]
 
-        # Add optional identifier columns to the validation list.
+        # Include optional identifier columns in validation.
         if id_cols is not None:
             required_columns.extend(id_cols)
 
-        # Remove duplicate column names while preserving order.
+        # Remove duplicate column names while preserving their order.
         required_columns = list(dict.fromkeys(required_columns))
 
-        # Stop early if any required column is missing.
+        # Check that every required column exists.
         missing_columns = [
-            column for column in required_columns if column not in data.columns
+            column
+            for column in required_columns
+            if column not in data.columns
         ]
 
         if missing_columns:
@@ -107,7 +110,7 @@ class RecommendationEvaluator:
         # Copy the input so the original DataFrame is not modified.
         evaluated = data.copy()
 
-        # Read the actual and recommended resource values.
+        # Read actual and recommended resource values.
         actual_cpu = evaluated[actual_cpu_col]
         actual_memory = evaluated[actual_memory_col]
         recommended_cpu = evaluated[recommended_cpu_col]
@@ -134,8 +137,6 @@ class RecommendationEvaluator:
         )
 
         # Calculate bounded CPU utilization.
-        #
-        # The result cannot exceed 1.0, which represents 100%.
         evaluated["cpu_utilization"] = cpu_utilization(
             actual_cpu,
             recommended_cpu,
@@ -173,17 +174,10 @@ class RecommendationEvaluator:
             recommended_memory,
         )
 
-        # Add the policy name when one is provided.
-        #
-        # Examples:
-        # - Request
-        # - P95
-        # - ML
-        # - Hybrid
+        # Add the policy name when provided.
         if policy_name is not None:
             evaluated["policy_name"] = policy_name
 
-        # Return the original data together with standardized metrics.
         return evaluated
 
     def summarize(
@@ -193,76 +187,90 @@ class RecommendationEvaluator:
         """
         Calculate summary metrics from row-level evaluation results.
 
-        Violation percentages use only rows with valid actual and
-        recommended values. Utilization averages exclude undefined
-        zero-recommendation rows.
+        Violation percentages use valid violation results.
+        Utilization averages exclude undefined utilization values,
+        such as zero-recommendation rows.
         """
 
-        # Identify rows where CPU comparison is meaningful.
-        valid_cpu_rows = (
+        # Violation masks are independent from utilization masks.
+        #
+        # This ensures that a row with a zero recommendation can still
+        # count as a violation even though its utilization is undefined.
+        valid_cpu_violation_rows = (
             evaluated_data["cpu_violation"].notna()
-            & evaluated_data["cpu_utilization"].notna()
         )
 
-        # Identify rows where memory comparison is meaningful.
-        valid_memory_rows = (
+        valid_memory_violation_rows = (
             evaluated_data["memory_violation"].notna()
-            & evaluated_data["memory_utilization"].notna()
         )
 
-        # Any-resource comparison requires both CPU and memory values.
-        valid_any_resource_rows = valid_cpu_rows & valid_memory_rows
+        valid_any_resource_violation_rows = (
+            evaluated_data["any_resource_violation"].notna()
+        )
+
+        # Utilization masks exclude undefined utilization values.
+        valid_cpu_utilization_rows = (
+            evaluated_data["cpu_utilization"].notna()
+        )
+
+        valid_memory_utilization_rows = (
+            evaluated_data["memory_utilization"].notna()
+        )
 
         # Calculate CPU violation percentage.
         cpu_violation_pct = (
-            evaluated_data.loc[valid_cpu_rows, "cpu_violation"].mean() * 100
-            if valid_cpu_rows.any()
+            evaluated_data.loc[
+                valid_cpu_violation_rows,
+                "cpu_violation",
+            ].mean()
+            * 100
+            if valid_cpu_violation_rows.any()
             else np.nan
         )
 
         # Calculate memory violation percentage.
         memory_violation_pct = (
             evaluated_data.loc[
-                valid_memory_rows,
+                valid_memory_violation_rows,
                 "memory_violation",
             ].mean()
             * 100
-            if valid_memory_rows.any()
+            if valid_memory_violation_rows.any()
             else np.nan
         )
 
         # Calculate any-resource violation percentage.
         any_resource_violation_pct = (
             evaluated_data.loc[
-                valid_any_resource_rows,
+                valid_any_resource_violation_rows,
                 "any_resource_violation",
             ].mean()
             * 100
-            if valid_any_resource_rows.any()
+            if valid_any_resource_violation_rows.any()
             else np.nan
         )
 
         # Calculate average bounded CPU utilization.
         average_cpu_utilization = (
             evaluated_data.loc[
-                valid_cpu_rows,
+                valid_cpu_utilization_rows,
                 "cpu_utilization",
             ].mean()
-            if valid_cpu_rows.any()
+            if valid_cpu_utilization_rows.any()
             else np.nan
         )
 
         # Calculate average bounded memory utilization.
         average_memory_utilization = (
             evaluated_data.loc[
-                valid_memory_rows,
+                valid_memory_utilization_rows,
                 "memory_utilization",
             ].mean()
-            if valid_memory_rows.any()
+            if valid_memory_utilization_rows.any()
             else np.nan
         )
 
-        # Return standardized summary names for every policy.
+        # Return standardized summary values.
         return {
             "row_count": len(evaluated_data),
             "cpu_violation_pct": cpu_violation_pct,
@@ -270,9 +278,15 @@ class RecommendationEvaluator:
             "any_resource_violation_pct": any_resource_violation_pct,
             "average_cpu_utilization": average_cpu_utilization,
             "average_memory_utilization": average_memory_utilization,
-            "average_cpu_waste": evaluated_data["cpu_waste"].mean(),
-            "average_memory_waste": evaluated_data["memory_waste"].mean(),
-            "average_cpu_shortfall": evaluated_data["cpu_shortfall"].mean(),
+            "average_cpu_waste": evaluated_data[
+                "cpu_waste"
+            ].mean(),
+            "average_memory_waste": evaluated_data[
+                "memory_waste"
+            ].mean(),
+            "average_cpu_shortfall": evaluated_data[
+                "cpu_shortfall"
+            ].mean(),
             "average_memory_shortfall": evaluated_data[
                 "memory_shortfall"
             ].mean(),
