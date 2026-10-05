@@ -14,10 +14,6 @@ from evaluation.metrics import (
 
 
 def test_bounded_utilization():
-    """
-    Utilization should be actual / recommended,
-    but it must not exceed 100%.
-    """
     result = bounded_utilization(
         actual=[2, 5, 4],
         recommended=[4, 4, 4],
@@ -29,9 +25,6 @@ def test_bounded_utilization():
 
 
 def test_zero_recommendation_returns_nan():
-    """
-    A zero recommendation must not create infinity.
-    """
     result = bounded_utilization(
         actual=[0, 2],
         recommended=[0, 0],
@@ -42,10 +35,6 @@ def test_zero_recommendation_returns_nan():
 
 
 def test_any_resource_violation():
-    """
-    Any-resource violation is true when either CPU or memory
-    exceeds its recommendation.
-    """
     result = any_resource_violation(
         actual_cpu=[2, 5, 2],
         recommended_cpu=[4, 4, 4],
@@ -59,13 +48,6 @@ def test_any_resource_violation():
 
 
 def test_equal_actual_and_recommended_is_not_a_violation():
-    """
-    Equal actual and recommended values do not count as violations.
-
-    The rule is strictly:
-
-        actual > recommended
-    """
     cpu_result = cpu_violation(
         actual_cpu=[4],
         recommended_cpu=[4],
@@ -81,10 +63,6 @@ def test_equal_actual_and_recommended_is_not_a_violation():
 
 
 def test_cpu_only_violation():
-    """
-    A CPU violation should be detected when memory is within
-    its recommendation.
-    """
     result = any_resource_violation(
         actual_cpu=[5],
         recommended_cpu=[4],
@@ -99,10 +77,6 @@ def test_cpu_only_violation():
 
 
 def test_memory_only_violation():
-    """
-    A memory violation should be detected when CPU is within
-    its recommendation.
-    """
     result = any_resource_violation(
         actual_cpu=[2],
         recommended_cpu=[4],
@@ -117,13 +91,6 @@ def test_memory_only_violation():
 
 
 def test_zero_recommendation_can_still_be_a_violation():
-    """
-    A zero recommendation is still a violation when actual usage
-    is greater than zero.
-
-    Utilization is undefined for zero recommendations, but the
-    violation rule still applies.
-    """
     result = cpu_violation(
         actual_cpu=[2],
         recommended_cpu=[0],
@@ -133,10 +100,6 @@ def test_zero_recommendation_can_still_be_a_violation():
 
 
 def test_zero_recommendation_is_included_in_violation_summary():
-    """
-    A zero recommendation should still count in the violation rate,
-    while its utilization remains undefined.
-    """
     data = pd.DataFrame(
         {
             "peak_cpu": [2, 1],
@@ -158,15 +121,11 @@ def test_zero_recommendation_is_included_in_violation_summary():
 
     summary = evaluator.summarize(evaluated)
 
-    # First row violates CPU: 2 > 0.
-    # Second row does not: 1 <= 2.
     assert np.isclose(
         summary["cpu_violation_pct"],
         50.0,
     )
 
-    # The first row has undefined utilization.
-    # Only the second row contributes: 1 / 2 = 0.5.
     assert np.isclose(
         summary["average_cpu_utilization"],
         0.5,
@@ -174,9 +133,6 @@ def test_zero_recommendation_is_included_in_violation_summary():
 
 
 def test_evaluator_rejects_missing_required_columns():
-    """
-    The evaluator should clearly report missing required columns.
-    """
     data = pd.DataFrame(
         {
             "actual_cpu": [2],
@@ -198,10 +154,6 @@ def test_evaluator_rejects_missing_required_columns():
 
 
 def test_waste():
-    """
-    Waste is positive only when the recommendation is larger
-    than actual usage.
-    """
     result = waste(
         actual=[6, 12, 10],
         recommended=[10, 10, 10],
@@ -213,10 +165,6 @@ def test_waste():
 
 
 def test_shortfall():
-    """
-    Shortfall is positive only when actual usage exceeds
-    the recommendation.
-    """
     result = shortfall(
         actual=[6, 12, 10],
         recommended=[10, 10, 10],
@@ -228,10 +176,6 @@ def test_shortfall():
 
 
 def test_evaluator_returns_standard_metric_columns():
-    """
-    The evaluator should return the same metric columns regardless
-    of the recommendation method.
-    """
     data = pd.DataFrame(
         {
             "execution_id": ["e1", "e2", "e3"],
@@ -276,9 +220,6 @@ def test_evaluator_returns_standard_metric_columns():
 
 
 def test_evaluator_summary():
-    """
-    Verify violation percentages and average utilization.
-    """
     data = pd.DataFrame(
         {
             "peak_cpu": [2, 5, 4],
@@ -300,26 +241,122 @@ def test_evaluator_summary():
 
     summary = evaluator.summarize(evaluated)
 
-    # One of three rows violated CPU.
     assert np.isclose(
         summary["cpu_violation_pct"],
         (1 / 3) * 100,
     )
 
-    # One of three rows violated memory.
     assert np.isclose(
         summary["memory_violation_pct"],
         (1 / 3) * 100,
     )
 
-    # One of three rows violated at least one resource.
     assert np.isclose(
         summary["any_resource_violation_pct"],
         (1 / 3) * 100,
     )
 
-    # CPU utilization is [0.5, 1.0, 1.0].
     assert np.isclose(
         summary["average_cpu_utilization"],
         np.mean([0.5, 1.0, 1.0]),
     )
+
+
+def test_nonfinite_values_return_unknown_violation():
+    cpu_result = cpu_violation(
+        actual_cpu=[np.nan, 2, np.inf],
+        recommended_cpu=[4, np.nan, 4],
+    )
+
+    memory_result = memory_violation(
+        actual_memory=[np.nan, 2, 8],
+        recommended_memory=[4, 4, np.inf],
+    )
+
+    assert np.isnan(cpu_result[0])
+    assert np.isnan(cpu_result[1])
+    assert np.isnan(cpu_result[2])
+
+    assert np.isnan(memory_result[0])
+    assert not np.isnan(memory_result[1])
+    assert np.isnan(memory_result[2])
+
+
+def test_any_resource_violation_preserves_unknown_state():
+    result = any_resource_violation(
+        actual_cpu=[np.nan, 2, 5, 2],
+        recommended_cpu=[4, 4, 4, 4],
+        actual_memory=[2, np.nan, np.nan, 2],
+        recommended_memory=[4, 4, 4, 4],
+    )
+
+    assert np.isnan(result[0])
+    assert np.isnan(result[1])
+    assert result[2] == 1.0
+    assert result[3] == 0.0
+
+
+def test_summary_returns_valid_denominator_counts():
+    data = pd.DataFrame(
+        {
+            "peak_cpu": [np.nan, 5, 1, 2],
+            "peak_memory": [1, np.nan, 1, 1],
+            "recommended_cpu": [4, 4, 2, 0],
+            "recommended_memory": [2, 2, 2, 2],
+        }
+    )
+
+    evaluator = RecommendationEvaluator()
+
+    evaluated = evaluator.evaluate(
+        data=data,
+        actual_cpu_col="peak_cpu",
+        actual_memory_col="peak_memory",
+        recommended_cpu_col="recommended_cpu",
+        recommended_memory_col="recommended_memory",
+    )
+
+    summary = evaluator.summarize(evaluated)
+
+    assert summary["row_count"] == 4
+    assert summary["valid_cpu_violation_count"] == 3
+    assert summary["valid_memory_violation_count"] == 3
+    assert summary["valid_any_resource_violation_count"] == 3
+    assert summary["valid_cpu_utilization_count"] == 2
+    assert summary["valid_memory_utilization_count"] == 3
+
+    assert np.isclose(
+        summary["cpu_violation_pct"],
+        (2 / 3) * 100,
+    )
+
+    assert np.isclose(
+        summary["any_resource_violation_pct"],
+        (2 / 3) * 100,
+    )
+
+
+def test_nonfinite_recommendation_is_not_counted_as_non_violation():
+    data = pd.DataFrame(
+        {
+            "peak_cpu": [2, 5],
+            "peak_memory": [1, 1],
+            "recommended_cpu": [np.nan, 4],
+            "recommended_memory": [2, 2],
+        }
+    )
+
+    evaluator = RecommendationEvaluator()
+
+    evaluated = evaluator.evaluate(
+        data=data,
+        actual_cpu_col="peak_cpu",
+        actual_memory_col="peak_memory",
+        recommended_cpu_col="recommended_cpu",
+        recommended_memory_col="recommended_memory",
+    )
+
+    summary = evaluator.summarize(evaluated)
+
+    assert summary["valid_cpu_violation_count"] == 1
+    assert summary["cpu_violation_pct"] == 100.0
