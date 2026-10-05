@@ -18,19 +18,18 @@ def chronological_split(
     dict[str, object],
 ]:
     """
-    Split execution-level data chronologically into train,
-    validation, and test partitions.
+    Create deterministic chronological train/validation/test splits.
 
-    The split is deterministic and does not shuffle data.
+    Split boundaries are chosen only between complete timestamp groups.
+    All rows sharing the same timestamp are therefore assigned to the
+    same partition.
 
-    Default split:
-        earliest 70% -> train
-        next 15%     -> validation
-        latest 15%   -> test
+    Fractions are approximate because preserving timestamp groups takes
+    priority over exact row counts.
     """
 
     # ---------------------------------------------------------
-    # Validate split fractions
+    # Validate fractions
     # ---------------------------------------------------------
     if not 0 < train_fraction < 1:
         raise ValueError(
@@ -63,12 +62,10 @@ def chronological_split(
 
     if missing_columns:
         raise ValueError(
-            f"Missing required split columns: {missing_columns}"
+            "Missing required split columns: "
+            f"{missing_columns}"
         )
 
-    # ---------------------------------------------------------
-    # Validate IDs and timestamps
-    # ---------------------------------------------------------
     if df[time_col].isna().any():
         raise ValueError(
             f"{time_col} contains missing values."
@@ -80,22 +77,25 @@ def chronological_split(
         )
 
     if df[id_col].duplicated().any():
-        duplicate_count = int(
-            df[id_col].duplicated().sum()
+        raise ValueError(
+            f"{id_col} contains duplicate values."
         )
 
+    if len(df) < 3:
         raise ValueError(
-            f"{id_col} contains "
-            f"{duplicate_count} duplicate values."
+            "At least 3 rows are required."
         )
 
     # ---------------------------------------------------------
-    # Sort chronologically
+    # Deterministic chronological ordering
     # ---------------------------------------------------------
     ordered = cast(
         pd.DataFrame,
         df.sort_values(
-            by=[time_col, id_col],
+            by=[
+                time_col,
+                id_col,
+            ],
             kind="mergesort",
         )
         .reset_index(drop=True)
@@ -104,22 +104,101 @@ def chronological_split(
 
     total_rows = len(ordered)
 
-    if total_rows < 3:
+    # ---------------------------------------------------------
+    # Build complete timestamp groups
+    # ---------------------------------------------------------
+    timestamp_groups = (
+        ordered.groupby(
+            time_col,
+            sort=False,
+        )
+        .size()
+        .rename("row_count")
+        .reset_index()
+    )
+
+    if len(timestamp_groups) < 3:
         raise ValueError(
-            "At least 3 rows are required "
-            "for train/validation/test splitting."
+            "At least 3 distinct timestamps are required "
+            "to create train, validation, and test splits "
+            "without dividing timestamp groups."
         )
 
-    # ---------------------------------------------------------
-    # Calculate split boundaries
-    # ---------------------------------------------------------
-    train_end = int(
+    timestamp_groups["cumulative_rows"] = (
+        timestamp_groups["row_count"].cumsum()
+    )
+
+    # Desired row positions.
+    target_train_end = (
         total_rows * train_fraction
     )
 
-    val_end = int(
+    target_val_end = (
         total_rows
         * (train_fraction + val_fraction)
+    )
+
+    # ---------------------------------------------------------
+    # Choose train boundary
+    #
+    # Leave at least one whole timestamp group for validation
+    # and one for test.
+    # ---------------------------------------------------------
+    train_candidates = timestamp_groups.iloc[:-2].copy()
+
+    train_group_index = (
+        (
+            train_candidates["cumulative_rows"]
+            - target_train_end
+        )
+        .abs()
+        .idxmin()
+    )
+
+    train_end = int(
+        timestamp_groups.loc[
+            train_group_index,
+            "cumulative_rows",
+        ]
+    )
+
+    # ---------------------------------------------------------
+    # Choose validation boundary
+    #
+    # It must occur after train and before the final timestamp
+    # group so test remains non-empty.
+    # ---------------------------------------------------------
+    val_candidates = timestamp_groups.loc[
+        (
+            timestamp_groups.index
+            > train_group_index
+        )
+        & (
+            timestamp_groups.index
+            < timestamp_groups.index[-1]
+        )
+    ].copy()
+
+    if val_candidates.empty:
+        raise ValueError(
+            "Unable to create a non-empty validation "
+            "and test split without dividing timestamps."
+        )
+
+    val_group_index = (
+        (
+            val_candidates["cumulative_rows"]
+            - target_val_end
+        )
+        .abs()
+        .idxmin()
+    )
+
+    val_end = int(
+        timestamp_groups.loc[
+            val_group_index,
+            "cumulative_rows",
+        ]
     )
 
     # ---------------------------------------------------------
@@ -127,17 +206,26 @@ def chronological_split(
     # ---------------------------------------------------------
     train_df = cast(
         pd.DataFrame,
-        ordered.iloc[0:train_end, :].copy(),
+        ordered.iloc[
+            0:train_end,
+            :,
+        ].copy(),
     )
 
     val_df = cast(
         pd.DataFrame,
-        ordered.iloc[train_end:val_end, :].copy(),
+        ordered.iloc[
+            train_end:val_end,
+            :,
+        ].copy(),
     )
 
     test_df = cast(
         pd.DataFrame,
-        ordered.iloc[val_end:, :].copy(),
+        ordered.iloc[
+            val_end:,
+            :,
+        ].copy(),
     )
 
     train_df["_split"] = "train"
@@ -153,64 +241,60 @@ def chronological_split(
         + len(test_df)
         != total_rows
     ):
-        raise AssertionError(
-            "Split row counts do not equal "
-            "the original row count."
+        raise RuntimeError(
+            "Split row counts do not sum to the input row count."
         )
 
     train_ids = set(train_df[id_col])
     val_ids = set(val_df[id_col])
     test_ids = set(test_df[id_col])
 
-    if train_ids & val_ids:
-        raise AssertionError(
-            "Execution IDs overlap between "
-            "train and validation."
+    if not train_ids.isdisjoint(val_ids):
+        raise RuntimeError(
+            "Train and validation IDs overlap."
         )
 
-    if train_ids & test_ids:
-        raise AssertionError(
-            "Execution IDs overlap between "
-            "train and test."
+    if not train_ids.isdisjoint(test_ids):
+        raise RuntimeError(
+            "Train and test IDs overlap."
         )
 
-    if val_ids & test_ids:
-        raise AssertionError(
-            "Execution IDs overlap between "
-            "validation and test."
+    if not val_ids.isdisjoint(test_ids):
+        raise RuntimeError(
+            "Validation and test IDs overlap."
         )
 
-    if not train_df.empty and not val_df.empty:
-        if (
-            train_df[time_col].max()
-            > val_df[time_col].min()
-        ):
-            raise AssertionError(
-                "Train and validation splits "
-                "are not chronological."
-            )
+    # Strict inequality is intentional.
+    # Equal timestamps across partitions are not allowed.
+    if not (
+        train_df[time_col].max()
+        < val_df[time_col].min()
+    ):
+        raise RuntimeError(
+            "Train and validation timestamps overlap."
+        )
 
-    if not val_df.empty and not test_df.empty:
-        if (
-            val_df[time_col].max()
-            > test_df[time_col].min()
-        ):
-            raise AssertionError(
-                "Validation and test splits "
-                "are not chronological."
-            )
+    if not (
+        val_df[time_col].max()
+        < test_df[time_col].min()
+    ):
+        raise RuntimeError(
+            "Validation and test timestamps overlap."
+        )
 
     # ---------------------------------------------------------
-    # Record metadata
+    # Metadata
     # ---------------------------------------------------------
-    metadata = {
-        "split_type": "chronological",
+    metadata: dict[str, object] = {
+        "split_type": (
+            "chronological_timestamp_group_preserving"
+        ),
         "time_col": time_col,
         "id_col": id_col,
-        "train_fraction": train_fraction,
-        "val_fraction": val_fraction,
-        "test_fraction": (
-            1.0
+        "requested_train_fraction": train_fraction,
+        "requested_val_fraction": val_fraction,
+        "requested_test_fraction": (
+            1
             - train_fraction
             - val_fraction
         ),
@@ -218,41 +302,27 @@ def chronological_split(
         "train_rows": len(train_df),
         "val_rows": len(val_df),
         "test_rows": len(test_df),
-        "train_start": (
-            train_df[time_col].min()
-            if not train_df.empty
-            else None
+        "actual_train_fraction": (
+            len(train_df) / total_rows
         ),
-        "train_end": (
-            train_df[time_col].max()
-            if not train_df.empty
-            else None
+        "actual_val_fraction": (
+            len(val_df) / total_rows
         ),
-        "val_start": (
-            val_df[time_col].min()
-            if not val_df.empty
-            else None
+        "actual_test_fraction": (
+            len(test_df) / total_rows
         ),
-        "val_end": (
-            val_df[time_col].max()
-            if not val_df.empty
-            else None
-        ),
-        "test_start": (
-            test_df[time_col].min()
-            if not test_df.empty
-            else None
-        ),
-        "test_end": (
-            test_df[time_col].max()
-            if not test_df.empty
-            else None
-        ),
+        "train_start": train_df[time_col].min(),
+        "train_end": train_df[time_col].max(),
+        "val_start": val_df[time_col].min(),
+        "val_end": val_df[time_col].max(),
+        "test_start": test_df[time_col].min(),
+        "test_end": test_df[time_col].max(),
+        "unique_timestamps": len(timestamp_groups),
     }
 
     return (
         train_df,
         val_df,
         test_df,
-        metadata
+        metadata,
     )

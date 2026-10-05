@@ -133,3 +133,71 @@ def test_required_columns_are_checked():
         match="Missing required split columns",
     ):
         chronological_split(df)
+        
+def test_shared_timestamps_are_not_split():
+    df = pd.DataFrame(
+        {
+            "execution_id": [
+                f"e{i}"
+                for i in range(20)
+            ],
+            "execution_start_time_us": (
+                [100] * 6
+                + [200] * 6
+                + [300] * 4
+                + [400] * 4
+            ),
+        }
+    )
+
+    train_df, val_df, test_df, _ = (
+        chronological_split(
+            df,
+            train_fraction=0.50,
+            val_fraction=0.25,
+        )
+    )
+
+    train_times = set(
+        train_df["execution_start_time_us"]
+    )
+
+    val_times = set(
+        val_df["execution_start_time_us"]
+    )
+
+    test_times = set(
+        test_df["execution_start_time_us"]
+    )
+
+    assert train_times.isdisjoint(
+        val_times
+    )
+
+    assert train_times.isdisjoint(
+        test_times
+    )
+
+    assert val_times.isdisjoint(
+        test_times
+    )
+
+    assert (
+        train_df[
+            "execution_start_time_us"
+        ].max()
+        <
+        val_df[
+            "execution_start_time_us"
+        ].min()
+    )
+
+    assert (
+        val_df[
+            "execution_start_time_us"
+        ].max()
+        <
+        test_df[
+            "execution_start_time_us"
+        ].min()
+    )
