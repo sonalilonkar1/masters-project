@@ -25,6 +25,11 @@ reports/eval/GoogleCluster2019/per_execution_*.csv
 __pycache__/
 *.pyc
 
+# Python virtual environments
+.venv/
+venv/
+env/
+
 # Ignore past results (large)
 #for comparison with new results, not needed to be tracked
 reports/eval/subset/figures/*.png
