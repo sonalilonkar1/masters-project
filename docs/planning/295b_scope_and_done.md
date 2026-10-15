@@ -1,133 +1,144 @@
 # TraceAdvisor 295B Scope and Definition of Done
 
-This is the single current reference for what the team must finish in CMPE 295B.
-Nobody should need the 295A Workbook to decide what is mandatory.
+This document records what the team must finish in CMPE 295B, so that nobody needs the 295A Workbook to decide what is mandatory.
 
-- **Tracking:** [Project board](https://github.com/users/sonalilonkar1/projects/2) and GitHub issues
-- **Detailed plan:** *TraceAdvisor 295B Project Completion GitHub Issue Backlog* (October 2026), including its *Revised Development and Completion Issues* section
-- **Advisor:** Dan Harkey (295B; previously Dr. Gheorghi Guzun)
+**How to use this document**
+
+- **Live task status is on the [project board](https://github.com/users/sonalilonkar1/projects/2)**, not here. This document does not track status.
+- Scope and the Definition of Done come from the team's planning document, *TraceAdvisor 295B Project Completion GitHub Issue Backlog* (CMPE 295B, October 2026), referred to below as **the backlog**. The backlog has an original issue list and a later section titled *TraceAdvisor 295B Revised Development and Completion Issues*, referred to below as **the revised plan**.
+- Where the original issue list and the revised plan disagree, the disagreement is listed in [Section 7](#7-open-questions-and-known-conflicts). Confirm with the team before acting on a conflicting item.
 
 ---
 
 ## 1. Source-of-Truth Hierarchy
 
-1. **Current `main` branch + latest 295B direction/design notes** — authoritative for implementation.
-2. **Submitted final-report Table of Contents** — authoritative for final report structure.
-3. **Submitted 295A Chapter 1** — preserved research framing; consistency edits only as needed.
-4. **295A Workbook / Workbook 2** — historical background only, not a requirement list.
+From the backlog:
 
-When the backlog's original issue list and its revised section disagree, the **revised section** applies.
+1. Current main branch + latest 295B direction/design notes — authoritative for implementation
+2. Submitted final-report Table of Contents — authoritative for final report structure
+3. Submitted 295A Chapter 1 — preserved research framing; consistency edits only as needed
+4. 295A Workbook / Workbook 2 — historical background only, not a final-project requirement list
 
 ---
 
 ## 2. Final Report Status
 
-| Part | Status |
-|---|---|
-| Table of Contents | Submitted |
-| Chapter 1 — Project Overview | Submitted (consistency edits only) |
-| Chapters 2–9 | Remaining (backlog Issue 17) |
-
-Chapters 2–9 follow the submitted TOC. Final Google result numbers come only from the one-time final-test evaluation (backlog Issue 12).
+From the backlog: the Table of Contents and Chapter 1 are already submitted; the remaining report work is Chapters 2–9 plus final consistency, figures, and appendices (backlog Issue 17). Final Google result numbers must come from the one-time final-test evaluation (backlog Issue 12).
 
 ---
 
 ## 3. 295B Completion Scope
 
-- **Primary track:** Google ClusterData 2019 CPU and memory pre-execution recommendations for recurring workloads.
-- **Modeling and evaluation unit:** the full-workload **occurrence** (`occurrence_key = recurrence_key || execution_start_time_us`), not an individual execution row.
-- **Core policy comparison:** Request, Mean, P90, P95, P99, ML-only, and Hybrid, all scored by the shared evaluator (`src/evaluation/`) against the same next-occurrence targets.
-- **ML sizing:** regression is primary; classification is supporting analysis only.
-- **Final-test discipline:** every choice is locked from training/validation before one untouched final-test evaluation.
-- **Cross-platform track:** canonical workload interface plus dataset-specific adapters. Active external datasets: **Alibaba** and **Azure VM (Resource Central)**. Each dataset keeps its native resource semantics, and fitted models are dataset-specific.
-- **Product track:** recommendation output contract, objective-driven Hybrid policy engine, read-only API, then UI over precomputed artifacts.
-- **Academic track:** final report Chapters 2–9, presentation, demo, and release.
+From the backlog, with the revised plan's changes noted:
 
-### Scope-pending
+- **Primary core track:** Google ClusterData2019 CPU and memory pre-execution recommendation for recurring workloads.
+- **Canonical modeling/evaluation unit:** full-workload occurrence, not an individual execution row. In the current Google pipeline, `occurrence_key = recurrence_key || execution_start_time_us` (Notebook 04 metadata).
+- **Core final policy comparison:** Request, Mean, P90, P95, P99, ML-only, and Hybrid.
+- **ML sizing method:** regression is primary; classification remains supporting analysis unless it is explicitly wired into policy logic.
+- **Final-test discipline:** all choices are locked from training/validation before one final untouched-test evaluation.
+- **Cross-platform track:** canonical workload interface plus dataset-specific adapters. The revised plan's active external datasets are **Alibaba** and **Azure VM**; Splitwise and ModServe are scope-pending (see Section 7).
+- **Product track:** the original list names a recommendation output contract, prototype API/CLI, then interactive UI/dashboard over precomputed artifacts. The revised plan replaces these with a common output interface (New Issue 5), an objective-driven Hybrid policy engine (New Issue 6), a read-only API (New Issue 7), UI simulation and policy controls (New Issue 8), and UI/API integration with an end-to-end demo (New Issue 9).
+- **Academic track:** complete final report Chapters 2–9 from the submitted TOC, then final demo/presentation/release.
 
-- **Azure Splitwise and Azure ModServe** stay outside the active implementation until the team or advisor confirms they are mandatory. If confirmed, they get dataset-specific adapters and must not be treated as CPU/memory substitutes.
+Planning rules stated in the revised plan:
 
-### Not required to close the project (unless advisor feedback changes scope)
+- The shared evaluator and metrics are common across Google, Alibaba, and Azure VM. New datasets must produce standardized inputs for the shared evaluator.
+- Raw datasets and fitted models are dataset-specific. Do not merge raw datasets or reuse a fitted Google model without dataset-specific validation.
 
-- GPU recommendations (the backlog is CPU + memory).
+### Explicitly not required to close the project (unless advisor feedback changes scope)
+
+From the backlog, verbatim:
+
+- Full production-system reimplementations or extra learned-model extensions for Splitwise/ModServe beyond the required adapter + reproducible validation tracks. Their inclusion is mandatory; deeper extensions are optional unless advisor feedback expands scope.
+- GPU recommendation support. Current completion backlog is CPU + memory.
 - OpenStack integration.
-- Full ClusterData 2019 processing if compute/storage makes it impractical (document as a limitation).
-- Full production reimplementations of Splitwise/ModServe or extra learned models for them.
-- Live scheduler integration, online inference, autoscaling, authentication, cloud hosting, or a multi-user backend.
-- Industry-specific/NVIDIA integration or an LLM assistant.
+- Full Google ClusterData2019 processing if compute/storage constraints make it impractical; larger-scale validation can be a documented limitation unless explicitly required.
+- A full refactor of history_profiler.py / feature_builder.py if the current pipeline is stable and tested. The 295B notes describe reusable profiling modules as "if time permits."
+- Live scheduler integration, online inference, autoscaling deployment, authentication, cloud hosting, or production multi-user backend.
+- Industry-specific/NVIDIA AI integration or an LLM assistant unless specifically requested by the advisor.
+
+Note: the first bullet calls Splitwise/ModServe inclusion mandatory, while the revised plan makes them scope-pending. See Section 7.
 
 ---
 
 ## 4. Project-Level Definition of Done
 
+From the backlog, verbatim:
+
 - [ ] Full-workload occurrence CPU/memory resources are correct and independently verified.
 - [ ] Chronological train/validation/final-test artifacts are leakage-safe and use next-distinct-occurrence targets.
-- [ ] Request, Mean, P90, P95, P99, ML, and Hybrid use the same target columns and the shared evaluator.
-- [ ] Baseline/`min_runs`, feature set, ML models/hyperparameters, Hybrid rules/thresholds, and fallback behavior are selected using training/validation only.
+- [ ] Request, Mean, P90, P95, P99, ML, and Hybrid use the same target columns and shared evaluator.
+- [ ] Baseline/min_runs, feature set, ML models/hyperparameters, Hybrid rules/thresholds, and fallback behavior are selected using training/validation only.
 - [ ] One final test evaluation is produced after every decision is frozen; no post-test tuning occurs.
-- [ ] The canonical adapter/interface path works for Google and each active external dataset, with dataset-specific capability handling.
-- [ ] Developer-facing output contract, API, and UI work end to end from saved artifacts.
-- [ ] Tests and a fresh-environment smoke run verify schemas, leakage rules, evaluator behavior, artifacts, and the demo path.
-- [ ] Final report Chapters 2–9, figures/tables, demo, presentation, README/runbook, and release manifest agree with the same frozen artifacts.
-- [ ] All required GitHub issues are closed or explicitly waived by advisor feedback; stale 295A issues are not confused with 295B work.
+- [ ] Canonical adapter/interface path works for Google plus all required external validation tracks: Resource Central, Splitwise, ModServe, and Alibaba, with dataset-specific capability handling.
+- [ ] Developer-facing output contract, API/CLI, and interactive dashboard work end to end from saved artifacts.
+- [ ] Tests and a fresh-environment smoke run verify schemas, leakage rules, evaluator behavior, artifacts, and demo path.
+- [ ] Final report Chapters 2-9, figures/tables, demo, presentation, README/runbook, and release manifest all agree with the same frozen artifacts.
+- [ ] All required GitHub issues are closed or explicitly waived by advisor feedback; stale 295A issues are not confused with 295B completion work.
+
+Note: the sixth item lists Splitwise and ModServe as required, which conflicts with the revised plan (see Section 7).
 
 ---
 
-## 5. Backlog-to-GitHub Map
+## 5. Backlog Items and GitHub Issues
 
-Status as recorded on the project board. Board columns: Backlog → Todo → In Progress → Review → Done.
+This table lists only GitHub issues whose title or description names the backlog item. For current status and owner, see the [project board](https://github.com/users/sonalilonkar1/projects/2).
 
-| Backlog item | GitHub | Board status |
-|---|---|---|
-| Issue 00 — Reset tracking to the 295B source of truth | #68 | In Progress |
-| Issue 01 — Correct full-workload occurrence aggregation (N02/N03) | #53, #54 | Done |
-| Issue 02 — Rebuild N04 splits, targets, baselines | #55, #56 | Done |
-| New Issue 1 — Study Alibaba and Azure VM dataset semantics | #62 | Review |
-| New Issue 2 — Canonical workload interface and schema | #64 | In Progress |
-| New Issue 3 — Adapter framework and validation | #65 | Todo |
-| New Issue 4 — Integrate Alibaba and Azure VM datasets | #66 | Todo |
-| New Issue 5 — Common ML and baseline recommendation output interface | #67 | Todo |
-| Issues 06–08 (Google) — ML features, model comparison, tuning and lock (N05) | #63 (PR #61) | Review |
-| N06 — Hybrid construction and final policy comparison | not yet created | — |
-| New Issue 6 — Objective-driven Hybrid policy engine | not yet created | — |
-| New Issues 7–9 — API, UI simulation, UI/API integration and demo | not yet created | — |
-| Issues 11–13 — Decision freeze, final test, explainability | not yet created | — |
-| Issues 16–18 — QA/README, final report, presentation/release | not yet created | — |
-
-**Notebook split (team decision):** N05 tunes and locks the ML models and produces final ML/P95 inputs; N06 evaluates the baselines, builds Hybrid, and compares all policies through the shared evaluator.
-
-### Legacy 295A issues
-
-| Issue | Treatment |
+| Backlog item | GitHub issue |
 |---|---|
-| #4 — [UI] Decide UI approach + wireframe | Superseded by New Issue 8 (UI simulation and policy controls) and New Issue 9 (UI/API integration) |
+| Issue 00 — Reset project tracking to the 295B source of truth | #68 |
+| New Issue 1 — Study Alibaba and Azure VM dataset semantics | #62 |
+| New Issue 2 — Define canonical workload interface and schema | #64 |
+| New Issue 3 — Build adapter framework and validation | #65 |
+| New Issue 4 — Integrate Alibaba and Azure VM datasets | #66 |
+| New Issue 5 — Define common ML and baseline recommendation output interface | #67 |
+| Issues 06 and 07, and the tuning/lock part of Issue 08, for Google (Notebook 05) | #63 |
+
+**Issues 01–02** are marked DONE in the revised plan. The related closed GitHub issues for the Notebook 02–04 corrections are #53 (Notebook 2 resource aggregation), #54 (Notebook 3 historical profiles), and #55 (Notebook 4 targets, baselines, and evaluation). #56 is a closed issue with the same title as #55.
+
+As of 2026-10-14, backlog items not listed above had no GitHub issue. Check the board before creating one, to avoid duplicates.
+
+**Notebook 05 / Notebook 06 split (team decision shared in the team chat; not in the backlog):**
+
+- Notebook 05: tune and select the final ML models, refit the locked models, generate final ML predictions, and provide the final ML/P95 inputs for authoritative evaluation.
+- Notebook 06: evaluate Request/Mean/P90/P95/P99, receive the ML predictions, construct Hybrid recommendations, and compare all policies through the shared evaluator.
+
+This differs from the backlog, which places tuning and model locking (Issue 08) in Notebook 06.
 
 ---
 
-## 6. Current Code vs Historical Material
+## 6. Where the Code Lives
 
-**Current 295B pipeline (authoritative):**
+**Current Google pipeline** (`pipelines/google_subset/`):
 
-- `pipelines/google_subset/` — notebooks 00–05 (N06 planned)
-- `src/evaluation/` — shared evaluator and metrics
-- `src/features/` — feature contract, ML preparation, chronological split utilities
-- `tests/`
+| Notebook | Role |
+|---|---|
+| `00_dataQualityReview.ipynb` | Raw data quality review |
+| `01_dataIngestion.ipynb` | Ingestion and canonical observations |
+| `02_reconstructExecutions.ipynb` | Execution reconstruction |
+| `03_buildProfilesAndMetrics.ipynb` | Occurrence-level point-in-time historical profiles |
+| `04_splitAndBaselines.ipynb` | Chronological splits, next-occurrence targets, and baselines |
+| `05_evaluateRecommendations.ipynb` | ML stage. As of 2026-10-14 this file is an empty placeholder on `main`; the implementation is in PR #61 |
 
-**Historical 295A material (background only; numbers are pre-refactor and not final results):**
+Shared modules: `src/evaluation/` (shared evaluator and metrics, used by Notebook 04) and `src/features/` (chronological split utility used by Notebook 04, plus feature configuration and ML preparation helpers), with tests in `tests/`.
 
-- `notebooks/subset/`, `notebooks/GoogleCluster2019/`, `notebooks/modserve/`, `notebooks/splitwise/`, `notebooks/resource-central/`
-- `src/eval/evaluator_v0.py`, `src/baselines/`
-- `reports/eval/`
-- `docs/baseline_experiments/`, `docs/evaluation/*_v0.md`
-- The 295A Workbook / Workbook 2
+**Earlier 295A-era material:** `notebooks/subset/`, `notebooks/GoogleCluster2019/`, `notebooks/modserve/`, `notebooks/splitwise/`, `notebooks/resource-central/`, `src/eval/evaluator_v0.py`, `src/baselines/`, and the results under `reports/eval/`. These are not part of the occurrence-level Google pipeline above. The backlog requires that the final report contain no stale pre-refactor metric, execution-target definition, or outdated scope claim (Issue 17), and that existing Splitwise and ModServe outputs not be reused without rerunning and validating them (Issues 04A and 04B).
 
 ---
 
-## 7. Working Rules
+## 7. Open Questions and Known Conflicts
 
-- Check the project board before picking up work; an issue is **Ready** only when all its dependencies are done or explicitly waived.
-- Do not assign or start a blocked issue.
-- Each parent issue is a workstream and may have several contributors; create child issues only for independently owned work.
-- P0 blocks downstream work, P1 is required after its dependencies, P2 is optional or scope-pending.
-- Do not merge raw Google, Alibaba, and Azure rows into one training dataframe, and do not reuse a fitted Google model on another dataset without dataset-specific validation.
-- All violation, utilization, waste, and shortfall numbers come from the shared evaluator only.
+| Topic | What the backlog says | Status |
+|---|---|---|
+| Splitwise and ModServe | The original issue list (Scope, Definition of Done, Issues 04A/04B, and "not required" list) calls them required external validation tracks. The revised plan says they "remain outside the active external-dataset implementation until the team or advisor confirms that they are mandatory" (P2 or scope-pending). | Unresolved; confirm with the team or advisor |
+| Where tuning and model locking happen | The backlog places Issue 08 in Notebook 06. | The team moved it into Notebook 05 (Section 5) |
+| Open 295A-era issue #4 ("[UI] Decide UI approach + wireframe") | Not mentioned in the backlog. Its topic overlaps the revised plan's UI work (New Issues 8 and 9). | Triage decision pending |
+
+---
+
+## 8. Sources
+
+- *TraceAdvisor 295B Project Completion GitHub Issue Backlog* (CMPE 295B, October 2026), including *TraceAdvisor 295B Revised Development and Completion Issues*
+- [Project board](https://github.com/users/sonalilonkar1/projects/2) and GitHub issues of this repository, read on 2026-10-14
+- Team decision on the Notebook 05/06 split, shared in the team chat
+- Notebook 04 metadata (`occurrence_key` definition)

@@ -1,7 +1,7 @@
 # TraceAdvisor: Pre-Execution Resource Recommendations for Recurring Cluster Workloads
 
 **CMPE 295B** - Updated October 14, 2026  
-**Current Status**: 295B completion work in progress. The current scope, Definition of Done, and backlog-to-issue map are in [docs/planning/295b_scope_and_done.md](docs/planning/295b_scope_and_done.md).
+**Current Status**: 295B completion work in progress. The 295B scope and Definition of Done are in [docs/planning/295b_scope_and_done.md](docs/planning/295b_scope_and_done.md); live task status is on the [project board](https://github.com/users/sonalilonkar1/projects/2).
 
 > **295B vs 295A:** The [295B scope document](docs/planning/295b_scope_and_done.md) and the [project board](https://github.com/users/sonalilonkar1/projects/2) define what is mandatory now. Sections below marked **(295A, historical)** describe Semester A work and are kept for background only; the 295A Workbook is not a requirement list.
 
@@ -115,7 +115,7 @@ See [docs/baseline_experiments/](docs/baseline_experiments/) for reproducible im
 - [pipelines/google_subset/02_reconstructExecutions.ipynb](pipelines/google_subset/02_reconstructExecutions.ipynb) - Execution reconstruction
 - [pipelines/google_subset/03_buildProfilesAndMetrics.ipynb](pipelines/google_subset/03_buildProfilesAndMetrics.ipynb) - Occurrence-level point-in-time historical profiles
 - [pipelines/google_subset/04_splitAndBaselines.ipynb](pipelines/google_subset/04_splitAndBaselines.ipynb) - Chronological splits, next-occurrence targets, and baselines
-- [pipelines/google_subset/05_evaluateRecommendations.ipynb](pipelines/google_subset/05_evaluateRecommendations.ipynb) - ML stage (see the 295B scope document for status)
+- [pipelines/google_subset/05_evaluateRecommendations.ipynb](pipelines/google_subset/05_evaluateRecommendations.ipynb) - ML stage
 
 The notebooks below are **(295A, historical)**; their results predate the 295B occurrence-level refactor.
 
@@ -229,7 +229,7 @@ The notebooks below are **(295A, historical)**; their results predate the 295B o
 ## Implementation Status
 
 ### 295B (current)
-The current scope, Definition of Done, and status of every backlog item are maintained in [docs/planning/295b_scope_and_done.md](docs/planning/295b_scope_and_done.md) and on the [project board](https://github.com/users/sonalilonkar1/projects/2). Report status: Chapter 1 and the Table of Contents are submitted; Chapters 2–9 remain.
+The 295B scope and Definition of Done are in [docs/planning/295b_scope_and_done.md](docs/planning/295b_scope_and_done.md); live task status is on the [project board](https://github.com/users/sonalilonkar1/projects/2). Report status: Chapter 1 and the Table of Contents are submitted; Chapters 2–9 remain.
 
 ### Semester A (295A, historical)
 
@@ -246,7 +246,7 @@ The current scope, Definition of Done, and status of every backlog item are main
   - **Splitwise**: Fixed P95 achieves 100% tail coverage at 11-12% utilization (decode-heavy workloads)
   - **ModServe**: Fixed Monolith 95%+ SLO-safe but wasteful; Reactive Decoupled efficient but under-provisioned (71.5% SLO-safe)
 
-The Semester A "In Progress" and "Next Milestones" lists have been replaced by the 295B scope document. In particular, learned Splitwise/ModServe extensions and GPU recommendations are not part of the current 295B scope.
+The Semester A "In Progress" and "Next Milestones" lists have been replaced by the 295B scope document. The backlog lists GPU recommendation support and extra learned-model extensions for Splitwise/ModServe as not required to close the project.
 
 ---
 
@@ -256,7 +256,7 @@ The Semester A "In Progress" and "Next Milestones" lists have been replaced by t
 - **Recurring batch and machine learning jobs** (where historical runs exist)
 - **Trace-driven learning** from production cluster workload traces
 - **Job-level peak usage modeling** (tail/peak-oriented, P90/P95/P99—not only averages)
-- **Multi-resource recommendations** (CPU and memory; GPU is out of 295B scope)
+- **Multi-resource recommendations** (CPU and memory; GPU support is not required for 295B)
 - **Offline evaluation** via time-aware trace replay preventing data leakage
 - **Lightweight adoption** alongside existing schedulers (no scheduler modification required)
 
