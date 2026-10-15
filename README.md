@@ -1,11 +1,13 @@
 # TraceAdvisor: Pre-Execution Resource Recommendations for Recurring Cluster Workloads
 
-**Project Workbook v2** - Updated March 9, 2026  
-**Current Status**: Baseline implementation and evaluation complete. Ready for ML modeling phase (Semester B).
+**CMPE 295B** - Updated October 14, 2026  
+**Current Status**: 295B completion work in progress. The current scope, Definition of Done, and backlog-to-issue map are in [docs/planning/295b_scope_and_done.md](docs/planning/295b_scope_and_done.md).
+
+> **295B vs 295A:** The [295B scope document](docs/planning/295b_scope_and_done.md) and the [project board](https://github.com/users/sonalilonkar1/projects/2) define what is mandatory now. Sections below marked **(295A, historical)** describe Semester A work and are kept for background only; the 295A Workbook is not a requirement list.
 
 ## Project Summary
 
-TraceAdvisor is a trace-driven advisory system that generates pre-execution CPU, memory, and GPU recommendations for recurring cluster workloads. Using offline analysis of production traces, it identifies recurring jobs, computes risk-aware percentile-based resource envelopes (P90/P95/P99), and provides safe-minimum allocation guidance at job submission time—before resources enter the scheduler. The system operates as a non-intrusive advisory layer requiring no scheduler modification.
+TraceAdvisor is a trace-driven advisory system that generates pre-execution CPU and memory recommendations for recurring cluster workloads. Using offline analysis of production traces, it identifies recurring jobs, computes risk-aware percentile-based resource envelopes (P90/P95/P99), and provides safe-minimum allocation guidance at job submission time—before resources enter the scheduler. The system operates as a non-intrusive advisory layer requiring no scheduler modification.
 
 **Key Innovation**: Shifts inefficiency correction upstream from runtime scheduling to pre-execution submission time, reducing over-provisioning at the source rather than compensating for it at runtime.
 
@@ -14,6 +16,8 @@ TraceAdvisor is a trace-driven advisory system that generates pre-execution CPU,
 ## Quick Links
 
 - **Project Board**: https://github.com/users/sonalilonkar1/projects/2
+- **295B Scope & Definition of Done**: [docs/planning/295b_scope_and_done.md](docs/planning/295b_scope_and_done.md)
+- **Current Google Pipeline**: [pipelines/google_subset/](pipelines/google_subset/)
 - **Meeting Logs**: [docs/meetings/](docs/meetings/)
 - **References**: [docs/references/References.md](docs/references/References.md)
 - **Planning & Assumptions**: [docs/planning/assumptions.md](docs/planning/assumptions.md)
@@ -105,6 +109,16 @@ See [docs/baseline_experiments/](docs/baseline_experiments/) for reproducible im
 
 ### 📔 Notebooks
 
+#### Google Subset Pipeline (current 295B pipeline)
+- [pipelines/google_subset/00_dataQualityReview.ipynb](pipelines/google_subset/00_dataQualityReview.ipynb) - Raw data quality review
+- [pipelines/google_subset/01_dataIngestion.ipynb](pipelines/google_subset/01_dataIngestion.ipynb) - Ingestion and canonical observations
+- [pipelines/google_subset/02_reconstructExecutions.ipynb](pipelines/google_subset/02_reconstructExecutions.ipynb) - Execution reconstruction
+- [pipelines/google_subset/03_buildProfilesAndMetrics.ipynb](pipelines/google_subset/03_buildProfilesAndMetrics.ipynb) - Occurrence-level point-in-time historical profiles
+- [pipelines/google_subset/04_splitAndBaselines.ipynb](pipelines/google_subset/04_splitAndBaselines.ipynb) - Chronological splits, next-occurrence targets, and baselines
+- [pipelines/google_subset/05_evaluateRecommendations.ipynb](pipelines/google_subset/05_evaluateRecommendations.ipynb) - ML stage (see the 295B scope document for status)
+
+The notebooks below are **(295A, historical)**; their results predate the 295B occurrence-level refactor.
+
 #### Google Cluster Data 2019 (ClusterData)
 - [notebooks/GoogleCluster2019/Experiments_1DayData.ipynb](notebooks/GoogleCluster2019/Experiments_1DayData.ipynb) - 1-day experiment evaluation
 - [notebooks/GoogleCluster2019/Experiments_1WeekData.ipynb](notebooks/GoogleCluster2019/Experiments_1WeekData.ipynb) - 1-week experiment evaluation
@@ -115,9 +129,7 @@ See [docs/baseline_experiments/](docs/baseline_experiments/) for reproducible im
 - [notebooks/modserve/03_modserve_replay_evaluation.ipynb](notebooks/modserve/03_modserve_replay_evaluation.ipynb) - Replay evaluation and performance metrics
 
 #### Subset Analysis
-- [notebooks/subset/subset.ipynb](notebooks/subset/subset.ipynb) - Full subset analysis pipeline
-- [notebooks/subset/subsetv0.ipynb](notebooks/subset/subsetv0.ipynb) - Initial subset version
-- [notebooks/subset/subsetv1.ipynb](notebooks/subset/subsetv1.ipynb) - Updated subset version
+- [notebooks/subset/](notebooks/subset/) - Earlier execution-level subset pipeline (`subset-01` to `subset-06`)
 
 ---
 
@@ -145,9 +157,10 @@ See [docs/baseline_experiments/](docs/baseline_experiments/) for reproducible im
 - [docs/evaluation/evaluation_output_format.md](docs/evaluation/evaluation_output_format.md) - Output format specifications
 
 **Evaluation Code**:
-- [src/eval/evaluator_v0.py](src/eval/evaluator_v0.py) - Core evaluation logic and metrics computation
+- [src/evaluation/](src/evaluation/) - Shared evaluator and metrics used by the current 295B pipeline
+- [src/eval/evaluator_v0.py](src/eval/evaluator_v0.py) - Earlier v0 evaluator (295A, historical)
 
-**Evaluation Results**:
+**Evaluation Results (295A, historical)**: pre-refactor baseline results kept for background. Final 295B Google results will come only from the one-time final-test evaluation.
 
 - **[reports/eval/GoogleCluster2019/](reports/eval/GoogleCluster2019/)** - ClusterData 2019 Evaluation
   - **Kaggle Subset** (1.3M rows): P95 achieves **29.2% any-resource violation** (vs 40.1% as-is), 1.01 utilization
@@ -199,10 +212,10 @@ See [docs/baseline_experiments/](docs/baseline_experiments/) for reproducible im
 
 ## Team & Advisor
 
-**Advisor**: Dr. Gheorghi Guzun  
-**Last Updated**: March 9, 2026
+**Advisor**: Dan Harkey (295B; previously Dr. Gheorghi Guzun)  
+**Last Updated**: October 14, 2026
 
-**Team Structure** (Current Semester A Assignments):
+**Team Structure** (Semester A assignments, historical; current 295B work is tracked on the [project board](https://github.com/users/sonalilonkar1/projects/2)):
 
 | Team Member | Primary Role | Semester A Deliverables |
 |---|---|---|
@@ -213,9 +226,14 @@ See [docs/baseline_experiments/](docs/baseline_experiments/) for reproducible im
 
 ---
 
-## Implementation Status (Semester A)
+## Implementation Status
 
-### ✅ Completed
+### 295B (current)
+The current scope, Definition of Done, and status of every backlog item are maintained in [docs/planning/295b_scope_and_done.md](docs/planning/295b_scope_and_done.md) and on the [project board](https://github.com/users/sonalilonkar1/projects/2). Report status: Chapter 1 and the Table of Contents are submitted; Chapters 2–9 remain.
+
+### Semester A (295A, historical)
+
+#### ✅ Completed
 - **Environment & Repository**: Python setup, notebook infrastructure, reproducibility documentation
 - **Data Pipeline**: Trace normalization, execution-level aggregation, time-aware dataset construction
 - **Google ClusterData 2019 Prototype**: Full pipeline including Kaggle subset, 1-day, and 1-week experiments
@@ -228,17 +246,7 @@ See [docs/baseline_experiments/](docs/baseline_experiments/) for reproducible im
   - **Splitwise**: Fixed P95 achieves 100% tail coverage at 11-12% utilization (decode-heavy workloads)
   - **ModServe**: Fixed Monolith 95%+ SLO-safe but wasteful; Reactive Decoupled efficient but under-provisioned (71.5% SLO-safe)
 
-### 🔄 In Progress
-- **ML Baselines**: Learning-based demand prediction for Google cluster and Azure datasets
-- **TraceAdvisor Method**: Final learned recommender combining percentile reasoning with workload-aware features
-- **Dashboard/CLI**: User-facing interface for recommendations and what-if analysis
-
-### 📋 Next Milestones (Semester B)
-- Refine ML baselines and learned TraceAdvisor method
-- Reproduce Resource Central baseline (Azure VM-level)
-- Extend Splitwise and ModServe to learned baselines
-- Finalize dashboard and CLI interface
-- Complete final report and presentation
+The Semester A "In Progress" and "Next Milestones" lists have been replaced by the 295B scope document. In particular, learned Splitwise/ModServe extensions and GPU recommendations are not part of the current 295B scope.
 
 ---
 
@@ -248,7 +256,7 @@ See [docs/baseline_experiments/](docs/baseline_experiments/) for reproducible im
 - **Recurring batch and machine learning jobs** (where historical runs exist)
 - **Trace-driven learning** from production cluster workload traces
 - **Job-level peak usage modeling** (tail/peak-oriented, P90/P95/P99—not only averages)
-- **Multi-resource recommendations** (CPU, memory, GPU simultaneously)
+- **Multi-resource recommendations** (CPU and memory; GPU is out of 295B scope)
 - **Offline evaluation** via time-aware trace replay preventing data leakage
 - **Lightweight adoption** alongside existing schedulers (no scheduler modification required)
 
@@ -281,10 +289,11 @@ The full dataset is not included in this repository due to its large size. See [
 ## Getting Started
 
 ### 📖 Documentation & Planning
-1. **Project Workbook**: Full technical documentation (Chapter 1-9)
-2. **Assumptions & Planning**: [docs/planning/assumptions.md](docs/planning/assumptions.md)
-3. **Meeting Notes**: [docs/meetings/](docs/meetings/) - decisions, updates, weekly progress
-4. **References**: [docs/references/References.md](docs/references/References.md) - full bibliography and related work
+1. **295B Scope & Definition of Done**: [docs/planning/295b_scope_and_done.md](docs/planning/295b_scope_and_done.md) - what is mandatory now
+2. **Project Workbook (295A, historical)**: background technical documentation; not a 295B requirement list
+3. **Assumptions & Planning**: [docs/planning/assumptions.md](docs/planning/assumptions.md)
+4. **Meeting Notes**: [docs/meetings/](docs/meetings/) - decisions, updates, weekly progress
+5. **References**: [docs/references/References.md](docs/references/References.md) - full bibliography and related work
 
 ### 🚀 Running Experiments
 1. **Data Setup**: Follow [docs/data/subsetSetup.md](docs/data/subsetSetup.md)
