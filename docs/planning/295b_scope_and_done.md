@@ -195,7 +195,7 @@ Shared modules: `src/evaluation/` (shared evaluator and metrics, used by Noteboo
 | Role of external datasets | The original list treats them as validation tracks (for example, Issue 05: "Alibaba results are presented as external validation, not used to retune the locked Google policy"). The revised plan requires full pipelines for Alibaba and Azure VM: New Issue 4, "Each selected dataset can proceed to downstream feature, baseline, ML, policy, API, and UI stages", and dataset-specific Issues 06–08 (Section 3). | Confirm with the team |
 | CLI and product priorities | The original Scope, Definition of Done item 7, and Issue 14 include an API/CLI and an interactive dashboard (Issues 14 and 15 are P0). The revised New Issues 7–9 describe a read-only API, UI simulation, and UI/API integration, do not mention a CLI, and are P1. | Confirm with the team |
 | Where Google tuning, model lock, and Hybrid happen | Issue 08 places tuning through prediction generation in Notebook 6; Issue 07 includes Hybrid predictions. | The team decision moves tuning through final ML predictions into Notebook 05 and keeps Hybrid in Notebook 06 (Section 5) |
-| Open 295A-era issue #4 ("Issue 4 — [UI] Decide UI approach + wireframe") | Not mentioned in the backlog. Issue 00 requires triaging old open 295A issues. In this document's assessment (not stated in the backlog), its topic overlaps the revised plan's UI work (New Issues 8 and 9). | **Snapshot (2026-10-14):** triage decision pending (board status: Backlog) |
+| 295A-era issue #4 ("Issue 4 — [UI] Decide UI approach + wireframe") | Not mentioned in the backlog. Issue 00 requires triaging old open 295A issues. | **Resolved** (team review comment on PR #69, 2026-10-15): #4 was closed with the comment "Closed as superseded by New Development Issues 8 and 9." |
 | Backlog section 9, "Final Closure Checklist" | Written with the original issue list. It refers to issues the revised plan replaces or makes pending: "Issue 10 Hybrid policy", "Issues 04, 04A, 04B, and 05 external validation", and "Issues 14-15 API/CLI/dashboard". | Read it together with the revised plan's issue mapping (Section 5) |
 
 ---
@@ -205,4 +205,5 @@ Shared modules: `src/evaluation/` (shared evaluator and metrics, used by Noteboo
 - *TraceAdvisor 295B Project Completion GitHub Issue Backlog* (CMPE 295B, October 2026), including *TraceAdvisor 295B Revised Development and Completion Issues* (not stored in this repository)
 - [Project board](https://github.com/users/sonalilonkar1/projects/2) and GitHub issues of this repository, read on 2026-10-14
 - Team decision on the Notebook 05/06 split, shared in the team chat
+- Team decision on issue #4, from a review comment on PR #69 (2026-10-15)
 - Notebook 04 metadata (`occurrence_key` definition)
