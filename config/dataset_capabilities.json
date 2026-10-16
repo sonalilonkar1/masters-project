@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.1.0",
+  "datasets": [
+    {
+      "dataset_id": "google_clusterdata2019",
+      "supports_cpu": true,
+      "supports_memory": true,
+      "supports_request": true,
+      "supports_recurrence": true,
+      "supports_targets": true,
+      "supports_ml": true,
+      "supports_observed_cpu": true,
+      "supports_observed_memory": true,
+      "supports_allocated_cpu": false,
+      "supports_allocated_memory": false
+    },
+    {
+      "dataset_id": "alibaba_clustertrace2018",
+      "supports_cpu": true,
+      "supports_memory": true,
+      "supports_request": true,
+      "supports_recurrence": false,
+      "supports_targets": false,
+      "supports_ml": false,
+      "supports_observed_cpu": true,
+      "supports_observed_memory": true,
+      "supports_allocated_cpu": false,
+      "supports_allocated_memory": false
+    },
+    {
+      "dataset_id": "azure_public_vm_v2",
+      "supports_cpu": true,
+      "supports_memory": true,
+      "supports_request": false,
+      "supports_recurrence": false,
+      "supports_targets": false,
+      "supports_ml": false,
+      "supports_observed_cpu": true,
+      "supports_observed_memory": false,
+      "supports_allocated_cpu": true,
+      "supports_allocated_memory": true
+    }
+  ]
+}

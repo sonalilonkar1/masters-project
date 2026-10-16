@@ -1,0 +1,15 @@
+Capability,Google,Alibaba 2018,Azure VM V2
+Workload/job identity,Yes,Yes: job_name,Partial: deployment_id
+Execution/instance identity,Yes,Yes: instance_name,Yes: vm_id
+Start/end timestamps,Yes,Yes,Yes
+Parallel workload structure,Yes,Yes: task DAG + instances,Yes: deployment -> VMs
+Requested/planned CPU,Yes,Yes: plan_cpu per task instance,Partial: allocated vCPU bucket
+Requested/planned memory,Yes,Yes: plan_mem per task instance,Partial: memory-capacity bucket
+Observed CPU,Yes,Yes: cpu_avg/cpu_max,Yes: 5-minute CPU readings
+Observed memory,Yes,Yes: mem_avg/mem_max,No in selected VM trace
+Explicit recurrence key,Derived by project,No,No
+Point-in-time history,Yes,Yes with completed instances/jobs,Yes for CPU replay/history
+Next-occurrence CPU target,Yes,Possible only after derived recurrence rule,Not canonical without recurrence; replay target feasible
+Next-occurrence memory target,Yes,Possible only after derived recurrence rule,No observed-memory target
+Full CPU+memory TraceAdvisor pipeline,Yes,Potentially yes,No
+CPU-only TraceAdvisor validation,Yes,Yes,Yes
