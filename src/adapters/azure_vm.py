@@ -69,6 +69,100 @@ class AzureVMAdapter(BaseDatasetAdapter):
                 f"{table_name} is missing required columns: {missing}"
             )
 
+    @staticmethod
+    def _strict_numeric(
+        series: pd.Series,
+        *,
+        field_name: str,
+    ) -> pd.Series:
+        parsed = pd.to_numeric(
+            series,
+            errors="coerce",
+        )
+
+        invalid = series.notna() & parsed.isna()
+
+        if invalid.any():
+            examples = (
+                series.loc[invalid]
+                .astype(str)
+                .head(5)
+                .tolist()
+            )
+
+            raise ValueError(
+                f"{field_name} contains non-numeric values: {examples}"
+            )
+
+        return parsed
+    
+    @staticmethod
+    def _parse_capacity_bucket(
+        series: pd.Series,
+        *,
+        field_name: str,
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
+        """
+        Parse Azure capacity buckets without inventing exact values.
+
+        Exact numeric buckets such as "4" or "14" become numeric values.
+
+        Open-ended buckets such as ">24" are preserved as open-ended:
+        - canonical numeric value remains NaN
+        - open-ended flag is True
+        - lower bound is recorded separately
+
+        Unexpected labels still raise.
+        """
+        text = series.astype("string").str.strip()
+
+        missing = series.isna() | text.eq("")
+
+        open_ended = text.str.fullmatch(
+            r">\s*\d+(?:\.\d+)?",
+            na=False,
+        )
+
+        exact_text = text.mask(open_ended)
+
+        parsed = pd.to_numeric(
+            exact_text,
+            errors="coerce",
+        )
+
+        invalid = (
+            ~missing
+            & ~open_ended
+            & parsed.isna()
+        )
+
+        if invalid.any():
+            examples = (
+                text.loc[invalid]
+                .head(5)
+                .tolist()
+            )
+
+            raise ValueError(
+                f"{field_name} contains unsupported bucket values: "
+                f"{examples}"
+            )
+
+        lower_bound = pd.to_numeric(
+            text.str.replace(
+                ">",
+                "",
+                regex=False,
+            ),
+            errors="coerce",
+        ).where(open_ended)
+
+        return (
+            parsed,
+            open_ended,
+            lower_bound,
+        )
+    
     def prepare_cpu_intervals(
         self,
         vm_table: pd.DataFrame,
@@ -101,18 +195,52 @@ class AzureVMAdapter(BaseDatasetAdapter):
             ]
         ].copy()
 
+        input_cpu_row_count = int(len(cpu_readings))
+
         prepared = cpu_readings.copy(deep=True).merge(
             vm_lookup,
-            how="inner",
+            how="left",
             on="vm_id",
             validate="many_to_one",
+            indicator="_vm_join",
         )
 
-        if prepared.empty:
+        matched_mask = prepared["_vm_join"] == "both"
+
+        matched_cpu_row_count = int(
+            matched_mask.sum()
+        )
+
+        unmatched_cpu_row_count = int(
+            (~matched_mask).sum()
+        )
+
+        if matched_cpu_row_count == 0:
             raise ValueError(
                 "Azure CPU readings and VM table have zero overlapping vm_id "
                 "values. Use matching source partitions or a targeted VM sample."
             )
+
+        if unmatched_cpu_row_count > 0:
+            raise ValueError(
+                "Azure CPU readings contain VM IDs missing from VM metadata: "
+                f"{unmatched_cpu_row_count} unmatched of "
+                f"{input_cpu_row_count} rows"
+            )
+
+        prepared = prepared.drop(
+            columns=["_vm_join"]
+        )
+
+        prepared.attrs["input_cpu_row_count"] = (
+            input_cpu_row_count
+        )
+        prepared.attrs["matched_cpu_row_count"] = (
+            matched_cpu_row_count
+        )
+        prepared.attrs["unmatched_cpu_row_count"] = (
+            unmatched_cpu_row_count
+        )
 
         return prepared
 
@@ -153,18 +281,37 @@ class AzureVMAdapter(BaseDatasetAdapter):
 
         # Recurrence remains unsupported.
         out["time_basis"] = "trace_relative"
+        timestamp = self._strict_numeric(
+            source["timestamp"],
+            field_name="timestamp",
+        )
+
         out["event_time_us"] = (
-            pd.to_numeric(
-                source["timestamp"],
-                errors="coerce",
-            )
-            * 1_000_000
+            timestamp * 1_000_000
         )
         out["aggregation_window_sec"] = 300
 
-        out["allocated_cpu"] = pd.to_numeric(
+        (
+            allocated_cpu,
+            cpu_bucket_open_ended,
+            cpu_bucket_lower_bound,
+        ) = self._parse_capacity_bucket(
             source["vm_core_count_bucket"],
-            errors="coerce",
+            field_name="vm_core_count_bucket",
+        )
+
+        out["allocated_cpu"] = allocated_cpu
+
+        out["source_vm_core_count_bucket"] = (
+            source["vm_core_count_bucket"]
+        )
+
+        out["source_allocated_cpu_bucket_open_ended"] = (
+            cpu_bucket_open_ended
+        )
+
+        out["source_allocated_cpu_bucket_lower_bound"] = (
+            cpu_bucket_lower_bound
         )
         out["allocated_cpu_unit"] = np.where(
             out["allocated_cpu"].notna(),
@@ -172,9 +319,27 @@ class AzureVMAdapter(BaseDatasetAdapter):
             None,
         )
 
-        out["allocated_memory"] = pd.to_numeric(
+        (
+            allocated_memory,
+            memory_bucket_open_ended,
+            memory_bucket_lower_bound,
+        ) = self._parse_capacity_bucket(
             source["vm_memory_bucket"],
-            errors="coerce",
+            field_name="vm_memory_bucket",
+        )
+
+        out["allocated_memory"] = allocated_memory
+
+        out["source_vm_memory_bucket"] = (
+            source["vm_memory_bucket"]
+        )
+
+        out["source_allocated_memory_bucket_open_ended"] = (
+            memory_bucket_open_ended
+        )
+
+        out["source_allocated_memory_bucket_lower_bound"] = (
+            memory_bucket_lower_bound
         )
         out["allocated_memory_unit"] = np.where(
             out["allocated_memory"].notna(),
@@ -182,9 +347,9 @@ class AzureVMAdapter(BaseDatasetAdapter):
             None,
         )
 
-        out["observed_cpu"] = pd.to_numeric(
+        out["observed_cpu"] = self._strict_numeric(
             source["avg_cpu"],
-            errors="coerce",
+            field_name="avg_cpu",
         )
         out["observed_cpu_unit"] = np.where(
             out["observed_cpu"].notna(),
@@ -192,9 +357,9 @@ class AzureVMAdapter(BaseDatasetAdapter):
             None,
         )
 
-        out["peak_cpu"] = pd.to_numeric(
+        out["peak_cpu"] = self._strict_numeric(
             source["max_cpu"],
-            errors="coerce",
+            field_name="max_cpu",
         )
         out["peak_cpu_unit"] = np.where(
             out["peak_cpu"].notna(),
@@ -234,7 +399,10 @@ class AzureVMAdapter(BaseDatasetAdapter):
         out["source_vm_category"] = source[
             "vm_category"
         ]
-        out["source_min_cpu"] = source["min_cpu"]
+        out["source_min_cpu"] = self._strict_numeric(
+            source["min_cpu"],
+            field_name="min_cpu",
+        )
 
         return out
 
@@ -294,19 +462,22 @@ class AzureVMAdapter(BaseDatasetAdapter):
         ].astype("string")
 
         out["time_basis"] = "trace_relative"
-        out["start_time_us"] = (
-            pd.to_numeric(
-                vm_table["vm_created"],
-                errors="coerce",
-            )
-            * 1_000_000
+        vm_created = self._strict_numeric(
+            vm_table["vm_created"],
+            field_name="vm_created",
         )
+
+        vm_deleted = self._strict_numeric(
+            vm_table["vm_deleted"],
+            field_name="vm_deleted",
+        )
+
+        out["start_time_us"] = (
+            vm_created * 1_000_000
+        )
+
         out["end_time_us"] = (
-            pd.to_numeric(
-                vm_table["vm_deleted"],
-                errors="coerce",
-            )
-            * 1_000_000
+            vm_deleted * 1_000_000
         )
 
         # Azure documentation treats equal create/delete timestamps as at
@@ -321,9 +492,27 @@ class AzureVMAdapter(BaseDatasetAdapter):
             )
         )
 
-        out["allocated_cpu"] = pd.to_numeric(
+        (
+            allocated_cpu,
+            cpu_bucket_open_ended,
+            cpu_bucket_lower_bound,
+        ) = self._parse_capacity_bucket(
             vm_table["vm_core_count_bucket"],
-            errors="coerce",
+            field_name="vm_core_count_bucket",
+        )
+
+        out["allocated_cpu"] = allocated_cpu
+
+        out["source_vm_core_count_bucket"] = (
+            vm_table["vm_core_count_bucket"]
+        )
+
+        out["source_allocated_cpu_bucket_open_ended"] = (
+            cpu_bucket_open_ended
+        )
+
+        out["source_allocated_cpu_bucket_lower_bound"] = (
+            cpu_bucket_lower_bound
         )
         out["allocated_cpu_unit"] = np.where(
             out["allocated_cpu"].notna(),
@@ -331,9 +520,27 @@ class AzureVMAdapter(BaseDatasetAdapter):
             None,
         )
 
-        out["allocated_memory"] = pd.to_numeric(
+        (
+            allocated_memory,
+            memory_bucket_open_ended,
+            memory_bucket_lower_bound,
+        ) = self._parse_capacity_bucket(
             vm_table["vm_memory_bucket"],
-            errors="coerce",
+            field_name="vm_memory_bucket",
+        )
+
+        out["allocated_memory"] = allocated_memory
+
+        out["source_vm_memory_bucket"] = (
+            vm_table["vm_memory_bucket"]
+        )
+
+        out["source_allocated_memory_bucket_open_ended"] = (
+            memory_bucket_open_ended
+        )
+
+        out["source_allocated_memory_bucket_lower_bound"] = (
+            memory_bucket_lower_bound
         )
         out["allocated_memory_unit"] = np.where(
             out["allocated_memory"].notna(),
@@ -341,9 +548,9 @@ class AzureVMAdapter(BaseDatasetAdapter):
             None,
         )
 
-        out["observed_cpu"] = pd.to_numeric(
+        out["observed_cpu"] = self._strict_numeric(
             vm_table["avg_cpu"],
-            errors="coerce",
+            field_name="avg_cpu",
         )
         out["observed_cpu_unit"] = np.where(
             out["observed_cpu"].notna(),
@@ -351,9 +558,9 @@ class AzureVMAdapter(BaseDatasetAdapter):
             None,
         )
 
-        out["peak_cpu"] = pd.to_numeric(
+        out["peak_cpu"] = self._strict_numeric(
             vm_table["max_cpu"],
-            errors="coerce",
+            field_name="max_cpu",
         )
         out["peak_cpu_unit"] = np.where(
             out["peak_cpu"].notna(),
@@ -393,9 +600,10 @@ class AzureVMAdapter(BaseDatasetAdapter):
         out["source_vm_category"] = vm_table[
             "vm_category"
         ]
-        out["source_p95_max_cpu"] = vm_table[
-            "p95_max_cpu"
-        ]
+        out["source_p95_max_cpu"] = self._strict_numeric(
+            vm_table["p95_max_cpu"],
+            field_name="p95_max_cpu",
+        )
         out["source_equal_create_delete"] = equal_lifetime
 
         validate_adapter_output(
@@ -407,6 +615,7 @@ class AzureVMAdapter(BaseDatasetAdapter):
             "adapter_name": self.adapter_name,
             "adapter_version": self.adapter_version,
             "dataset_id": self.capabilities.dataset_id,
+            "capabilities": self.capabilities.to_dict(),
             "view": "vm_lifecycle",
             "source_row_count": int(len(vm_table)),
             "canonical_row_count": int(len(out)),
@@ -423,6 +632,16 @@ class AzureVMAdapter(BaseDatasetAdapter):
             ),
             "allocated_memory_missing_count": int(
                 out["allocated_memory"].isna().sum()
+            ),
+            "allocated_cpu_open_ended_bucket_count": int(
+                out[
+                    "source_allocated_cpu_bucket_open_ended"
+                ].sum()
+            ),
+            "allocated_memory_open_ended_bucket_count": int(
+                out[
+                    "source_allocated_memory_bucket_open_ended"
+                ].sum()
             ),
         }
 
@@ -458,6 +677,34 @@ class AzureVMAdapter(BaseDatasetAdapter):
                 ),
                 "allocated_memory_missing_count": int(
                     canonical["allocated_memory"].isna().sum()
+                ),
+                "input_cpu_row_count": int(
+                    source.attrs.get(
+                        "input_cpu_row_count",
+                        len(source),
+                    )
+                ),
+                "matched_cpu_row_count": int(
+                    source.attrs.get(
+                        "matched_cpu_row_count",
+                        len(source),
+                    )
+                ),
+                "unmatched_cpu_row_count": int(
+                    source.attrs.get(
+                        "unmatched_cpu_row_count",
+                        0,
+                    )
+                ),
+                "allocated_cpu_open_ended_bucket_count": int(
+                    canonical[
+                        "source_allocated_cpu_bucket_open_ended"
+                    ].sum()
+                ),
+                "allocated_memory_open_ended_bucket_count": int(
+                    canonical[
+                        "source_allocated_memory_bucket_open_ended"
+                    ].sum()
                 ),
             }
         )

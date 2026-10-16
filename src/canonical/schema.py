@@ -15,6 +15,18 @@ RESOURCE_VALUE_FIELDS = [
 ]
 RESOURCE_UNIT_FIELDS = {f: f"{f}_unit" for f in RESOURCE_VALUE_FIELDS}
 
+ALLOWED_RESOURCE_UNITS = {
+    "ncu",
+    "normalized",
+    "cpu_core",
+    "vcpu",
+    "gb",
+    "percent",
+    "alibaba_plan_cpu_100_per_core",
+    "alibaba_cpu_usage_source_unit",
+    "alibaba_memory_source_normalized",
+}
+
 @dataclass(frozen=True)
 class DatasetCapabilities:
     dataset_id: str
@@ -95,24 +107,108 @@ def validate_canonical_frame(df: pd.DataFrame, capabilities: DatasetCapabilities
         supplied = df[value_col].notna()
         vals = pd.to_numeric(df[value_col], errors="coerce")
         if (supplied & vals.isna()).any():
-            raise CanonicalSchemaError(f"{value_col} contains non-numeric values")
+            raise CanonicalSchemaError(
+                f"{value_col} contains non-numeric values"
+            )
         if (supplied & (vals < 0)).any():
-            raise CanonicalSchemaError(f"{value_col} must be non-negative")
-        if supplied.any() and (unit_col not in df.columns or (supplied & df[unit_col].isna()).any()):
-            raise CanonicalSchemaError(f"{unit_col} required whenever {value_col} is populated")
-    if not capabilities.supports_recurrence:
-        _reject_populated(df, ["recurrence_key"], "recurrence unsupported")
-    if not capabilities.supports_request:
-        _reject_populated(df, ["requested_cpu","requested_memory"], "request unsupported")
-    if not capabilities.supports_observed_cpu:
-        _reject_populated(df, ["observed_cpu","peak_cpu"], "observed CPU unsupported")
-    if not capabilities.supports_observed_memory:
-        _reject_populated(df, ["observed_memory","peak_memory"], "observed memory unsupported")
-    if not capabilities.supports_allocated_cpu:
-        _reject_populated(df, ["allocated_cpu"], "allocated CPU unsupported")
-    if not capabilities.supports_allocated_memory:
-        _reject_populated(df, ["allocated_memory"], "allocated memory unsupported")
+            raise CanonicalSchemaError(
+                f"{value_col} must be non-negative"
+            )
+        if supplied.any():
+            if (
+                unit_col not in df.columns
+                or (supplied & df[unit_col].isna()).any()
+            ):
+                raise CanonicalSchemaError(
+                    f"{unit_col} required whenever {value_col} is populated"
+                )
 
+            units = df.loc[supplied, unit_col].astype("string")
+            invalid_units = ~units.isin(ALLOWED_RESOURCE_UNITS)
+
+            if invalid_units.any():
+                bad_units = sorted(
+                    units.loc[invalid_units].dropna().unique().tolist()
+                )
+                raise CanonicalSchemaError(
+                    f"{unit_col} contains unsupported units: {bad_units}"
+                )
+    if not capabilities.supports_cpu:
+        _reject_populated(
+            df,
+            [
+                "requested_cpu",
+                "allocated_cpu",
+                "observed_cpu",
+                "peak_cpu",
+                "actual_cpu",
+                "recommended_cpu",
+            ],
+            "CPU unsupported",
+        )
+
+    if not capabilities.supports_memory:
+        _reject_populated(
+            df,
+            [
+                "requested_memory",
+                "allocated_memory",
+                "observed_memory",
+                "peak_memory",
+                "actual_memory",
+                "recommended_memory",
+            ],
+            "memory unsupported",
+        )
+
+    if not capabilities.supports_recurrence:
+        _reject_populated(
+            df,
+            ["recurrence_key"],
+            "recurrence unsupported",
+        )
+
+    if not capabilities.supports_request:
+        _reject_populated(
+            df,
+            ["requested_cpu", "requested_memory"],
+            "request unsupported",
+        )
+
+    if not capabilities.supports_targets:
+        _reject_populated(
+            df,
+            ["actual_cpu", "actual_memory"],
+            "targets unsupported",
+        )
+
+    if not capabilities.supports_observed_cpu:
+        _reject_populated(
+            df,
+            ["observed_cpu", "peak_cpu"],
+            "observed CPU unsupported",
+        )
+
+    if not capabilities.supports_observed_memory:
+        _reject_populated(
+            df,
+            ["observed_memory", "peak_memory"],
+            "observed memory unsupported",
+        )
+
+    if not capabilities.supports_allocated_cpu:
+        _reject_populated(
+            df,
+            ["allocated_cpu"],
+            "allocated CPU unsupported",
+        )
+
+    if not capabilities.supports_allocated_memory:
+        _reject_populated(
+            df,
+            ["allocated_memory"],
+            "allocated memory unsupported",
+        )
 def validate_evaluator_view(df: pd.DataFrame) -> None:
     required = {
         "dataset_id","workload_id","policy_name",

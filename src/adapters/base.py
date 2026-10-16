@@ -32,6 +32,7 @@ class BaseDatasetAdapter(ABC):
             "dataset_id": self.capabilities.dataset_id,
             "source_row_count": int(len(source)),
             "canonical_row_count": int(len(canonical)),
+            "capabilities": self.capabilities.to_dict(),
         }
 
     def adapt(self, source: pd.DataFrame) -> AdapterResult:

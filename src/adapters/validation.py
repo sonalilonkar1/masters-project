@@ -7,6 +7,62 @@ from src.canonical.schema import CanonicalSchemaError, DatasetCapabilities, vali
 class AdapterValidationError(ValueError):
     pass
 
+def _validate_record_uniqueness(df: pd.DataFrame) -> None:
+    if df.empty or "record_level" not in df.columns:
+        return
+
+    for record_level, group in df.groupby(
+        "record_level",
+        dropna=False,
+    ):
+        keys = None
+
+        if record_level == "occurrence":
+            keys = ["occurrence_id"]
+
+        elif record_level == "interval":
+            keys = ["instance_id", "event_time_us"]
+
+        elif record_level == "instance":
+            if "source_seq_no" in group.columns:
+                keys = ["instance_id", "source_seq_no"]
+            else:
+                keys = ["instance_id"]
+
+        elif record_level == "execution":
+            if "start_time_us" in group.columns:
+                keys = ["execution_id", "start_time_us"]
+            else:
+                keys = ["execution_id"]
+
+        if not keys:
+            continue
+
+        if any(key not in group.columns for key in keys):
+            continue
+
+        eligible = group[keys].notna().all(axis=1)
+
+        duplicated = group.loc[
+            eligible
+        ].duplicated(
+            subset=keys,
+            keep=False,
+        )
+
+        if duplicated.any():
+            examples = (
+                group.loc[eligible]
+                .loc[duplicated, keys]
+                .head(5)
+                .to_dict("records")
+            )
+
+            raise AdapterValidationError(
+                f"Duplicate canonical {record_level} records "
+                f"for key {keys}: {examples}"
+            )
+
 def validate_adapter_output(df: pd.DataFrame, *, capabilities: DatasetCapabilities) -> None:
     if not isinstance(df, pd.DataFrame):
         raise AdapterValidationError("adapter output must be a pandas DataFrame")
@@ -15,6 +71,8 @@ def validate_adapter_output(df: pd.DataFrame, *, capabilities: DatasetCapabiliti
     if duplicate_columns:
         raise AdapterValidationError(f"Duplicate canonical columns: {duplicate_columns}")
 
+    _validate_record_uniqueness(df)
+    
     if not df.empty and "dataset_id" in df.columns:
         ids = set(df["dataset_id"].dropna().astype(str).unique())
         if ids != {capabilities.dataset_id}:

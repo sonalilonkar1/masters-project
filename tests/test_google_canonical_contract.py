@@ -28,6 +28,25 @@ SPLIT_PATHS = {
 
 METADATA_PATH = GOOGLE_DATA_DIR / "metadata.json"
 
+OCCURRENCE_FILES = {
+    "train": "train_occurrences.parquet",
+    "validation": "val_occurrences.parquet",
+    "test": "test_occurrences.parquet",
+}
+
+
+def load_google_occurrence_split(split_name):
+    path = (
+        GOOGLE_DATA_DIR
+        / OCCURRENCE_FILES[split_name]
+    )
+
+    if not path.exists():
+        pytest.skip(
+            f"Corrected N04 artifact not available: {path}"
+        )
+
+    return pd.read_parquet(path)
 
 def build_google_canonical_contract_view(
     source: pd.DataFrame,

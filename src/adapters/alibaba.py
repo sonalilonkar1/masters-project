@@ -75,6 +75,33 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
                 f"{table_name} is missing required columns: {missing}"
             )
 
+    @staticmethod
+    def _strict_numeric(
+        series: pd.Series,
+        *,
+        field_name: str,
+    ) -> pd.Series:
+        parsed = pd.to_numeric(
+            series,
+            errors="coerce",
+        )
+
+        invalid = series.notna() & parsed.isna()
+
+        if invalid.any():
+            examples = (
+                series.loc[invalid]
+                .astype(str)
+                .head(5)
+                .tolist()
+            )
+
+            raise ValueError(
+                f"{field_name} contains non-numeric values: {examples}"
+            )
+
+        return parsed
+
     def prepare_source(
         self,
         task_df: pd.DataFrame,
@@ -166,11 +193,14 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
         # instance identity, but Issue 1 did not validate a recurrence rule.
         out["time_basis"] = "trace_relative"
 
-        start_sec = pd.to_numeric(
-            source["start_time"], errors="coerce"
+        start_sec = self._strict_numeric(
+            source["start_time"],
+            field_name="start_time",
         )
-        end_sec = pd.to_numeric(
-            source["end_time"], errors="coerce"
+
+        end_sec = self._strict_numeric(
+            source["end_time"],
+            field_name="end_time",
         )
 
         out["start_time_us"] = start_sec * 1_000_000
@@ -195,57 +225,69 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
             np.nan,
         )
 
-        out["requested_cpu"] = pd.to_numeric(
-            source["plan_cpu"], errors="coerce"
+        out["requested_cpu"] = self._strict_numeric(
+            source["plan_cpu"],
+            field_name="plan_cpu",
         )
+
         out["requested_cpu_unit"] = np.where(
             out["requested_cpu"].notna(),
-            "alibaba_cpu_source_unit",
+            "alibaba_plan_cpu_100_per_core",
             None,
         )
 
-        out["requested_memory"] = pd.to_numeric(
-            source["plan_mem"], errors="coerce"
+        out["requested_memory"] = self._strict_numeric(
+            source["plan_mem"],
+            field_name="plan_mem",
         )
+
         out["requested_memory_unit"] = np.where(
             out["requested_memory"].notna(),
-            "normalized",
+            "alibaba_memory_source_normalized",
             None,
         )
 
-        out["observed_cpu"] = pd.to_numeric(
-            source["cpu_avg"], errors="coerce"
+        out["observed_cpu"] = self._strict_numeric(
+            source["cpu_avg"],
+            field_name="cpu_avg",
         )
+
         out["observed_cpu_unit"] = np.where(
             out["observed_cpu"].notna(),
-            "alibaba_cpu_source_unit",
+            "alibaba_cpu_usage_source_unit",
             None,
         )
 
-        out["peak_cpu"] = pd.to_numeric(
-            source["cpu_max"], errors="coerce"
+        out["peak_cpu"] = self._strict_numeric(
+            source["cpu_max"],
+            field_name="cpu_max",
         )
+
         out["peak_cpu_unit"] = np.where(
             out["peak_cpu"].notna(),
-            "alibaba_cpu_source_unit",
+            "alibaba_cpu_usage_source_unit",
             None,
         )
 
-        out["observed_memory"] = pd.to_numeric(
-            source["mem_avg"], errors="coerce"
+        out["observed_memory"] = self._strict_numeric(
+            source["mem_avg"],
+            field_name="mem_avg",
         )
+
         out["observed_memory_unit"] = np.where(
             out["observed_memory"].notna(),
-            "normalized",
+            "alibaba_memory_source_normalized",
             None,
         )
 
-        out["peak_memory"] = pd.to_numeric(
-            source["mem_max"], errors="coerce"
+        out["peak_memory"] = self._strict_numeric(
+            source["mem_max"],
+            field_name="mem_max",
         )
+
         out["peak_memory_unit"] = np.where(
             out["peak_memory"].notna(),
-            "normalized",
+            "alibaba_memory_source_normalized",
             None,
         )
 
@@ -253,18 +295,92 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
             out["start_time_us"].notna()
             & out["end_time_us"].notna()
         )
-        complete_resources = (
+
+        matched_plan = (
+            source["task_metadata_matched"]
+            .fillna(False)
+        )
+
+        cpu_complete = (
             out["observed_cpu"].notna()
             & out["peak_cpu"].notna()
-            & out["observed_memory"].notna()
+        )
+
+        memory_complete = (
+            out["observed_memory"].notna()
             & out["peak_memory"].notna()
         )
-        matched_plan = source["task_metadata_matched"].fillna(False)
 
-        out["validity_status"] = np.where(
-            complete_timing & complete_resources & matched_plan,
-            "valid",
-            "partial",
+        cpu_avg_gt_max = (
+            cpu_complete
+            & (
+                out["observed_cpu"]
+                > out["peak_cpu"]
+            )
+        )
+
+        memory_avg_gt_max = (
+            memory_complete
+            & (
+                out["observed_memory"]
+                > out["peak_memory"]
+            )
+        )
+
+        out["cpu_validity_status"] = np.select(
+            [
+                cpu_avg_gt_max,
+                cpu_complete,
+            ],
+            [
+                "invalid",
+                "valid",
+            ],
+            default="partial",
+        )
+
+        out["memory_validity_status"] = np.select(
+            [
+                memory_avg_gt_max,
+                memory_complete,
+            ],
+            [
+                "invalid",
+                "valid",
+            ],
+            default="partial",
+        )
+
+        out["source_cpu_avg_gt_max"] = (
+            cpu_avg_gt_max
+        )
+
+        out["source_memory_avg_gt_max"] = (
+            memory_avg_gt_max
+        )
+
+        any_invalid = (
+            cpu_avg_gt_max
+            | memory_avg_gt_max
+        )
+
+        fully_valid = (
+            complete_timing
+            & matched_plan
+            & (out["cpu_validity_status"] == "valid")
+            & (out["memory_validity_status"] == "valid")
+        )
+
+        out["validity_status"] = np.select(
+            [
+                any_invalid,
+                fully_valid,
+            ],
+            [
+                "invalid",
+                "valid",
+            ],
+            default="partial",
         )
 
         # Dataset-specific extensions are preserved for traceability. Shared
@@ -314,6 +430,30 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
                 ),
                 "peak_memory_missing_count": int(
                     canonical["peak_memory"].isna().sum()
+                ),
+                "cpu_valid_count": int(
+                    (canonical["cpu_validity_status"] == "valid").sum()
+                ),
+                "cpu_partial_count": int(
+                    (canonical["cpu_validity_status"] == "partial").sum()
+                ),
+                "cpu_invalid_count": int(
+                    (canonical["cpu_validity_status"] == "invalid").sum()
+                ),
+                "memory_valid_count": int(
+                    (canonical["memory_validity_status"] == "valid").sum()
+                ),
+                "memory_partial_count": int(
+                    (canonical["memory_validity_status"] == "partial").sum()
+                ),
+                "memory_invalid_count": int(
+                    (canonical["memory_validity_status"] == "invalid").sum()
+                ),
+                "cpu_avg_gt_max_count": int(
+                    canonical["source_cpu_avg_gt_max"].sum()
+                ),
+                "memory_avg_gt_max_count": int(
+                    canonical["source_memory_avg_gt_max"].sum()
                 ),
             }
         )
