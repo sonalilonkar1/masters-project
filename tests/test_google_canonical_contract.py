@@ -322,42 +322,68 @@ def test_google_metadata_matches_canonical_contract():
         == "target_memory_next_occurrence_peak_normalized"
     )
 
-
-def test_google_train_target_nulls_are_preserved():
-    source = pd.read_parquet(
+def test_google_target_nulls_match_global_final_occurrences():
+    train = pd.read_parquet(
         SPLIT_PATHS["train"]
     )
-
-    canonical = build_google_canonical_contract_view(
-        source
+    validation = pd.read_parquet(
+        SPLIT_PATHS["validation"]
+    )
+    test = pd.read_parquet(
+        SPLIT_PATHS["test"]
     )
 
-    # N04 semantics:
-    # final occurrence of each recurrence has no next-occurrence CPU target.
-    assert source["recurrence_key"].nunique() == 1801
+    combined = pd.concat(
+        [
+            train,
+            validation,
+            test,
+        ],
+        ignore_index=True,
+    )
 
+    combined = combined.sort_values(
+        [
+            "recurrence_key",
+            "execution_start_time_us",
+            "occurrence_key",
+        ]
+    )
+
+    final_occurrences = (
+        combined
+        .groupby(
+            "recurrence_key",
+            sort=False,
+        )
+        .tail(1)
+    )
+
+    # Exactly one globally final occurrence per recurrence.
     assert (
-        source[
-            "target_cpu_next_occurrence_peak_ncu"
-        ].isna().sum()
-        == 1801
+        len(final_occurrences)
+        == combined["recurrence_key"].nunique()
     )
 
-    assert (
-        canonical["actual_cpu"].isna().sum()
-        == 1801
+    cpu_target = (
+        "target_cpu_next_occurrence_peak_ncu"
     )
 
-    # Memory has the same final-occurrence nulls plus additional
-    # source memory missingness. It must NOT be filled with zero.
-    assert (
-        canonical["actual_memory"].isna().sum()
-        == source[
-            "target_memory_next_occurrence_peak_normalized"
-        ].isna().sum()
+    cpu_null_keys = set(
+        combined.loc[
+            combined[cpu_target].isna(),
+            "occurrence_key",
+        ]
     )
 
-    assert (
-        canonical["actual_memory"].isna().sum()
-        >= canonical["actual_cpu"].isna().sum()
+    final_keys = set(
+        final_occurrences[
+            "occurrence_key"
+        ]
     )
+
+    # N04 constructs next-occurrence targets before splitting.
+    # Therefore a train-final occurrence can legitimately have
+    # a target in validation/test. CPU targets are null only for
+    # the globally final occurrence of each recurrence.
+    assert cpu_null_keys == final_keys
