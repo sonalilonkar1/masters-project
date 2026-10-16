@@ -1,0 +1,405 @@
+{
+  "raw_columns": 34,
+  "observation_rows": 405894,
+  "execution_rows": 253585,
+  "recurrence_keys": 2280,
+  "occurrences": 4879,
+  "cold_start_occurrences": 2280,
+  "occurrences_missing_memory_peak": 60,
+  "selected_baseline_policy": "P99",
+  "selected_min_runs": 1,
+  "common_validation_occurrences": 329,
+  "ml_selected_models": {
+    "cpu": "random_forest",
+    "memory": "random_forest"
+  },
+  "val_prediction_rows": 329,
+  "test_prediction_rows": 731,
+  "split_train": {
+    "Split": "Train",
+    "Execution rows": "178,858",
+    "Execution share": "70.5%",
+    "Occurrences": "3,473",
+    "Multi-execution occurrences": "2,277",
+    "With CPU target": "2,010",
+    "With memory target": "1,983",
+    "First start (s)": "300",
+    "Last start (s)": "1,812,600"
+  },
+  "split_val": {
+    "Split": "Validation",
+    "Execution rows": "36,703",
+    "Execution share": "14.5%",
+    "Occurrences": "675",
+    "Multi-execution occurrences": "513",
+    "With CPU target": "330",
+    "With memory target": "329",
+    "First start (s)": "1,813,200",
+    "Last start (s)": "2,261,100"
+  },
+  "split_test": {
+    "Split": "Test",
+    "Execution rows": "38,024",
+    "Execution share": "15.0%",
+    "Occurrences": "731",
+    "Multi-execution occurrences": "517",
+    "With CPU target": "259",
+    "With memory target": "259",
+    "First start (s)": "2,262,600",
+    "Last start (s)": "2,678,400"
+  },
+  "table_7_1": [
+    {
+      "Policy": "Request",
+      "CPU viol. %": "52.15",
+      "Mem. viol. %": "38.04",
+      "Any-resource viol. %": "55.52",
+      "Valid n (any)": 326,
+      "Avg CPU util.": "0.623",
+      "Avg mem. util.": "0.530",
+      "Avg CPU waste (NCU)": "0.957",
+      "Avg mem. waste": "0.449",
+      "Avg CPU shortfall (NCU)": "2.421",
+      "Avg mem. shortfall": "0.302"
+    },
+    {
+      "Policy": "Mean",
+      "CPU viol. %": "35.37",
+      "Mem. viol. %": "34.15",
+      "Any-resource viol. %": "42.99",
+      "Valid n (any)": 328,
+      "Avg CPU util.": "0.491",
+      "Avg mem. util.": "0.509",
+      "Avg CPU waste (NCU)": "1.740",
+      "Avg mem. waste": "0.363",
+      "Avg CPU shortfall (NCU)": "1.887",
+      "Avg mem. shortfall": "0.217"
+    },
+    {
+      "Policy": "P90",
+      "CPU viol. %": "22.26",
+      "Mem. viol. %": "21.65",
+      "Any-resource viol. %": "28.66",
+      "Valid n (any)": 328,
+      "Avg CPU util.": "0.387",
+      "Avg mem. util.": "0.406",
+      "Avg CPU waste (NCU)": "4.856",
+      "Avg mem. waste": "0.980",
+      "Avg CPU shortfall (NCU)": "1.335",
+      "Avg mem. shortfall": "0.142"
+    },
+    {
+      "Policy": "P95",
+      "CPU viol. %": "18.60",
+      "Mem. viol. %": "19.82",
+      "Any-resource viol. %": "25.30",
+      "Valid n (any)": 328,
+      "Avg CPU util.": "0.341",
+      "Avg mem. util.": "0.371",
+      "Avg CPU waste (NCU)": "8.449",
+      "Avg mem. waste": "1.865",
+      "Avg CPU shortfall (NCU)": "1.064",
+      "Avg mem. shortfall": "0.103"
+    },
+    {
+      "Policy": "P99",
+      "CPU viol. %": "16.77",
+      "Mem. viol. %": "17.07",
+      "Any-resource viol. %": "21.95",
+      "Valid n (any)": 328,
+      "Avg CPU util.": "0.298",
+      "Avg mem. util.": "0.337",
+      "Avg CPU waste (NCU)": "19.041",
+      "Avg mem. waste": "3.346",
+      "Avg CPU shortfall (NCU)": "0.972",
+      "Avg mem. shortfall": "0.086"
+    }
+  ],
+  "any_violation_by_min_runs": {
+    "1": {
+      "Request": 55.52,
+      "Mean": 42.99,
+      "P90": 28.66,
+      "P95": 25.3,
+      "P99": 21.95
+    },
+    "3": {
+      "Request": 55.52,
+      "Mean": 42.94,
+      "P90": 28.83,
+      "P95": 25.46,
+      "P99": 22.39
+    },
+    "5": {
+      "Request": 55.52,
+      "Mean": 41.72,
+      "P90": 28.83,
+      "P95": 26.07,
+      "P99": 23.31
+    },
+    "10": {
+      "Request": 55.52,
+      "Mean": 45.09,
+      "P90": 35.28,
+      "P95": 33.44,
+      "P99": 30.98
+    }
+  },
+  "table_5_1": [
+    {
+      "Resource": "CPU",
+      "Variant": "tuned",
+      "Model": "Decision Tree",
+      "Selectable": "yes",
+      "Train rows": 1672,
+      "Val. rows": 329,
+      "MAE": "2.852",
+      "RMSE": "9.686",
+      "R\u00b2": "-0.032",
+      "log1p RMSE": "0.891",
+      "log1p R\u00b2": "0.053"
+    },
+    {
+      "Resource": "CPU",
+      "Variant": "tuned",
+      "Model": "Random Forest",
+      "Selectable": "yes",
+      "Train rows": 1672,
+      "Val. rows": 329,
+      "MAE": "2.824",
+      "RMSE": "9.559",
+      "R\u00b2": "-0.005",
+      "log1p RMSE": "0.850",
+      "log1p R\u00b2": "0.137"
+    },
+    {
+      "Resource": "CPU",
+      "Variant": "tuned",
+      "Model": "XGBoost",
+      "Selectable": "yes",
+      "Train rows": 1672,
+      "Val. rows": 329,
+      "MAE": "2.851",
+      "RMSE": "9.600",
+      "R\u00b2": "-0.014",
+      "log1p RMSE": "0.860",
+      "log1p R\u00b2": "0.117"
+    },
+    {
+      "Resource": "CPU",
+      "Variant": "starting",
+      "Model": "Decision Tree",
+      "Selectable": "no",
+      "Train rows": 1672,
+      "Val. rows": 329,
+      "MAE": "3.017",
+      "RMSE": "9.808",
+      "R\u00b2": "-0.058",
+      "log1p RMSE": "0.981",
+      "log1p R\u00b2": "-0.149"
+    },
+    {
+      "Resource": "CPU",
+      "Variant": "starting",
+      "Model": "Random Forest",
+      "Selectable": "no",
+      "Train rows": 1672,
+      "Val. rows": 329,
+      "MAE": "2.879",
+      "RMSE": "9.575",
+      "R\u00b2": "-0.009",
+      "log1p RMSE": "0.866",
+      "log1p R\u00b2": "0.106"
+    },
+    {
+      "Resource": "CPU",
+      "Variant": "starting",
+      "Model": "XGBoost",
+      "Selectable": "no",
+      "Train rows": 1672,
+      "Val. rows": 329,
+      "MAE": "2.963",
+      "RMSE": "9.637",
+      "R\u00b2": "-0.022",
+      "log1p RMSE": "0.905",
+      "log1p R\u00b2": "0.022"
+    },
+    {
+      "Resource": "CPU",
+      "Variant": "reference",
+      "Model": "Median reference",
+      "Selectable": "no",
+      "Train rows": 1672,
+      "Val. rows": 329,
+      "MAE": "2.756",
+      "RMSE": "9.914",
+      "R\u00b2": "-0.081",
+      "log1p RMSE": "1.048",
+      "log1p R\u00b2": "-0.310"
+    },
+    {
+      "Resource": "Memory",
+      "Variant": "tuned",
+      "Model": "Decision Tree",
+      "Selectable": "yes",
+      "Train rows": 1649,
+      "Val. rows": 329,
+      "MAE": "0.488",
+      "RMSE": "1.313",
+      "R\u00b2": "0.024",
+      "log1p RMSE": "0.421",
+      "log1p R\u00b2": "0.033"
+    },
+    {
+      "Resource": "Memory",
+      "Variant": "tuned",
+      "Model": "Random Forest",
+      "Selectable": "yes",
+      "Train rows": 1649,
+      "Val. rows": 329,
+      "MAE": "0.454",
+      "RMSE": "1.255",
+      "R\u00b2": "0.107",
+      "log1p RMSE": "0.387",
+      "log1p R\u00b2": "0.185"
+    },
+    {
+      "Resource": "Memory",
+      "Variant": "tuned",
+      "Model": "XGBoost",
+      "Selectable": "yes",
+      "Train rows": 1649,
+      "Val. rows": 329,
+      "MAE": "0.528",
+      "RMSE": "1.306",
+      "R\u00b2": "0.034",
+      "log1p RMSE": "0.439",
+      "log1p R\u00b2": "-0.051"
+    },
+    {
+      "Resource": "Memory",
+      "Variant": "starting",
+      "Model": "Decision Tree",
+      "Selectable": "no",
+      "Train rows": 1649,
+      "Val. rows": 329,
+      "MAE": "0.656",
+      "RMSE": "1.600",
+      "R\u00b2": "-0.451",
+      "log1p RMSE": "0.539",
+      "log1p R\u00b2": "-0.583"
+    },
+    {
+      "Resource": "Memory",
+      "Variant": "starting",
+      "Model": "Random Forest",
+      "Selectable": "no",
+      "Train rows": 1649,
+      "Val. rows": 329,
+      "MAE": "0.496",
+      "RMSE": "1.278",
+      "R\u00b2": "0.075",
+      "log1p RMSE": "0.415",
+      "log1p R\u00b2": "0.061"
+    },
+    {
+      "Resource": "Memory",
+      "Variant": "starting",
+      "Model": "XGBoost",
+      "Selectable": "no",
+      "Train rows": 1649,
+      "Val. rows": 329,
+      "MAE": "0.626",
+      "RMSE": "2.071",
+      "R\u00b2": "-1.429",
+      "log1p RMSE": "0.484",
+      "log1p R\u00b2": "-0.277"
+    },
+    {
+      "Resource": "Memory",
+      "Variant": "reference",
+      "Model": "Median reference",
+      "Selectable": "no",
+      "Train rows": 1649,
+      "Val. rows": 329,
+      "MAE": "0.425",
+      "RMSE": "1.393",
+      "R\u00b2": "-0.099",
+      "log1p RMSE": "0.472",
+      "log1p R\u00b2": "-0.215"
+    }
+  ],
+  "ml_cv_summary": [
+    {
+      "resource": "cpu",
+      "model": "decision_tree",
+      "best_params": "{\"max_depth\": 4, \"min_samples_leaf\": 40}",
+      "tss_mean_log_rmse": 0.853,
+      "tss_std_log_rmse": 0.032,
+      "groupkfold_mean_log_rmse": 0.794,
+      "groupkfold_std_log_rmse": 0.27
+    },
+    {
+      "resource": "cpu",
+      "model": "random_forest",
+      "best_params": "{\"max_depth\": 10, \"max_features\": \"sqrt\", \"min_samples_leaf\": 10, \"n_estimators\": 300}",
+      "tss_mean_log_rmse": 0.839,
+      "tss_std_log_rmse": 0.054,
+      "groupkfold_mean_log_rmse": 0.781,
+      "groupkfold_std_log_rmse": 0.285
+    },
+    {
+      "resource": "cpu",
+      "model": "xgboost",
+      "best_params": "{\"colsample_bytree\": 0.8, \"learning_rate\": 0.03, \"max_depth\": 3, \"min_child_weight\": 1, \"n_estimators\": 200, \"subsample\": 0.8}",
+      "tss_mean_log_rmse": 0.875,
+      "tss_std_log_rmse": 0.059,
+      "groupkfold_mean_log_rmse": 0.807,
+      "groupkfold_std_log_rmse": 0.32
+    },
+    {
+      "resource": "memory",
+      "model": "decision_tree",
+      "best_params": "{\"max_depth\": 6, \"min_samples_leaf\": 40}",
+      "tss_mean_log_rmse": 0.475,
+      "tss_std_log_rmse": 0.059,
+      "groupkfold_mean_log_rmse": 0.442,
+      "groupkfold_std_log_rmse": 0.174
+    },
+    {
+      "resource": "memory",
+      "model": "random_forest",
+      "best_params": "{\"max_depth\": 6, \"max_features\": \"sqrt\", \"min_samples_leaf\": 10, \"n_estimators\": 300}",
+      "tss_mean_log_rmse": 0.471,
+      "tss_std_log_rmse": 0.077,
+      "groupkfold_mean_log_rmse": 0.442,
+      "groupkfold_std_log_rmse": 0.188
+    },
+    {
+      "resource": "memory",
+      "model": "xgboost",
+      "best_params": "{\"colsample_bytree\": 0.8, \"learning_rate\": 0.03, \"max_depth\": 3, \"min_child_weight\": 1, \"n_estimators\": 200, \"subsample\": 0.8}",
+      "tss_mean_log_rmse": 0.492,
+      "tss_std_log_rmse": 0.084,
+      "groupkfold_mean_log_rmse": 0.451,
+      "groupkfold_std_log_rmse": 0.2
+    }
+  ],
+  "ml_refit_rows": {
+    "cpu": 2108,
+    "memory": 2082
+  },
+  "ml_training_rows": {
+    "cpu/train_period_only": 1672,
+    "cpu/all_available": 2010,
+    "memory/train_period_only": 1649,
+    "memory/all_available": 1983
+  },
+  "ml_versions": {
+    "python": "3.12.15",
+    "pandas": "2.3.3",
+    "numpy": "2.5.4",
+    "scikit-learn": "1.9.1",
+    "xgboost": "3.4.1"
+  }
+}
