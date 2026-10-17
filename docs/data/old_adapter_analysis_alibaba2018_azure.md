@@ -1,5 +1,15 @@
 # Alibaba and Azure VM Canonical Integration
 
+> Old reference document. This file preserves the earlier PR #70 adapter analysis for Alibaba 2018 and Azure. It is not the current adapter framework or Alibaba GPU 2020 integration plan. Current adapter responsibilities are defined in:
+> - docs/design/adapter_framework.md
+> - docs/design/canonical_workload_schema.md
+> - docs/design/canonical_schema_design_decisions.md
+>
+> - It describes the earlier adapter scope, which covered Alibaba 2018 and Azure.
+> - Alibaba GPU 2020 is now the required second integration.
+> - Azure is deferred.
+> - The current adapter framework document (`docs/design/adapter_framework.md`) is authoritative.
+
 **TraceAdvisor 295B — New Development Issue 4**
 
 ## Goal

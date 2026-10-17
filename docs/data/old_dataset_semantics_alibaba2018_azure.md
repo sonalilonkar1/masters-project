@@ -1,5 +1,15 @@
 # TraceAdvisor External Dataset Semantics Study
 
+> Old reference document. This file preserves the earlier Alibaba 2018 and Azure source-semantics study. It is not an authoritative current design or implementation contract. Current design decisions are defined in:
+> - docs/design/canonical_workload_schema.md
+> - docs/design/adapter_framework.md
+> - docs/design/canonical_schema_design_decisions.md
+>
+> - This document predates the finalized decision to integrate Alibaba GPU 2020.
+> - Its Azure references, including the V1/V2 wording, come from the earlier study.
+> - Azure remains deferred.
+> - Current Azure identity and semantics must not be inferred from this file.
+
 ## New Development Issue 1 — Alibaba and Azure VM Dataset Semantics
 
 **Status:** COMPLETE FOR ISSUE 1  
