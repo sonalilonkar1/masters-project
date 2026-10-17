@@ -271,9 +271,32 @@ Task 3 needs the first three. Task 2 has no code dependency on the PR #70 follow
 3. **Instance identity:** deterministic `instance_slot_key` (`job_name||task_name||inst_name`); 1-based `instance_attempt_index` within the slot, ordered by instance start time (null last) and then `source_row_number`; `instance_id = job_name||task_name||inst_name||instance_attempt_index`; nullable `worker_id`; `source_row_number` taken unchanged from the Task 2 loader (never recomputed); raw `source_` columns; no `source_seq_no`.
 4. **Parent-field inheritance:** instance rows copy `workload_id`, `recurrence_key`, `occurrence_id` and `role_key` from their parent role row, including the fallback values.
 5. **Full instance-to-parent linkage:** the Task 1 linkage-validation interface runs on the full role and instance views; zero orphan and zero mismatched instance rows.
-6. **Timestamps:** role `start_time_us` = submission and `end_time_us` = completion or null; instance `event_time_us` = parent submission; own instance times or null; no substitution, inference or fabrication.
+6. **Timestamps** (source seconds × 10⁶, `time_basis = trace_relative`):
+   - role `start_time_us` = the job submission time;
+   - role `end_time_us` = the job completion time, or null if unavailable;
+   - instance `event_time_us` = the parent job submission time, always;
+   - instance `start_time_us` and `end_time_us` = the instance's own source timestamps, or null if unavailable;
+   - the first task launch time is kept only as the lifecycle extension `launch_time_us`; it is never used as any `start_time_us` or `end_time_us`;
+   - no task-launch time, sensor time or other timestamp is substituted or inferred for a missing required timestamp; nothing is carried forward or fabricated.
 7. **Rejected-record routing through Task 1:** jobs without a submission time rejected whole as `missing_submission_time`, with all their role and instance rows, into the Task 1 rejected output.
-8. **Exclusions:** the 14 ordered exclusion rules, one primary reason per row, ineligible rows kept; per-resource validity (missing CPU gives `cpu_validity_status = partial` and does not affect memory eligibility).
+8. **Exclusions:** the 14 ordered rules of schema §9.3, evaluated on role rows in this order; the first failed rule sets the single primary `exclusion_reason`, and a null `exclusion_reason` means eligible:
+   1. `no_recurrence_key`: the job has no `group`;
+   2. `job_failed`: job status is `Failed`;
+   3. `job_incomplete`: the job is not `Terminated`, or has no completion time;
+   4. `task_not_terminated`: task status is not `Terminated`;
+   5. `missing_or_invalid_request`: `plan_cpu` or `plan_mem` is missing or not greater than 0;
+   6. `instance_failed`: any instance of the role is `Failed`;
+   7. `instance_interrupted`: any instance of the role is `Interrupted`;
+   8. `instance_incomplete`: any instance of the role is otherwise not `Terminated` (for example `Running`, `Waiting`, `Ready`);
+   9. `missing_worker_name`: any instance of the role has no `worker_name`;
+   10. `multi_attempt_worker`: any worker of the role has more than one attempt;
+   11. `missing_sensor`: no worker of the role has a sensor row;
+   12. `partial_sensor_coverage`: some, but not all, workers of the role have a sensor row;
+   13. `invalid_memory_exceeds_capacity`: any worker's `max_mem` exceeds the host's `cap_mem`;
+   14. `invalid_resource`: any worker's `max_mem` is below its `avg_mem`, or a memory value is negative.
+
+   Eligible and ineligible role rows both stay in the validated `role_occurrence` view for audit; excluded rows are never used for history or targets. A sensor row with missing CPU still counts as sensor coverage (rules 11–12). Instance rows get no independent exclusion reason: eligibility is decided on the parent role row, and a null `exclusion_reason` on an instance row does not mean eligible. Google has no exclusion rules and Alibaba 2018 rules are not defined in this version.
+   - **Per-resource validity:** `cpu_validity_status`, `memory_validity_status` and row `validity_status`; missing CPU gives `cpu_validity_status = partial` and does not affect memory eligibility.
 9. **Resource aggregation:** requests in `percent_of_vcpu`, `gb` and `percent_of_gpu`; role values as the maximum over eligible instances; `observed_cpu` as a lifetime average, null if any eligible worker's CPU is missing; `peak_cpu` always null; `peak_memory` from `max_mem` as the maximum over eligible workers; worker peaks never summed; GPU fields retained, not evaluated.
 10. **View validation:** the `role_occurrence` view and the `instance` view each validated against the Alibaba GPU 2020 profile through Task 1 per-view validation.
 11. **Artifacts:** a build script that writes the canonical `role_occurrence`, `instance` and rejected-output artifacts, and the Task 1 metadata fields filled in for Alibaba GPU 2020 (checksums, counts per exclusion and rejection reason).
@@ -289,7 +312,11 @@ Task 3 needs the first three. Task 2 has no code dependency on the PR #70 follow
 **Tests and verification:**
 - Alibaba GPU 2020 identity and linkage tests on fixtures: each identity rule, the fallback keys, `instance_slot_key`, attempt ordering (null start times, ties broken by `source_row_number`), `instance_id` uniqueness across retries, parent-field inheritance, and the linkage check rejecting orphan and mismatched instance rows.
 - Fixture tests for the timestamp contract, rejected routing, each exclusion rule and the rule order, CPU nullness, and `peak_cpu` rejection.
-- Full-data checks against the verified evidence: the eligible role-row population (461,900 before the final `multi_attempt_worker` step) and the rejected volumes (3,663 jobs, 6,942 role rows, 111,219 instance rows).
+- Full-data population checks against the verified evidence (`docs/data/alibaba_gpu_2020_evidence_and_limitations.md`):
+  - 462,156 role-occurrences pass every exclusion rule before the final `multi_attempt_worker` rule;
+  - the final `multi_attempt_worker` rule removes 256 of them, leaving 461,900 eligible role-occurrences;
+  - 1,224 eligible role-occurrences have missing CPU;
+  - the rejected output holds 3,663 jobs, 6,942 role rows and 111,219 instance rows (`missing_submission_time`).
 - Every view validated against the Alibaba GPU 2020 profile.
 
 **Expected outputs or artifacts:** canonical `role_occurrence`, `instance` and rejected-output artifacts; adapter metadata; a count report explaining any difference from the evidence.
@@ -297,11 +324,11 @@ Task 3 needs the first three. Task 2 has no code dependency on the PR #70 follow
 **Acceptance criteria:**
 1. Both validated views pass validation; `role_key` and `instance_id` are unique and non-null.
 2. No validated row lacks a usable canonical time; the Task 1 linkage check reports zero orphan and zero mismatched instance rows.
-3. Counts match the verified evidence, or each difference is explained.
+3. Counts match the verified evidence (462,156 before `multi_attempt_worker`; 256 removed by it; 461,900 eligible; 1,224 eligible with missing CPU; rejected 3,663 jobs, 6,942 role rows, 111,219 instance rows), or each difference is explained in the count report.
 4. `peak_cpu` is null everywhere; GPU fields are present but unused.
 5. Existing adapters and their tests are unchanged.
 
-**Risks and limitations:** Selection bias from eligibility rules; low sensor coverage on multi-instance roles; the final `multi_attempt_worker` step may slightly change the eligible population; memory pressure on the instance–sensor join.
+**Risks and limitations:** Selection bias from eligibility rules; low sensor coverage on multi-instance roles; the final `multi_attempt_worker` rule removes 256 role-occurrences (462,156 → 461,900); memory pressure on the instance–sensor join.
 
 **Pull-request boundary:** One PR for the adapter and tests. Full-data artifacts in the same PR or a short follow-up PR. No split or target columns.
 
