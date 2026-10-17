@@ -60,7 +60,7 @@ Results from different datasets are **not directly comparable**. Google measures
 These requirements are verified from:
 - the Google pipeline (`pipelines/google_subset/`);
 - the shared evaluator (`src/evaluation/metrics.py`, `src/evaluation/evaluator.py`);
-- the canonical schema on PR #70 (`src/canonical/schema.py`, `docs/data/canonical_workload_schema.md`).
+- the canonical schema on PR #70 (`src/canonical/schema.py`, `docs/design/canonical_workload_schema.md`).
 
 | Requirement | Why it matters | Full next-occurrence pipeline | Reduced adapter demonstration |
 |---|---|---|---|
@@ -87,7 +87,7 @@ These requirements are verified from:
   - `ReferenceOccurrenceAdapter` (a contract test adapter, not a production Google adapter);
   - tests.
   - Alibaba 2018 is registered with `supports_recurrence=False`, `supports_targets=False` and `supports_ml=False`.
-- **PR #70 semantics study** (`dataset_semantics_study_FINAL.md`):
+- **PR #70 semantics study** (`old_dataset_semantics_alibaba2018_azure.md`):
   - studied only Alibaba 2018 and Azure;
   - its Azure sample is actually the 2017 V1 trace (section 8.1);
   - Alibaba GPU v2020 and the 2023–2026 traces were not evaluated.
@@ -367,7 +367,7 @@ Newer traces were not preferred merely for being newer. None of the 2026 traces 
 > **Deferred from the current implementation phase.** Azure is not a current integration target. This section preserves the analysis for a possible later phase.
 
 **Files read:**
-- On PR #70: `src/adapters/azure_vm.py`, `base.py`, `validation.py`, `src/canonical/schema.py`, `config/dataset_capabilities.json`, `tests/test_azure_vm_adapter.py`, `scripts/build_external_canonical_samples.py`, `docs/data/dataset_semantics_study_FINAL.md` and the capability matrix CSV.
+- On PR #70: `src/adapters/azure_vm.py`, `base.py`, `validation.py`, `src/canonical/schema.py`, `config/dataset_capabilities.json`, `tests/test_azure_vm_adapter.py`, `scripts/build_external_canonical_samples.py`, `docs/data/old_dataset_semantics_alibaba2018_azure.md` and the capability matrix CSV.
 - On `main`: `src/evaluation/metrics.py`, `evaluator.py`, and the Resource Central notebook, documentation and metadata.
 
 **[HEAD] downloads** (session scratchpad only):
@@ -713,7 +713,7 @@ Throughout:
   - `config/dataset_capabilities.json`
   - `tests/test_azure_vm_adapter.py`
   - `scripts/build_external_canonical_samples.py`
-  - `docs/data/{canonical_workload_schema,adapter_framework,dataset_semantics_study_FINAL}.md`
+  - `docs/design/{canonical_workload_schema,adapter_framework}.md`, `docs/data/old_dataset_semantics_alibaba2018_azure.md`
   - `docs/data/traceadvisor_external_dataset_capability_matrix.csv`
 - Related reports:
   - `docs/data/dataset_inspection_and_integration_design.md`

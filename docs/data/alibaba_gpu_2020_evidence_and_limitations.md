@@ -1,5 +1,16 @@
 # Canonical Contract Decision
 
+> Supporting evidence document. This file preserves verified Alibaba GPU 2020 evidence and evaluation limitations. It is not the current canonical schema or implementation contract. Current design decisions are defined in:
+> - docs/design/canonical_workload_schema.md
+> - docs/design/adapter_framework.md
+> - docs/design/canonical_schema_design_decisions.md
+> - docs/planning/canonical_schema_implementation_plan.md
+>
+> - The verified evidence and the reporting limitations in this file remain relevant.
+> - Terminology from the earlier proposal may be outdated.
+> - Current field names, record levels, recurrence keys, units and capability definitions must be taken from the frozen schema (`docs/design/canonical_workload_schema.md`).
+> - This document must not be treated as an active contract.
+
 **Date:** 2026-10-15
 **Sources:**
 - Dataset Inspection and Integration Design report (`docs/data/dataset_inspection_and_integration_design.md`)
@@ -200,8 +211,8 @@ The split-isolated counts (42,104 validation and 44,087 test rows) were calculat
 All of these are **future work**:
 
 1. Use this contract as the design baseline.
-2. Update the existing `docs/data/canonical_workload_schema.md` in place, as schema v0.2.0.
-3. Update the existing `docs/data/adapter_framework.md` in place. Add multi-table preparation, chunked loading, exclusion-reason output and provenance.
+2. Update the existing `docs/design/canonical_workload_schema.md` in place, as schema v0.2.0.
+3. Update the existing `docs/design/adapter_framework.md` in place. Add multi-table preparation, chunked loading, exclusion-reason output and provenance.
 4. Implement the Alibaba GPU v2020 adapter.
 5. Add canonical validation tests.
 6. Run the shared history, target, recommendation and evaluation pipeline on Alibaba GPU v2020, with memory-first baseline selection and no any-resource metric.
