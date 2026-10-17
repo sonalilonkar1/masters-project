@@ -126,3 +126,71 @@ LEAKY_COLUMNS: List[str] = [
     "peak_mem_gb",
     "peak_mem",
 ]
+
+# ===========================================================================
+# Google subset occurrence-level contract (pipelines/google_subset, N05+)
+# ===========================================================================
+# The definitions above belong to the legacy notebooks/subset pipeline.
+# The definitions below match the canonical N04 occurrence artifacts
+# (train/val/test_occurrences.parquet), where one row is one full-workload
+# occurrence: recurrence_key || execution_start_time_us.
+#
+# Prediction-time convention (from N04): each row is the state available at
+# the start of the current occurrence, and the target is the peak of the next
+# distinct occurrence of the same recurrence_key.
+
+OCCURRENCE_TARGET_CPU: str = "target_cpu_next_occurrence_peak_ncu"
+OCCURRENCE_TARGET_MEMORY: str = "target_memory_next_occurrence_peak_normalized"
+OCCURRENCE_TARGET_TIME: str = "target_next_occurrence_start_time_us"
+
+# Inputs known at the start of the current occurrence.
+OCCURRENCE_FEATURE_COLS: List[str] = [
+    # Submitted with the current occurrence
+    "occurrence_requested_cpu_ncu",
+    "occurrence_requested_memory_normalized",
+    "occurrence_execution_count",
+    "occurrence_cpu_request_nunique",
+    "occurrence_memory_request_nunique",
+
+    # Completed-occurrence history (Notebook 03, point-in-time)
+    "prior_completed_occurrence_count",
+    "occ_hist_peak_cpu_count",
+    "occ_hist_peak_cpu_mean",
+    "occ_hist_peak_cpu_std",
+    "occ_hist_peak_cpu_p90",
+    "occ_hist_peak_cpu_p95",
+    "occ_hist_peak_cpu_p99",
+    "occ_hist_peak_memory_count",
+    "occ_hist_peak_memory_mean",
+    "occ_hist_peak_memory_std",
+    "occ_hist_peak_memory_p90",
+    "occ_hist_peak_memory_p95",
+    "occ_hist_peak_memory_p99",
+    "occ_hist_runtime_count",
+    "occ_hist_runtime_mean",
+    "occ_hist_runtime_std",
+    "occ_hist_runtime_p90",
+    "occ_hist_runtime_p95",
+    "occ_hist_runtime_p99",
+]
+
+# Exact columns that must never be model inputs: outcomes of the current
+# occurrence (unknown at its start) and everything describing the target.
+OCCURRENCE_LEAKY_COLUMNS: List[str] = [
+    "occurrence_peak_cpu_ncu",
+    "occurrence_peak_memory_normalized",
+    "occurrence_end_time_us",
+    "occurrence_runtime_us",
+    OCCURRENCE_TARGET_TIME,
+    OCCURRENCE_TARGET_CPU,
+    OCCURRENCE_TARGET_MEMORY,
+    "target_next_occurrence_execution_count",
+]
+
+# Column-name prefixes that must never be model inputs. Any column starting
+# with these is a target, a baseline recommendation, or a baseline flag.
+OCCURRENCE_LEAKY_PREFIXES: List[str] = [
+    "target_",
+    "rec_",
+    "uses_history_",
+]

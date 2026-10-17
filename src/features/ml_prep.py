@@ -6,14 +6,21 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
+import numpy as np
 import pandas as pd
+from sklearn.model_selection import TimeSeriesSplit
 
-from src.features.feature_config import (
+# Relative import so the module works both as src.features.ml_prep
+# (notebooks) and as features.ml_prep (pytest with pythonpath = src).
+from .feature_config import (
     CATEGORICAL_FEATURES,
     FEATURE_COLS,
     LEAKY_COLUMNS,
+    OCCURRENCE_FEATURE_COLS,
+    OCCURRENCE_LEAKY_COLUMNS,
+    OCCURRENCE_LEAKY_PREFIXES,
 )
 
 
@@ -220,3 +227,183 @@ def get_available_features(
     )
 
     return list(feature_cols)
+
+# ===========================================================================
+# Google subset occurrence-level helpers (pipelines/google_subset, N05+)
+# ===========================================================================
+# Unlike prepare_xy above, these helpers never fill missing values: NaN means
+# "unknown" (for example, no completed history yet) and is passed to models
+# that handle missing values natively.
+
+
+def audit_occurrence_feature_manifest(
+    frames: Dict[str, pd.DataFrame],
+    target_cols: List[str],
+    feature_cols: Optional[List[str]] = None,
+) -> pd.DataFrame:
+    """
+    Fail loudly if the feature manifest is incomplete or leaky.
+
+    Checks:
+    1. No duplicate features.
+    2. No feature is an exact leaky column or starts with a leaky prefix.
+    3. Every feature exists in every split.
+    4. No feature reproduces a target column.
+
+    Returns a per-split missing-value summary for each feature.
+    """
+    if feature_cols is None:
+        feature_cols = OCCURRENCE_FEATURE_COLS
+
+    if len(feature_cols) != len(set(feature_cols)):
+        raise ValueError("Feature manifest contains duplicate columns.")
+
+    leaky = sorted(
+        set(feature_cols) & set(OCCURRENCE_LEAKY_COLUMNS)
+    ) + [
+        column
+        for column in feature_cols
+        if column.startswith(tuple(OCCURRENCE_LEAKY_PREFIXES))
+    ]
+
+    if leaky:
+        raise ValueError(
+            f"Leaky columns found in the feature manifest: {sorted(set(leaky))}"
+        )
+
+    rows = []
+
+    for split_name, df in frames.items():
+        missing = [column for column in feature_cols if column not in df.columns]
+        if missing:
+            raise ValueError(
+                f"[{split_name}] Missing feature columns: {missing}"
+            )
+
+        for feature in feature_cols:
+            values = df[feature]
+
+            for target_col in target_cols:
+                if target_col not in df.columns:
+                    continue
+
+                both = values.notna() & df[target_col].notna()
+
+                if both.any() and np.allclose(
+                    values[both].astype(float),
+                    df.loc[both, target_col].astype(float),
+                ):
+                    raise ValueError(
+                        f"[{split_name}] Feature {feature} reproduces {target_col}."
+                    )
+
+            rows.append(
+                {
+                    "split": split_name,
+                    "feature": feature,
+                    "missing_rows": int(values.isna().sum()),
+                    "missing_pct": 100 * float(values.isna().mean()),
+                }
+            )
+
+    return pd.DataFrame(rows)
+
+
+def build_occurrence_feature_matrix(
+    df: pd.DataFrame,
+    feature_cols: Optional[List[str]] = None,
+) -> pd.DataFrame:
+    """
+    Return the model input matrix in manifest order as float64.
+
+    Missing features raise an error. Missing values stay NaN.
+    """
+    if feature_cols is None:
+        feature_cols = OCCURRENCE_FEATURE_COLS
+
+    missing = [column for column in feature_cols if column not in df.columns]
+    if missing:
+        raise ValueError(f"Missing feature columns: {missing}")
+
+    return df[list(feature_cols)].astype("float64")
+
+
+def select_label_period_rows(
+    df: pd.DataFrame,
+    target_col: str,
+    target_time_col: str,
+    label_cutoff_time: Optional[int],
+    time_col: str = "execution_start_time_us",
+    id_col: str = "occurrence_key",
+) -> pd.DataFrame:
+    """
+    Keep rows whose target is present and, when a cutoff is given, whose
+    target occurrence starts at or before the cutoff.
+
+    A label whose target occurrence starts after the cutoff describes a
+    period the model must not have seen. Rows are returned in deterministic
+    chronological order.
+    """
+    keep = df[target_col].notna()
+
+    if label_cutoff_time is not None:
+        keep &= df[target_time_col] <= label_cutoff_time
+
+    return (
+        df.loc[keep]
+        .sort_values([time_col, id_col], kind="mergesort")
+        .reset_index(drop=True)
+    )
+
+
+def purged_time_series_folds(
+    df: pd.DataFrame,
+    target_time_col: str,
+    n_splits: int = 5,
+    time_col: str = "execution_start_time_us",
+) -> List[Tuple[np.ndarray, np.ndarray]]:
+    """
+    Expanding-window TimeSeriesSplit folds over complete timestamp groups.
+
+    For each fold:
+    - rows sharing a timestamp always land on the same side;
+    - training rows start before the validation block;
+    - training rows whose target occurrence starts at or after the
+      validation block are purged, so no training label comes from the
+      period being validated.
+
+    Returns positional (train_index, validation_index) pairs for df.
+    """
+    times = df[time_col].to_numpy()
+    target_times = df[target_time_col].to_numpy(dtype=float)
+
+    if np.isnan(target_times).any():
+        raise ValueError(f"{target_time_col} must be present for every row.")
+
+    unique_times = np.unique(times)
+
+    if len(unique_times) <= n_splits:
+        raise ValueError(
+            "Not enough distinct timestamps for the requested number of folds."
+        )
+
+    folds = []
+
+    for train_time_idx, val_time_idx in TimeSeriesSplit(n_splits=n_splits).split(
+        unique_times
+    ):
+        val_start = unique_times[val_time_idx].min()
+        val_end = unique_times[val_time_idx].max()
+
+        train_mask = (times < val_start) & (target_times < val_start)
+        val_mask = (times >= val_start) & (times <= val_end)
+
+        train_index = np.flatnonzero(train_mask)
+        val_index = np.flatnonzero(val_mask)
+
+        if len(train_index) == 0 or len(val_index) == 0:
+            raise ValueError("A time-series fold is empty after purging.")
+
+        folds.append((train_index, val_index))
+
+    return folds
