@@ -7,7 +7,7 @@
 - `docs/design/canonical_schema_design_decisions.md`
 
 **Consistent with:**
-- `docs/design/pr70_schema_followup_review.md` (the detailed review: exact symbols, test IDs, contradictions and the confirmed choices)
+- `docs/planning/github_issues/pr70_schema_followup_review.md` (the detailed review: exact symbols, test IDs, contradictions and the confirmed choices)
 - `docs/planning/data_integration_tasks.md` (Tasks 1–11 and the six-day schedule)
 
 This pull request corrects and extends the canonical foundation introduced by PR #70 so that it matches the frozen schema 0.2.0 design. It is **not** the Alibaba GPU 2020 integration. It only prepares the shared canonical contract and the generic validation that later adapters will use.
@@ -183,7 +183,7 @@ Steps 5 and 6 can run in parallel once step 3 exists.
 
 ## 8. Required tests
 
-The full test list with IDs is in `docs/design/pr70_schema_followup_review.md` §7. In summary:
+The full test list with IDs is in `docs/planning/github_issues/pr70_schema_followup_review.md` §7. In summary:
 
 **Schema tests**
 - version 0.2.0 in code, JSON and examples;

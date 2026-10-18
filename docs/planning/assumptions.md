@@ -118,7 +118,7 @@ Defined by the frozen design; summarized here so the assumptions are in one plac
 
 ## 6. Confirmed implementation choices
 
-These choices for the PR #70 schema follow-up were left open by the design documents and confirmed on 2026-10-17. The evidence for each is in `docs/design/pr70_schema_followup_review.md` §8.2:
+These choices for the PR #70 schema follow-up were left open by the design documents and confirmed on 2026-10-17. The evidence for each is in `docs/planning/github_issues/pr70_schema_followup_review.md` §8.2:
 - `telemetry_window` is a string;
 - Alibaba 2018 `cpu_unit` is null, because its CPU request and usage use different units; its `memory_unit` is `alibaba_memory_source_normalized`;
 - a null `supported_record_levels` means no restriction; an empty `allowed_exclusion_reasons` means every `exclusion_reason` must be null;
