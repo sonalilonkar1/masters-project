@@ -37,8 +37,8 @@ Only these files change:
 - `src/adapters/validation.py`
 - `config/dataset_capabilities.json`
 - `examples/canonical_records.jsonl`
-- schema tests: `tests/test_canonical_schema.py` (tests added only) and a new schema test module
-- validation tests: a new validation test module
+- schema tests: appended to `tests/test_canonical_schema.py` (existing tests unedited)
+- validation tests: appended to `tests/test_adapter_contract.py` (existing tests unedited)
 
 ## Tasks
 
@@ -173,7 +173,7 @@ These were left open by the design documents and are confirmed (evidence in `doc
 - [ ] The Python registry and the JSON configuration match exactly.
 - [ ] All examples pass validation.
 - [ ] All existing PR #70 tests pass without edits.
-- [ ] No new test failure; the only permitted failure is the existing `test_google_train_target_nulls_are_preserved`.
+- [ ] The full suite passes with no test failures, run in `mastersvenv` so `tests/test_ml_prep.py` is included. (The earlier Google target-null failure was fixed on `main` in commit `89d03e8`.)
 - [ ] No adapter, `base.py`, notebook, script or downstream pipeline code is changed.
 
 ## Expected Output
@@ -182,7 +182,7 @@ These were left open by the design documents and are confirmed (evidence in `doc
 - Updated `src/adapters/validation.py`
 - Updated `config/dataset_capabilities.json`
 - Updated `examples/canonical_records.jsonl`
-- New schema and validation tests
+- New schema tests in `tests/test_canonical_schema.py` and new validation tests in `tests/test_adapter_contract.py`
 
 ## Not in This Issue
 
@@ -199,7 +199,7 @@ These were left open by the design documents and are confirmed (evidence in `doc
 3. Profiles and registry: Google, Alibaba 2018, new Alibaba GPU 2020; Azure unedited.
 4. `config/dataset_capabilities.json`, in the same commit as steps 1 to 3.
 5. New checks in `validate_canonical_frame`, after the existing checks.
-6. `validation.py`: `role_occurrence` uniqueness, profile-driven identity checks, recurrence rule and adapter-output rule.
+6. `validation.py`: `role_occurrence` uniqueness, profile-driven identity checks, recurrence rule and adapter-output rule. The last three run after `validate_canonical_frame`, so existing messages such as `recurrence unsupported` still appear first.
 7. Canonical examples.
 8. Schema and validation tests.
 9. Focused tests, then the PR #70 regression modules, then the full suite.
