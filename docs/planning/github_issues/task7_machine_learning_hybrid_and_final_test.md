@@ -53,8 +53,8 @@ The Phase 4 results are the only source of final Alibaba GPU 2020 numbers.
   - `get_available_features(train_df, val_df, test_df, ...)` requires the test frame;
   - `validate_features(df, feature_cols, split_name, leaky_columns)` checks presence, leaky columns and merge artifacts.
 - **Google feature configuration:** `src/features/feature_config.py` (`FEATURE_COLS`, `TARGET_CPU = "peak_cpu"`, `TARGET_MEM = "peak_mem_gb"`, `LEAKY_COLUMNS`). It contains Google v0 fields that Alibaba GPU 2020 does not produce (for example `hist_std_peak_cpu`, `hist_cv_cpu`, `hist_confidence_tier`, `hist_stability`). It is not reused for Alibaba GPU 2020.
-- **Dependencies:** `requirements.txt` lists `scikit-learn>=1.3.0` and uses minimum-version (`>=`) constraints. It does not list `xgboost`, and no installed project environment currently has `xgboost`. The interpreter currently used for `pytest` has no scikit-learn, and `pytest` is not in `requirements.txt`.
-- **Google pipeline:** `pipelines/google_subset/05_evaluateRecommendations.ipynb` is 0 bytes; there is no current Google final-test evaluation.
+- **Dependencies:** `requirements.txt` lists `scikit-learn>=1.4.0` and `xgboost>=2.0.0` (added with the Google Notebook 05 work) and uses minimum-version (`>=`) constraints. `xgboost` is not yet installed in the current local project environments. The interpreter currently used for `pytest` has no scikit-learn, and `pytest` is not in `requirements.txt`.
+- **Google pipeline:** `pipelines/google_subset/05_evaluateRecommendations.ipynb` is the Google ML notebook (feature contract, tuning, model lock, refit and test predictions without scoring). It is Google-only and is not reused by this task.
 - **Inputs from earlier tasks:**
   - Task 4 split tables (history counts, targets, target statuses).
   - Task 6 locked selection record (selected baseline and `min_runs`), recommendation tables for all five baseline policies at the selected `min_runs` for train, validation and test, and point-in-time history statistics.
@@ -121,7 +121,7 @@ The Phase 4 results are the only source of final Alibaba GPU 2020 numbers.
 - New Alibaba GPU 2020 ML, Hybrid, manifest and final-test code (location to confirm).
 - New tests for the above.
 - `src/features/ml_prep.py`: reused without modification. Only `prepare_xy` and `validate_features` are used in Phases 1–3; `build_aligned_matrices` and `get_available_features` are not used before Phase 4.
-- `requirements.txt`: changed only if XGBoost is included (Decision D-1), and then only in PR 1. Otherwise it remains unchanged.
+- `requirements.txt`: already lists `xgboost>=2.0.0`; not modified by this task unless a version change is required for reproducibility (Decision D-1).
 - The committed decision manifest (location to confirm).
 
 ## Detailed Implementation Tasks
@@ -303,7 +303,7 @@ The best model is not known in advance. No model family is preselected; the fina
 7. Task 7 performs the only final-test evaluation, which runs exactly once for all seven policies (Request, Mean, P90, P95, P99, the selected machine-learning model, and Hybrid) and is the only source of final Alibaba GPU 2020 numbers.
 8. Memory is reported first; CPU is labeled average-usage sizing and is never described as peak-safe provisioning; no GPU or any-resource metric appears.
 9. CPU and memory denominators are reported separately in every table.
-10. If XGBoost is included, its version is recorded and its installation, reload and reproducibility tests pass; otherwise `requirements.txt` is unchanged and the exclusion is documented as a limitation.
+10. If XGBoost is included, its version is recorded and its installation, reload and reproducibility tests pass; otherwise the exclusion is documented as a limitation.
 
 ## Expected Outputs
 
@@ -315,7 +315,7 @@ The best model is not known in advance. No model family is preselected; the fina
 - Validation evaluation tables for all seven policies.
 - Final-test prediction and evaluation tables for all seven policies (Request, Mean, P90, P95, P99, the selected machine-learning model, and Hybrid), with sensitivity outputs.
 - Final-test run record and metadata.
-- A `requirements.txt` change only if XGBoost is included.
+- No `requirements.txt` change is expected; `xgboost>=2.0.0` is already listed.
 
 ## Data Leakage Controls
 
@@ -338,7 +338,7 @@ The best model is not known in advance. No model family is preselected; the fina
 
 | ID | Decision | Recommendation |
 |---|---|---|
-| D-1 | Whether XGBoost is a candidate | Optional. Include it only if it is reproducibly installable: add a compatible version to `requirements.txt` in PR 1, record the version in the manifest, and test installation, reload and reproducibility. Negative predictions use the fixed clipping rule. If it cannot be supported within the project timeline, exclude it and document the exclusion as a limitation |
+| D-1 | Whether XGBoost is a candidate | Optional. Include it only if it is reproducibly installable. `requirements.txt` already lists `xgboost>=2.0.0`; record the installed version in the manifest, and test installation, reload and reproducibility. Negative predictions use the fixed clipping rule. If it cannot be supported within the project timeline, exclude it and document the exclusion as a limitation |
 | D-2 | Validation selection order per resource | Primary: under-provisioning on the ML-only recommendation (`{resource}_violation_pct`, then `average_{resource}_shortfall`, from the Task 5 evaluator). Supporting: RMSE, then MAE. Final tie-break: model family name, then hyperparameters. Memory results are interpreted first |
 | D-3 | Missing feature handling | Decided: zero fill plus a missing indicator per history statistic |
 | D-4 | Hybrid rule | Decided: one fixed rule, `max(ML prediction, selected Task 6 baseline recommendation)` per resource. Variants require a separate issue |
@@ -352,7 +352,7 @@ The best model is not known in advance. No model family is preselected; the fina
 - Short histories may limit ML gains over the Task 6 baselines; the `DummyRegressor` comparison shows whether any model learns a useful signal.
 - Violation-first selection can favor models that over-predict; shortfall, RMSE, MAE and waste must be reported alongside.
 - The candidate grid multiplies training time across two resources; grids are kept small.
-- XGBoost adds a native dependency that is not installed in any current project environment; it may be excluded.
+- XGBoost is a native dependency listed in `requirements.txt` but not yet installed in the current local environments; it may be excluded if installation or reproducibility cannot be confirmed.
 - The interpreter currently used for `pytest` has no scikit-learn, and `pytest` is not in `requirements.txt`; Task 7 tests fail until the test environment is built from `requirements.txt` plus `pytest`.
 - Reusing `ml_prep.py` helpers that take the test frame would leak test targets; only `prepare_xy` and `validate_features` are used before Phase 4.
 - Refitting on train plus validation means the test model is not the exact model that was validated; this is intended and recorded.
@@ -362,7 +362,7 @@ The best model is not known in advance. No model family is preselected; the fina
 
 Two PRs:
 
-1. **PR 1:** feature configuration, leakage checks, candidate regression models, CPU and memory model selection, train-only validation predictions, Hybrid construction and validation, refitting on train plus validation, locked model artifacts, the decision manifest, and tests. A `requirements.txt` change is included only if an optional model such as XGBoost is selected for the candidate set. PR 1 code never reads the test table.
+1. **PR 1:** feature configuration, leakage checks, candidate regression models, CPU and memory model selection, train-only validation predictions, Hybrid construction and validation, refitting on train plus validation, locked model artifacts, the decision manifest, and tests. No `requirements.txt` change is expected, because `xgboost>=2.0.0` is already listed. PR 1 code never reads the test table.
 2. **PR 2:** final-test execution, final-test predictions, final-test evaluation tables, the final-test run record and final-test metadata only. PR 2 code may be developed and reviewed using fixtures before PR 1 merges. Real final-test execution waits until PR 1 merges and the manifest is committed. PR 2:
    - reads the manifest without modifying it;
    - does not tune or retrain models;

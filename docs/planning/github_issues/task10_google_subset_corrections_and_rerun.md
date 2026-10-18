@@ -36,11 +36,11 @@ Findings from `docs/data/google_subset_pipeline_analysis.md`:
 - **F3:** 104 of 330 validation targets start in the test period; 338 training targets start after `TRAIN_END_TIME`.
 - **F4:** with validation-period targets only, P99 with `min_runs = 1` stays selected; its any-resource violation moves from 21.95% to 18.30%.
 - **F5:** N04 markdown cell 0 says targets never cross splits; cell 24 and the metadata say they may.
-- **F6:** `05_evaluateRecommendations.ipynb` is 0 bytes.
+- **F6 (resolved in part):** `05_evaluateRecommendations.ipynb` was 0 bytes when the analysis was written. Commit `0a3cf8e` added it as the Google ML notebook: feature contract and leakage audit, label-purged tuning, validation model selection, lock and refit on train plus validation, and test predictions without scoring. Its handoff names a Notebook 06 for policy scoring (violations, waste, Hybrid), which is not yet in the repository.
 - **F7, F8, F11, F12:** abnormal events included; identical values summed across machines; runtime units inconsistent; next-occurrence size unused. Recorded, not fixed here unless approved.
 - Notebook 04 already uses the full-workload occurrence fields (`occurrence_peak_cpu_ncu`, `occurrence_peak_memory_normalized`) and next-occurrence target columns as evaluator actuals (cells 32–33), and keeps missing memory as NaN (cell 10).
 - The Google profile records `target_split_isolation = false`.
-- One test fails today: `test_google_train_target_nulls_are_preserved` (1,463 vs 1,801).
+- The earlier target-null test failure (1,463 vs 1,801) was fixed in commit `89d03e8`. The test is now `test_google_target_nulls_match_global_final_occurrences`, which checks the current behavior: next-occurrence targets are null only for each recurrence's globally final occurrence.
 
 ## Relationship to PR #70 and Tasks 1–5
 
@@ -111,11 +111,12 @@ Findings from `docs/data/google_subset_pipeline_analysis.md`:
 
 ### 7. Test Reconciliation
 
-- [ ] Explain and fix the `test_google_train_target_nulls_are_preserved` discrepancy (1,463 vs 1,801).
+- [ ] Update `test_google_target_nulls_match_global_final_occurrences` to match the corrected targets: after the correction, validation and test targets whose next occurrence lies in another split are also null.
+- [ ] Rerun Notebook 05 on the regenerated Notebook 04 artifacts, because its locked models and test predictions are built from them.
 
 ### 8. Google Final Evaluation (Decision D-3)
 
-- [ ] If approved, replace the 0-byte Notebook 05 with a valid final-evaluation notebook that scores the locked Google baselines on test once.
+- [ ] If approved, add the Notebook 06 policy-scoring step named in the Notebook 05 handoff, which scores the locked Google policies on test once.
 
 ## Required Tests
 
@@ -123,7 +124,7 @@ Findings from `docs/data/google_subset_pipeline_analysis.md`:
 - [ ] Every target points to a strictly later occurrence in the same `recurrence_key`.
 - [ ] Missing memory stays NaN in targets and recommendations.
 - [ ] `chronological_split` output for Google is unchanged.
-- [ ] The full suite passes with no failures, including `test_google_train_target_nulls_are_preserved`.
+- [ ] The full suite passes with no failures, including the updated `test_google_target_nulls_match_global_final_occurrences`.
 - [ ] Regression: all tests unrelated to the corrected behavior pass unchanged.
 
 ## Acceptance Criteria
@@ -137,7 +138,7 @@ Findings from `docs/data/google_subset_pipeline_analysis.md`:
 
 ## Expected Outputs
 
-- Corrected Notebook 04 (and Notebook 05 if approved).
+- Corrected Notebook 04, Notebook 05 rerun on the corrected artifacts, and Notebook 06 if approved.
 - Regenerated Google artifacts and metadata.
 - Before/after comparison and leakage audit.
 
@@ -145,7 +146,7 @@ Findings from `docs/data/google_subset_pipeline_analysis.md`:
 
 - Targets built after split assignment and limited to the same split.
 - Validation selection uses no test-period outcome.
-- Test is scored at most once, only in the approved Notebook 05.
+- Test is scored at most once, only in the approved Notebook 06. Notebook 05 produces test predictions without scoring them.
 
 ## Schema and Adapter Boundaries
 
@@ -158,7 +159,7 @@ Findings from `docs/data/google_subset_pipeline_analysis.md`:
 |---|---|---|
 | D-1 | Target-isolation rule for Google | Adopt split isolation for validation and test targets; for train, null targets in later splits so models trained later never learn from them |
 | D-2 | Google profile `target_split_isolation` value | Raise a one-line separate issue to set it to `true` once the correction merges, so the profile matches the artifacts |
-| D-3 | Google final evaluation (Notebook 05) | Include it as a second PR, because Task 12 needs leakage-safe Google final-test results |
+| D-3 | Google final evaluation (Notebook 06) | Include it as a second PR, because Task 12 needs leakage-safe Google final-test results |
 | D-4 | F7 and F8 | Raise as separate decisions; not part of this task |
 
 ## Risks
@@ -169,7 +170,7 @@ Findings from `docs/data/google_subset_pipeline_analysis.md`:
 
 ## Pull-Request Boundary
 
-Up to two Google-only PRs: (1) target and split correction with regenerated artifacts and the comparison; (2) Notebook 05 final evaluation, if approved. Never combined with Alibaba or Azure work.
+Up to two Google-only PRs: (1) target and split correction with regenerated artifacts and the comparison; (2) Notebook 06 final evaluation, if approved. Never combined with Alibaba or Azure work.
 
 ## Handoff
 
