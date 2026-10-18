@@ -4,7 +4,7 @@
 > - docs/design/canonical_workload_schema.md
 > - docs/design/adapter_framework.md
 > - docs/design/canonical_schema_design_decisions.md
-> - docs/planning/canonical_schema_implementation_plan.md
+> - docs/design/canonical_schema_implementation_plan.md
 >
 > - The verified evidence and the reporting limitations in this file remain relevant.
 > - Terminology from the earlier proposal may be outdated.

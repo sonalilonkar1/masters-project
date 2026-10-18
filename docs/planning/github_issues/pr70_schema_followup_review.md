@@ -7,7 +7,7 @@
 - `docs/design/adapter_framework.md` (cited as "framework §")
 - `docs/design/canonical_schema_design_decisions.md` (cited as "D-nn")
 
-**Plan reviewed against the contract:** `docs/planning/canonical_schema_implementation_plan.md` (cited as "plan §").
+**Plan reviewed against the contract:** `docs/design/canonical_schema_implementation_plan.md` (cited as "plan §").
 
 **Code inspected (as merged at `a0b3c77`):**
 - `src/canonical/schema.py`

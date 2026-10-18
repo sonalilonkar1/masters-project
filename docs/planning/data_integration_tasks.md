@@ -7,7 +7,7 @@
 - `docs/design/canonical_workload_schema.md` ("schema §")
 - `docs/design/adapter_framework.md` ("framework §")
 - `docs/design/canonical_schema_design_decisions.md` ("D-nn")
-- `docs/planning/canonical_schema_implementation_plan.md` (the PR #70 follow-up)
+- `docs/design/canonical_schema_implementation_plan.md` (the PR #70 follow-up)
 
 **Supporting evidence:**
 - `docs/data/alibaba_gpu_2020_evidence_and_limitations.md` (verified Alibaba GPU 2020 counts and reporting limitations)
@@ -27,7 +27,7 @@
 - the Alibaba 2018 and Azure adapters at 0.1.0 (`src/adapters/alibaba.py`, `src/adapters/azure_vm.py`);
 - canonical examples and contract tests.
 
-**What the PR #70 follow-up covers** (`docs/planning/canonical_schema_implementation_plan.md`): bringing the schema, validation, capability registry, examples and their tests to the frozen 0.2.0 design. It is a **prerequisite** for every task here and is **not repeated** in this document. The PR #70 cleanup is owned by the author of this plan; it is the only work with a fixed owner.
+**What the PR #70 follow-up covers** (`docs/design/canonical_schema_implementation_plan.md`): bringing the schema, validation, capability registry, examples and their tests to the frozen 0.2.0 design. It is a **prerequisite** for every task here and is **not repeated** in this document. The PR #70 cleanup is owned by the author of this plan; it is the only work with a fixed owner.
 
 **What this document covers:** all remaining development work after that follow-up. That work builds the actual TraceAdvisor integration and evaluation pipeline, not only the adapter contract:
 - the shared adapter framework implementation;
@@ -832,7 +832,7 @@ Task 2
 Task 11a tooling is prepared early; its final verification of the completed result runs only after Task 7b.
 
 **Responsibility boundary for the adapter work:**
-- **PR #70 follow-up:** generic schema, capability, example and profile-driven validation only (`docs/design/pr70_schema_followup_review.md`).
+- **PR #70 follow-up:** generic schema, capability, example and profile-driven validation only (`docs/planning/github_issues/pr70_schema_followup_review.md`).
 - **Task 1:** the multi-view adapter framework, rejected output, provenance metadata and the linkage-validation interface.
 - **Task 2:** verified source tables, explicit schemas, preserved file order and stable `source_row_number`.
 - **Task 3:** Alibaba GPU 2020 joins, identity construction, parent-field inheritance, full instance-to-parent linkage, exclusions, aggregation and the canonical artifacts.
