@@ -32,7 +32,7 @@ This is a verification and reporting task only. It introduces no new model, base
 
 - `scripts/verify_data_setup.py` is a Google smoke test that loads `data/raw/clusterdata2019_kaggle_subset.csv` and prints its shape; it does not verify Alibaba GPU 2020 artifacts.
 - No artifact manifest or checksum tooling exists.
-- The test suite has one known failing test, `test_google_train_target_nulls_are_preserved` (1,463 vs 1,801), owned by Task 10.
+- The full test suite passes with no failures. The earlier Google target-null failure was fixed in commit `89d03e8` (the test is now `test_google_target_nulls_match_global_final_occurrences`).
 - Processed data under `data/processed/` is gitignored, so verification runs locally and its report is committed.
 - `requirements.txt` does not list every test tool (for example `pytest`), so a fresh environment needs the repository's test dependencies in addition to `requirements.txt`.
 
@@ -164,7 +164,7 @@ Task 8 verifies four distinct stages of test-data access:
 
 ### 9. Test Suite and Reproduction
 
-- [ ] Run the full `pytest` suite. The only allowed failure is `test_google_train_target_nulls_are_preserved`, documented as owned by Task 10.
+- [ ] Run the full `pytest` suite. No failures are allowed.
 - [ ] Reproduce the required artifacts in a fresh environment using the dependencies in `requirements.txt`, the test dependencies required by the repository, and the documented Alibaba GPU 2020 data setup, within the tolerance set in Decision D-2.
 - [ ] If Task 7 includes XGBoost: install the recorded XGBoost version, confirm that the model artifact reloads successfully, confirm that predictions are reproducible, and record the XGBoost version in the reproduction metadata.
 - [ ] Recompute manifest checksums and compare.
@@ -192,7 +192,7 @@ Task 8 verifies four distinct stages of test-data access:
 4. The final-test result traces to the locked manifest. Test target and evaluation columns were read once during Task 7 Phase 4, after the decision manifest was locked. Task 6 may read test feature and request columns but does not read test targets or score test rows.
 5. Separate denominators, CPU average-usage labeling and memory-primary reporting are confirmed in every evaluation table. No any-resource metric or GPU evaluation metric appears in the baseline, machine-learning, Hybrid, or final-test evaluation outputs. Canonical artifacts may retain GPU source fields for provenance and future use.
 6. Every canonical and derived artifact, including its metadata, records `schema_version = 0.2.0` and `dataset_id = alibaba_gpu_v2020`.
-7. The full suite passes except the one documented Google failure.
+7. The full suite passes with no failures.
 8. The fresh-environment reproduction, using `requirements.txt`, the repository's test dependencies and the documented data setup, succeeds within tolerance, including the XGBoost checks if XGBoost was used.
 
 ## Expected Outputs
