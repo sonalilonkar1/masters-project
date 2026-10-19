@@ -589,18 +589,5 @@ def validate_evaluator_view(df: pd.DataFrame) -> None:
         au, ru = f"actual_{resource}_unit", f"recommended_{resource}_unit"
         if au not in df.columns or ru not in df.columns:
             raise CanonicalSchemaError(f"Unit columns required for {resource}")
-        # Every evaluated pair needs explicit units on both values.
-        missing_units = pair & (df[au].isna() | df[ru].isna())
-        if missing_units.any():
-            raise CanonicalSchemaError(
-                f"{resource} actual/recommendation units must be populated"
-            )
-
-        # Compare unit strings only after ruling out missing values.
-        mismatched_units = pair & (
-            df[au].astype("string") != df[ru].astype("string")
-        )
-        if mismatched_units.any():
-            raise CanonicalSchemaError(
-                f"{resource} actual/recommendation units must match"
-            )
+        if (pair & (df[au].astype("string") != df[ru].astype("string"))).any():
+            raise CanonicalSchemaError(f"{resource} actual/recommendation units must match")

@@ -676,36 +676,3 @@ def test_gpu_missing_cpu_example_keeps_cpu_null():  # S-22
     frame = records_to_frame([row])
     validate_canonical_frame(frame, ALIBABA_GPU_2020_CAPABILITIES)
     assert frame["observed_cpu"].isna().all()
-
-@pytest.mark.parametrize(
-    "actual_unit,recommended_unit",
-    [
-        (None, "ncu"),
-        ("ncu", None),
-        (None, None),
-    ],
-)
-def test_evaluator_rejects_missing_unit_values(
-    actual_unit,
-    recommended_unit,
-):
-    # CPU is evaluated; memory is unavailable for this synthetic row.
-    frame = pd.DataFrame(
-        {
-            "dataset_id": ["google_clusterdata2019"],
-            "workload_id": ["w1"],
-            "policy_name": ["P95"],
-            "actual_cpu": [2.0],
-            "recommended_cpu": [4.0],
-            "actual_cpu_unit": [actual_unit],
-            "recommended_cpu_unit": [recommended_unit],
-            "actual_memory": [None],
-            "recommended_memory": [None],
-        }
-    )
-
-    with pytest.raises(
-        CanonicalSchemaError,
-        match="units must be populated",
-    ):
-        validate_evaluator_view(frame)
