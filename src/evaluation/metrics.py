@@ -189,6 +189,7 @@ def memory_utilization(
 def waste(actual, recommended):
     """
     Calculate unused recommended capacity.
+    Returns NaN when either input is non-finite.
 
     Formula:
         waste = max(recommended - actual, 0)
@@ -201,15 +202,27 @@ def waste(actual, recommended):
         recommended_array,
     )
 
-    return np.maximum(
-        recommended_array - actual_array,
-        0.0,
+    # Invalid inputs must not contribute to summary averages.
+    valid_values = (
+        np.isfinite(actual_array)
+        & np.isfinite(recommended_array)
     )
+    result = np.full(actual_array.shape, np.nan, dtype=float)
+
+    np.subtract(
+        recommended_array,
+        actual_array,
+        out=result,
+        where=valid_values,
+    )
+
+    return np.maximum(result, 0.0)
 
 
 def shortfall(actual, recommended):
     """
     Calculate how much actual usage exceeded the recommendation.
+    Returns NaN when either input is non-finite.
 
     Formula:
         shortfall = max(actual - recommended, 0)
@@ -222,7 +235,18 @@ def shortfall(actual, recommended):
         recommended_array,
     )
 
-    return np.maximum(
-        actual_array - recommended_array,
-        0.0,
+    # Invalid inputs must not contribute to summary averages.
+    valid_values = (
+        np.isfinite(actual_array)
+        & np.isfinite(recommended_array)
     )
+    result = np.full(actual_array.shape, np.nan, dtype=float)
+
+    np.subtract(
+        actual_array,
+        recommended_array,
+        out=result,
+        where=valid_values,
+    )
+
+    return np.maximum(result, 0.0)
