@@ -181,7 +181,7 @@ def validate_adapter_output(df: pd.DataFrame, *, capabilities: DatasetCapabiliti
         raise AdapterValidationError(f"Duplicate canonical columns: {duplicate_columns}")
 
     _validate_record_uniqueness(df)
-    
+
     if not df.empty and "dataset_id" in df.columns:
         ids = set(df["dataset_id"].dropna().astype(str).unique())
         if ids != {capabilities.dataset_id}:
@@ -212,3 +212,293 @@ def validate_adapter_output(df: pd.DataFrame, *, capabilities: DatasetCapabiliti
     _validate_profile_identity(df, capabilities)
     _validate_recurrence_keys(df, capabilities)
     _reject_target_builder_columns(df)
+
+
+def validate_rejected_output(
+    rejected: pd.DataFrame,
+) -> None:
+    """
+    Validate the minimal shared rejected-record contract.
+
+    Rejected rows are intentionally not canonical rows and therefore do
+    not pass through validate_canonical_frame().
+
+    The framework requires only a primary rejection reason. Dataset
+    adapters retain whatever identity and source-traceability fields are
+    available from the source record.
+    """
+    if not isinstance(
+        rejected,
+        pd.DataFrame,
+    ):
+        raise AdapterValidationError(
+            "rejected output must be a pandas DataFrame"
+        )
+
+    duplicate_columns = (
+        rejected.columns[
+            rejected.columns.duplicated()
+        ]
+        .tolist()
+    )
+
+    if duplicate_columns:
+        raise AdapterValidationError(
+            f"Duplicate rejected-output columns: "
+            f"{duplicate_columns}"
+        )
+
+    if rejected.empty:
+        return
+
+    if (
+        "rejection_reason"
+        not in rejected.columns
+    ):
+        raise AdapterValidationError(
+            "rejected output requires a rejection_reason column"
+        )
+
+    if (
+        rejected[
+            "rejection_reason"
+        ]
+        .isna()
+        .any()
+    ):
+        raise AdapterValidationError(
+            "rejection_reason must not be null"
+        )
+
+    blank_reason = (
+        rejected[
+            "rejection_reason"
+        ]
+        .astype("string")
+        .str.strip()
+        .eq("")
+    )
+
+    if blank_reason.any():
+        raise AdapterValidationError(
+            "rejection_reason must not be blank"
+        )
+
+
+def _null_equal(
+    left: pd.Series,
+    right: pd.Series,
+) -> pd.Series:
+    """
+    Equality where null/null is treated as equal.
+    """
+    return (
+        left.eq(right)
+        | (
+            left.isna()
+            & right.isna()
+        )
+    ).fillna(False)
+
+
+def validate_role_instance_linkage(
+    role_view: pd.DataFrame,
+    instance_view: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Validate instance-to-role parent linkage.
+
+    Returns:
+        valid_instances, rejected_instances
+
+    This function validates existing identity fields only. It does not
+    construct, copy, infer, repair, or modify role/instance identity
+    fields.
+
+    Rejection reasons:
+    - missing_parent_role
+    - parent_identity_mismatch
+    """
+    if not isinstance(role_view, pd.DataFrame):
+        raise AdapterValidationError(
+            "role_view must be a pandas DataFrame"
+        )
+
+    if not isinstance(instance_view, pd.DataFrame):
+        raise AdapterValidationError(
+            "instance_view must be a pandas DataFrame"
+        )
+
+    required_linkage_columns = {
+        "role_key",
+        "workload_id",
+        "recurrence_key",
+        "occurrence_id",
+    }
+
+    missing_role = sorted(
+        required_linkage_columns
+        - set(role_view.columns)
+    )
+
+    if missing_role:
+        raise AdapterValidationError(
+            "role view missing linkage columns: "
+            f"{missing_role}"
+        )
+
+    missing_instance = sorted(
+        required_linkage_columns
+        - set(instance_view.columns)
+    )
+
+    if missing_instance:
+        raise AdapterValidationError(
+            "instance view missing linkage columns: "
+            f"{missing_instance}"
+        )
+
+    if role_view["role_key"].isna().any():
+        raise AdapterValidationError(
+            "role view contains null role_key"
+        )
+
+    if role_view["role_key"].duplicated().any():
+        raise AdapterValidationError(
+            "role view contains duplicate role_key values"
+        )
+
+    # Explicit column selection keeps Pandas/Pylance typing unambiguous.
+    parent_lookup = pd.DataFrame(
+        role_view[
+            [
+                "role_key",
+                "workload_id",
+                "recurrence_key",
+                "occurrence_id",
+            ]
+        ]
+    ).copy(deep=True)
+
+    parent_lookup = parent_lookup.rename(
+        columns={
+            "workload_id": "_parent_workload_id",
+            "recurrence_key": "_parent_recurrence_key",
+            "occurrence_id": "_parent_occurrence_id",
+        }
+    )
+
+    # Preserve the original row position so we can return the exact
+    # original instance rows without depending on index labels.
+    instance_working = instance_view.copy(
+        deep=True
+    )
+
+    linked: pd.DataFrame = instance_working.merge(
+        parent_lookup,
+        how="left",
+        on="role_key",
+        indicator="_parent_merge_status",
+        validate="many_to_one",
+        sort=False,
+    )
+
+    missing_parent = (
+        linked["role_key"].isna()
+        | (
+            linked["_parent_merge_status"]
+            != "both"
+        )
+    )
+
+    mismatch = pd.Series(
+        False,
+        index=linked.index,
+        dtype=bool,
+    )
+
+    field_pairs = [
+        (
+            "workload_id",
+            "_parent_workload_id",
+        ),
+        (
+            "recurrence_key",
+            "_parent_recurrence_key",
+        ),
+        (
+            "occurrence_id",
+            "_parent_occurrence_id",
+        ),
+    ]
+
+    for child_field, parent_field in field_pairs:
+        same = _null_equal(
+            linked[child_field],
+            linked[parent_field],
+        )
+
+        mismatch = (
+            mismatch
+            | (
+                ~missing_parent
+                & ~same
+            )
+        )
+
+    rejected_mask = (
+        missing_parent
+        | mismatch
+    )
+
+    valid_positions = [
+        position
+        for position, is_rejected in enumerate(
+            rejected_mask.tolist()
+        )
+        if not bool(is_rejected)
+    ]
+
+
+
+    rejected_positions = [
+        position
+        for position, is_rejected in enumerate(
+            rejected_mask.tolist()
+        )
+        if bool(is_rejected)
+    ]
+
+    valid_instances = pd.DataFrame(
+        instance_view.iloc[
+            valid_positions,
+            :,
+        ]
+    ).copy(deep=True)
+
+    rejected_instances = pd.DataFrame(
+        instance_view.iloc[
+            rejected_positions,
+            :,
+        ]
+    ).copy(deep=True)
+
+    rejection_reasons = [
+        (
+            "missing_parent_role"
+            if bool(
+                missing_parent.iloc[position]
+            )
+            else "parent_identity_mismatch"
+        )
+        for position in rejected_positions
+    ]
+
+    rejected_instances[
+        "rejection_reason"
+    ] = rejection_reasons
+
+    return (
+        valid_instances,
+        rejected_instances,
+    )
