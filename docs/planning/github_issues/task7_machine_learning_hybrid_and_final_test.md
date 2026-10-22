@@ -236,16 +236,29 @@ The best model is not known in advance. No model family is preselected; the fina
 - [ ] Record metrics, separate CPU and memory denominators, the average-usage CPU label, memory-primary metadata and confirmation that any-resource metrics were suppressed.
 - [ ] Report same-second, multi-instance and group-weighted sensitivity for the test results, using the methods fixed in Task 6.
 - [ ] No change to models, features, the Hybrid rule, the baseline policy or `min_runs` is allowed after test results are seen.
-- [ ] Write a final-test run record keyed by the manifest checksum; refuse to run again for the same manifest.
-- [ ] A rerun is allowed only for a documented code defect. It gets a new run ID; the original outputs are retained and never overwritten, and the defect, the fix and both result sets are recorded in the final metadata (Decision D-6).
+- [ ] Write a final-test run record keyed by the manifest checksum and the code commit. A second run with the same manifest checksum and code commit is refused.
+- [ ] A rerun is allowed only for a documented code defect and requires a new corrective code commit; the manifest and every locked decision stay unchanged. The rerun gets a new run ID, the original outputs are preserved and never overwritten, and the defect, the fix and both result sets are recorded in the final metadata (Decision D-6).
 
 ### Outputs
 
-- [ ] **Prediction artifacts:** one row per (`role_key`, `policy_name`) for validation and test, for all seven policies (Request, Mean, P90, P95, P99, the selected machine-learning model, and Hybrid), using the canonical evaluator names `dataset_id`, `workload_id`, `policy_name`, `actual_cpu`, `actual_memory`, `recommended_cpu`, `recommended_memory`, with unit columns. ML-only rows hold the ML predictions after the negative-prediction rule; Hybrid rows also keep both inputs (ML prediction and selected baseline recommendation) in separate columns (names to confirm). Validation ML predictions come from the train-only models; test ML predictions come from the refitted models.
+**Prediction format (both PRs):** one row per (`role_key`, `policy_name`) for all seven policies (Request, Mean, P90, P95, P99, the selected machine-learning model, and Hybrid), using the canonical evaluator names `dataset_id`, `workload_id`, `policy_name`, `actual_cpu`, `actual_memory`, `recommended_cpu`, `recommended_memory`, with unit columns. ML-only rows hold the ML predictions after the negative-prediction rule; Hybrid rows also keep both inputs (ML prediction and selected baseline recommendation) in separate columns (names to confirm).
+
+**PR 1 outputs (Phases 1–3; the test table is never read):**
+
+- [ ] **Validation predictions:** ML-only and Hybrid validation predictions, from the train-only models.
 - [ ] **Candidate-experiment table:** every candidate configuration per resource with validation metrics, including `DummyRegressor`.
-- [ ] **Model artifacts:** locked CPU and memory models with checksums and metadata.
-- [ ] **Evaluation tables:** validation tables and final-test tables for all seven policies, memory first.
-- [ ] **Metadata:** decision manifest, final-test run record, final-test metadata (population size, denominators, labels, run ID, run timestamp, manifest checksum).
+- [ ] **Validation evaluation tables:** all seven policies, memory first.
+- [ ] **Selected models:** the selected CPU and memory model per resource.
+- [ ] **Locked decision manifest** and its checksum.
+- [ ] **Model artifacts:** the locked CPU and memory models refitted on train plus validation, with checksums and metadata.
+
+**PR 2 outputs (Phase 4; after the manifest is locked):**
+
+- [ ] **Test predictions:** ML-only and Hybrid test predictions, from the refitted locked models.
+- [ ] **Final-test evaluation tables:** all seven policies, memory first.
+- [ ] **Sensitivity results:** same-second, multi-instance and group-weighted.
+- [ ] **Final-test metadata:** population size, denominators, labels, run ID, run timestamp, manifest checksum and code commit.
+- [ ] **Final-test run record**, keyed by manifest checksum and code commit, including any documented reruns.
 
 ## Required Tests
 
@@ -284,8 +297,9 @@ The best model is not known in advance. No model family is preselected; the fina
 - [ ] CPU results carry the average-usage label.
 - [ ] Memory-primary metadata is present.
 - [ ] CPU and memory denominators are reported separately.
-- [ ] The final-test step runs once per manifest; a second run is refused.
-- [ ] A documented rerun gets a new run ID and does not overwrite the original outputs.
+- [ ] A second final-test run with the same manifest checksum and code commit is refused.
+- [ ] A documented defect rerun with a new code commit and an unchanged manifest gets a new run ID and does not overwrite the original outputs.
+- [ ] A rerun is refused if the manifest checksum differs from the locked manifest.
 
 ### Regression and Environment
 
@@ -343,7 +357,7 @@ The best model is not known in advance. No model family is preselected; the fina
 | D-3 | Missing feature handling | Decided: zero fill plus a missing indicator per history statistic |
 | D-4 | Hybrid rule | Decided: one fixed rule, `max(ML prediction, selected Task 6 baseline recommendation)` per resource. Variants require a separate issue |
 | D-5 | Model artifact format and location | `joblib` (installed with scikit-learn); location to confirm |
-| D-6 | Rerun procedure after a real defect | Allowed only for a code defect; new run ID; original outputs retained; defect, fix and both result sets recorded |
+| D-6 | Rerun procedure after a real defect | A second run with the same manifest checksum and code commit is refused. A documented defect rerun requires a new corrective code commit; the manifest and locked decisions stay unchanged. The run record is keyed by manifest checksum and code commit; the rerun gets a new run ID; original outputs are preserved; the defect, the fix and both result sets are recorded |
 | D-7 | Gradient-boosting family | `HistGradientBoostingRegressor` by default; `GradientBoostingRegressor` only if the histogram-based model cannot be used |
 | D-8 | Negative-prediction rule | Clip negative predictions to 0 before evaluator use, for every candidate; record the count |
 
@@ -362,31 +376,48 @@ The best model is not known in advance. No model family is preselected; the fina
 
 Two PRs:
 
-1. **PR 1:** feature configuration, leakage checks, candidate regression models, CPU and memory model selection, train-only validation predictions, Hybrid construction and validation, refitting on train plus validation, locked model artifacts, the decision manifest, and tests. No `requirements.txt` change is expected, because `xgboost>=2.0.0` is already listed. PR 1 code never reads the test table.
-2. **PR 2:** final-test execution, final-test predictions, final-test evaluation tables, the final-test run record and final-test metadata only. PR 2 code may be developed and reviewed using fixtures before PR 1 merges. Real final-test execution waits until PR 1 merges and the manifest is committed. PR 2:
+1. **PR 1:** feature configuration, leakage checks, candidate regression models, CPU and memory model selection, Hybrid construction and validation, refitting on train plus validation, and tests. No `requirements.txt` change is expected, because `xgboost>=2.0.0` is already listed. PR 1 code never reads the test table. PR 1 produces only:
+   - validation ML and Hybrid predictions (from train-only models);
+   - the candidate-experiment table;
+   - validation evaluation tables;
+   - the selected models;
+   - the locked decision manifest;
+   - locked model artifacts and their checksums.
+2. **PR 2:** final-test execution and tests only. PR 2 code may be developed and reviewed using fixtures before PR 1 merges. Real final-test execution waits until PR 1 merges and the manifest is committed. PR 2 produces only:
+   - test ML and Hybrid predictions;
+   - final-test evaluation tables;
+   - sensitivity results;
+   - final-test metadata;
+   - the final-test run record.
+
+   PR 2:
    - reads the manifest without modifying it;
    - does not tune or retrain models;
    - does not change the Hybrid rule, baseline policy or `min_runs`;
    - performs the only final-test scoring;
-   - produces outputs once per locked manifest;
-   - assigns a new run ID for a documented defect rerun and never overwrites original outputs.
+   - refuses a second run with the same manifest checksum and code commit;
+   - for a documented defect rerun, requires a new corrective code commit with the manifest unchanged, assigns a new run ID and never overwrites original outputs.
 
 No baseline, evaluator, target-builder, adapter or Google code in either PR.
 
 ## Handoff
 
-- **Task 8:**
+- **Task 8, from PR 1:**
   - the committed decision manifest and its checksum;
   - locked model artifacts and their checksums;
   - the feature configuration and the saved training feature-column order;
   - references and checksums for the Task 6 baseline recommendations used;
-  - ML-only validation predictions from train-only models and ML-only test predictions from refitted models;
-  - Hybrid validation and test predictions;
-  - validation evaluation tables for all seven policies and final-test evaluation tables for all seven policies (Request, Mean, P90, P95, P99, the selected machine-learning model, and Hybrid);
+  - the candidate-experiment table;
+  - ML-only and Hybrid validation predictions from train-only models;
+  - validation evaluation tables for all seven policies;
+  - code commit, library versions, random seeds and environment information.
+- **Task 8, from PR 2:**
+  - ML-only and Hybrid test predictions from the refitted locked models;
+  - final-test evaluation tables for all seven policies (Request, Mean, P90, P95, P99, the selected machine-learning model, and Hybrid);
   - separate CPU and memory denominators, the average-usage CPU label, memory-primary metadata and confirmation that any-resource metrics were suppressed;
   - same-second, multi-instance and group-weighted sensitivity results;
-  - the final-test run record, manifest checksum and any documented reruns;
-  - code commit, library versions, random seeds and environment information.
+  - the final-test run record (keyed by manifest checksum and code commit) and any documented reruns;
+  - final-test metadata.
 - **Task 12:** verified final Alibaba GPU 2020 results, after Task 8.
 
 ## Not in This Issue
