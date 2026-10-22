@@ -166,7 +166,7 @@ class RecommendationEvaluator:
             },
         )
         if self.capabilities is not None:
-            # Map caller-selected values into the canonical view before checks.
+            # Map caller-selected values and their units together before checks.
             for resource, actual_col, recommended_col in (
                 ("cpu", actual_cpu_col, recommended_cpu_col),
                 ("memory", actual_memory_col, recommended_memory_col),
@@ -177,7 +177,7 @@ class RecommendationEvaluator:
                     canonical = f"{kind}_{resource}"
                     evaluated[canonical] = evaluated[column]
                     source_unit = f"{column}_unit"
-                    if canonical + "_unit" not in evaluated and source_unit in evaluated:
+                    if source_unit in evaluated:
                         evaluated[canonical + "_unit"] = evaluated[source_unit]
             if policy_name is not None:
                 evaluated["policy_name"] = policy_name

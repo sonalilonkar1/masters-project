@@ -633,6 +633,38 @@ def test_direct_profile_evaluation_maps_selected_columns(canonical_evaluation_da
     pd.testing.assert_frame_equal(data, original)
 
 
+@pytest.mark.parametrize("resource", ["cpu", "memory"])
+@pytest.mark.parametrize("kind", ["actual", "recommended"])
+@pytest.mark.parametrize("selected_unit_valid", [True, False])
+def test_selected_value_and_unit_override_canonical_pair(
+    canonical_evaluation_data, resource, kind, selected_unit_valid,
+):
+    data = canonical_evaluation_data.copy(deep=True)
+    canonical = f"{kind}_{resource}"
+    profile_unit = getattr(GOOGLE_CAPABILITIES, f"{resource}_unit")
+    data[canonical] = 99.0
+    data[f"{canonical}_unit"] = "stale" if selected_unit_valid else profile_unit
+    data["selected"] = 3.0
+    data["selected_unit"] = profile_unit if selected_unit_valid else "invalid"
+    original = data.copy(deep=True)
+    columns = {
+        f"actual_{resource}_col": f"actual_{resource}",
+        f"recommended_{resource}_col": f"recommended_{resource}",
+        f"{canonical}_col": "selected",
+    }
+    evaluator = RecommendationEvaluator(capabilities=GOOGLE_CAPABILITIES)
+
+    if selected_unit_valid:
+        evaluated = evaluator.evaluate(data, **columns)
+        assert evaluated[canonical].tolist() == [3.0]
+        assert evaluated[f"{canonical}_unit"].tolist() == [profile_unit]
+    else:
+        with pytest.raises(CanonicalSchemaError, match="units"):
+            evaluator.evaluate(data, **columns)
+
+    pd.testing.assert_frame_equal(data, original)
+
+
 @pytest.mark.parametrize("entry_point", ["direct", "canonical"])
 def test_profile_evaluation_accepts_absent_scope(canonical_evaluation_data, entry_point):
     data = canonical_evaluation_data.drop(
