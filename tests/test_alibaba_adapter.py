@@ -76,6 +76,9 @@ def test_alibaba_tables_map_to_canonical():
     assert out.loc[0, "requested_cpu"] == 100.0
     assert out.loc[0, "peak_cpu"] == 120.0
     assert out.loc[0, "peak_memory"] == 0.45
+    assert set(out["resource_scope"]) == {"instance"}
+    assert set(out["request_aggregation_method"]) == {"none"}
+    assert set(out["observed_aggregation_method"]) == {"none"}
 
 
 def test_alibaba_recurrence_is_not_invented():
@@ -103,6 +106,75 @@ def test_alibaba_running_missing_values_stay_null():
     assert running["cpu_validity_status"] == "partial"
     assert running["memory_validity_status"] == "partial"
     assert running["validity_status"] == "partial"
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        "Ready",
+        "Waiting",
+        "Running",
+        "Failed",
+        "Cancelled",
+        "Interupted",
+    ],
+)
+def test_alibaba_non_terminated_status_is_partial(status):
+    instances = make_instances().copy()
+    mask = instances["instance_name"] == "i1"
+
+    instances.loc[mask, "status"] = status
+
+    out = Alibaba2018Adapter().adapt_tables(
+        make_task(),
+        instances,
+    ).canonical
+
+    row = out.loc[
+        out["instance_id"] == "i1"
+    ].iloc[0]
+
+    assert row["source_status"] == status
+    assert row["cpu_validity_status"] == "partial"
+    assert row["memory_validity_status"] == "partial"
+    assert row["validity_status"] == "partial"
+
+
+def test_alibaba_terminated_status_is_valid_when_other_checks_pass():
+    out = Alibaba2018Adapter().adapt_tables(
+        make_task(),
+        make_instances(),
+    ).canonical
+
+    row = out.loc[
+        out["instance_id"] == "i1"
+    ].iloc[0]
+
+    assert row["source_status"] == "Terminated"
+    assert row["cpu_validity_status"] == "valid"
+    assert row["memory_validity_status"] == "valid"
+    assert row["validity_status"] == "valid"
+
+
+def test_alibaba_contradiction_remains_invalid_for_non_terminated_status():
+    instances = make_instances().copy()
+    mask = instances["instance_name"] == "i1"
+
+    instances.loc[mask, "status"] = "Running"
+    instances.loc[mask, "cpu_avg"] = 150.0
+    instances.loc[mask, "cpu_max"] = 120.0
+
+    out = Alibaba2018Adapter().adapt_tables(
+        make_task(),
+        instances,
+    ).canonical
+
+    row = out.loc[
+        out["instance_id"] == "i1"
+    ].iloc[0]
+
+    assert row["cpu_validity_status"] == "invalid"
+    assert row["validity_status"] == "invalid"
 
 
 def test_alibaba_unmatched_task_metadata_remains_null():
@@ -139,7 +211,6 @@ def test_alibaba_duplicate_task_plan_rejected():
             make_instances(),
         )
 
-
 def test_alibaba_uses_dataset_specific_units():
     out = Alibaba2018Adapter().adapt_tables(
         make_task(),
@@ -152,27 +223,31 @@ def test_alibaba_uses_dataset_specific_units():
         row["requested_cpu_unit"]
         == "alibaba_plan_cpu_100_per_core"
     )
+
     assert (
         row["observed_cpu_unit"]
         == "alibaba_cpu_usage_source_unit"
     )
+
     assert (
         row["peak_cpu_unit"]
         == "alibaba_cpu_usage_source_unit"
     )
+
     assert (
         row["requested_memory_unit"]
         == "alibaba_memory_source_normalized"
     )
+
     assert (
         row["observed_memory_unit"]
         == "alibaba_memory_source_normalized"
     )
+
     assert (
         row["peak_memory_unit"]
         == "alibaba_memory_source_normalized"
     )
-
 
 def test_alibaba_resource_validity_is_independent():
     instances = make_instances().copy()
@@ -275,6 +350,8 @@ def test_alibaba_metadata_contains_capabilities_and_validity_counts():
 
     capabilities = result.metadata["capabilities"]
 
+    assert result.metadata["adapter_version"] == "0.2.0"
+
     assert capabilities["supports_cpu"] is True
     assert capabilities["supports_memory"] is True
     assert capabilities["supports_recurrence"] is False
@@ -288,3 +365,33 @@ def test_alibaba_metadata_contains_capabilities_and_validity_counts():
     assert result.metadata["memory_valid_count"] == 1
     assert result.metadata["memory_partial_count"] == 1
     assert result.metadata["memory_invalid_count"] == 0
+
+
+def test_alibaba_metadata_contains_validity_counts_by_source_status():
+    result = Alibaba2018Adapter().adapt_tables(
+        make_task(),
+        make_instances(),
+    )
+
+    assert result.metadata[
+        "validity_counts_by_source_status"
+    ] == {
+        "Running": {
+            "partial": 1,
+        },
+        "Terminated": {
+            "valid": 1,
+        },
+    }
+
+
+def test_alibaba_capability_profile_uses_unified_cpu_unit():
+    result = Alibaba2018Adapter().adapt_tables(
+        make_task(),
+        make_instances(),
+    )
+
+    assert (
+        result.metadata["capabilities"]["cpu_unit"]
+        is None
+    )

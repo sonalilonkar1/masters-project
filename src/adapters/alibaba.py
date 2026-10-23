@@ -56,7 +56,7 @@ ALIBABA_INSTANCE_COLUMNS = [
 
 class Alibaba2018Adapter(BaseDatasetAdapter):
     adapter_name = "alibaba_clustertrace2018"
-    adapter_version = "0.1.0"
+    adapter_version = "0.2.0"
 
     @property
     def capabilities(self) -> DatasetCapabilities:
@@ -180,6 +180,9 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
         out["schema_version"] = SCHEMA_VERSION
         out["dataset_id"] = self.capabilities.dataset_id
         out["record_level"] = "instance"
+        out["resource_scope"] = "instance"
+        out["request_aggregation_method"] = "none"
+        out["observed_aggregation_method"] = "none"
 
         out["workload_id"] = source["job_name"].astype("string")
         out["execution_id"] = (
@@ -189,8 +192,8 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
         )
         out["instance_id"] = source["instance_name"].astype("string")
 
-        # Recurrence is intentionally not populated. Alibaba exposes job/task/
-        # instance identity, but Issue 1 did not validate a recurrence rule.
+        # Recurrence is intentionally not populated because the dataset profile
+        # declares recurrence_key_origin = "none".
         out["time_basis"] = "trace_relative"
 
         start_sec = self._strict_numeric(
@@ -301,6 +304,12 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
             .fillna(False)
         )
 
+        terminated = (
+            source["status"]
+            .astype("string")
+            .eq("Terminated")
+        )
+
         cpu_complete = (
             out["observed_cpu"].notna()
             & out["peak_cpu"].notna()
@@ -330,10 +339,12 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
         out["cpu_validity_status"] = np.select(
             [
                 cpu_avg_gt_max,
+                ~terminated,
                 cpu_complete,
             ],
             [
                 "invalid",
+                "partial",
                 "valid",
             ],
             default="partial",
@@ -342,10 +353,12 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
         out["memory_validity_status"] = np.select(
             [
                 memory_avg_gt_max,
+                ~terminated,
                 memory_complete,
             ],
             [
                 "invalid",
+                "partial",
                 "valid",
             ],
             default="partial",
@@ -365,7 +378,8 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
         )
 
         fully_valid = (
-            complete_timing
+            terminated
+            & complete_timing
             & matched_plan
             & (out["cpu_validity_status"] == "valid")
             & (out["memory_validity_status"] == "valid")
@@ -455,6 +469,18 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
                 "memory_avg_gt_max_count": int(
                     canonical["source_memory_avg_gt_max"].sum()
                 ),
+                "validity_counts_by_source_status": {
+                    str(status): {
+                        str(validity): int(count)
+                        for validity, count in group[
+                            "validity_status"
+                        ].value_counts().items()
+                    }
+                    for status, group in canonical.groupby(
+                        "source_status",
+                        dropna=False,
+                    )
+                },
             }
         )
         return base
