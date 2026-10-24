@@ -236,6 +236,62 @@ def verify_sources(
     ]
 
 
+def source_provenance(
+    tables: Optional[Sequence[str]] = None,
+    raw_dir: Optional[Path] = None,
+    manifest: Optional[Mapping] = None,
+) -> Dict[str, object]:
+    """
+    Verify the requested tables (default: all six) and return the provenance
+    fields for the adapter metadata.
+
+    source_files maps each table to its CSV file name relative to the raw
+    directory, as recorded in the manifest; source_checksums maps each table
+    to the SHA-256 computed by this verification. telemetry_window is
+    computed from the data, so the adapter adds it.
+    """
+    manifest = manifest if manifest is not None else load_manifest()
+    reports = verify_sources(raw_dir=raw_dir, tables=tables, manifest=manifest)
+    return {
+        "source_version": manifest["source_version"],
+        "source_files": {
+            report["table"]: manifest["tables"][report["table"]]["csv"]["file"] for report in reports
+        },
+        "source_checksums": {report["table"]: report["sha256"] for report in reports},
+    }
+
+
+# Tables already verified in this process, keyed by the CSV and header path,
+# size and modification time and by the manifest entry they were checked
+# against. Loads skip re-hashing an unchanged file; verify_table, and so the
+# verification script and source_provenance, always hash the files.
+_VERIFIED_FILES: Dict[tuple, object] = {}
+
+
+def _file_state(path: Path) -> tuple:
+    stat = path.stat()
+    return (str(path.resolve()), stat.st_size, stat.st_mtime_ns)
+
+
+def _verify_before_load(table: str, raw_dir: Optional[Path], manifest: Mapping) -> None:
+    raw_dir = Path(raw_dir or DEFAULT_RAW_DIR)
+    entry = _table_entry(manifest, table)
+    try:
+        key = (
+            table,
+            _file_state(raw_dir / entry["csv"]["file"]),
+            _file_state(raw_dir / entry["header"]["file"]),
+            json.dumps({"csv": entry["csv"], "header": entry["header"]}, sort_keys=True),
+        )
+    except (OSError, KeyError):
+        # Missing file or incomplete manifest entry: verify_table raises the error.
+        verify_table(table, raw_dir=raw_dir, manifest=manifest)
+        return
+
+    if key not in _VERIFIED_FILES:
+        _VERIFIED_FILES[key] = verify_table(table, raw_dir=raw_dir, manifest=manifest)
+
+
 def _read_options(table: str, columns: Optional[Sequence[str]]) -> dict:
     schema = SCHEMAS[table]
     selected = list(schema) if columns is None else list(columns)
@@ -296,14 +352,15 @@ def load_table(
 
     Returns the selected columns plus source_row_number, the 1-based
     data-line number in the decompressed source file. With verify=True
-    (default) the file is checked against the manifest before reading and
-    the row count is checked afterwards; verify=False skips both checks.
+    (default) the file is checked against the manifest before reading (once
+    per process while the file is unchanged) and the row count is checked
+    after every read; verify=False skips both checks.
     """
     manifest = manifest if manifest is not None else load_manifest()
     path = _source_path(table, raw_dir, manifest)
 
     if verify:
-        verify_table(table, raw_dir=raw_dir, manifest=manifest)
+        _verify_before_load(table, raw_dir, manifest)
 
     options, selected = _read_options(table, columns)
     frame = _finalize(pd.read_csv(path, **options), selected, first_row_number=1)
@@ -337,7 +394,7 @@ def iter_table_chunks(
     path = _source_path(table, raw_dir, manifest)
 
     if verify:
-        verify_table(table, raw_dir=raw_dir, manifest=manifest)
+        _verify_before_load(table, raw_dir, manifest)
 
     options, selected = _read_options(table, columns)
     next_row_number = 1

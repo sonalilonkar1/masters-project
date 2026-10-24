@@ -14,6 +14,7 @@ from src.sources.alibaba_gpu_2020 import (
     describe_file,
     iter_table_chunks,
     load_table,
+    source_provenance,
     verify_sources,
     verify_table,
 )
@@ -269,6 +270,124 @@ def test_invalid_chunksize_is_rejected(fixture_sources):
         next(iter_table_chunks("pai_job_table", chunksize=0, raw_dir=raw_dir, manifest=manifest))
 
 
+def test_source_provenance_matches_manifest(fixture_sources):
+    raw_dir, manifest = fixture_sources
+
+    provenance = source_provenance(raw_dir=raw_dir, manifest=manifest)
+
+    assert set(provenance) == {"source_version", "source_files", "source_checksums"}
+    assert provenance["source_version"] == loader.SOURCE_VERSION
+    assert list(provenance["source_files"]) == list(loader.TABLES)
+    for table in loader.TABLES:
+        assert provenance["source_files"][table] == manifest["tables"][table]["csv"]["file"]
+        assert provenance["source_checksums"][table] == manifest["tables"][table]["csv"]["sha256"]
+        assert provenance["source_checksums"][table] == describe_file(raw_dir / f"{table}.csv")["sha256"]
+
+    subset = source_provenance(tables=["pai_instance_table"], raw_dir=raw_dir, manifest=manifest)
+    assert list(subset["source_files"]) == ["pai_instance_table"]
+    assert list(subset["source_checksums"]) == ["pai_instance_table"]
+
+
+def test_source_provenance_is_accepted_by_the_adapter_framework(fixture_sources):
+    from src.adapters.base import BaseDatasetAdapter
+
+    raw_dir, manifest = fixture_sources
+    provenance = source_provenance(raw_dir=raw_dir, manifest=manifest)
+    provenance["telemetry_window"] = {"start": 90.0, "end": 410.0}
+
+    assert BaseDatasetAdapter._validate_provenance(provenance) == provenance
+
+
+@pytest.mark.parametrize("change", ["missing", "modified"])
+def test_source_provenance_fails_on_missing_or_modified_file(fixture_sources, change):
+    raw_dir, manifest = fixture_sources
+    path = raw_dir / "pai_sensor_table.csv"
+    if change == "missing":
+        path.unlink()
+    else:
+        path.write_text(path.read_text().replace("16.0625", "16.0626"))
+
+    with pytest.raises(SourceVerificationError, match="not found" if change == "missing" else "checksum mismatch"):
+        source_provenance(raw_dir=raw_dir, manifest=manifest)
+
+
+def _count_csv_hashes(monkeypatch, csv_path):
+    calls = []
+    original = loader.describe_file
+
+    def counting(path):
+        if Path(path) == csv_path:
+            calls.append(path)
+        return original(path)
+
+    monkeypatch.setattr(loader, "describe_file", counting)
+    return calls
+
+
+def test_loads_hash_an_unchanged_file_once(fixture_sources, monkeypatch):
+    raw_dir, manifest = fixture_sources
+    calls = _count_csv_hashes(monkeypatch, raw_dir / "pai_instance_table.csv")
+
+    full = load_table("pai_instance_table", raw_dir=raw_dir, manifest=manifest)
+    selected = load_table("pai_instance_table", columns=["job_name"], raw_dir=raw_dir, manifest=manifest)
+    chunked = pd.concat(
+        iter_table_chunks("pai_instance_table", chunksize=2, raw_dir=raw_dir, manifest=manifest),
+        ignore_index=True,
+    )
+
+    assert len(calls) == 1
+    pd.testing.assert_frame_equal(chunked, full)
+    pd.testing.assert_frame_equal(selected, full[["job_name", SOURCE_ROW_NUMBER]])
+
+    # Explicit verification always hashes the file.
+    verify_table("pai_instance_table", raw_dir=raw_dir, manifest=manifest)
+    source_provenance(tables=["pai_instance_table"], raw_dir=raw_dir, manifest=manifest)
+    assert len(calls) == 3
+
+
+def test_loads_hash_a_modified_file_again(fixture_sources, monkeypatch):
+    raw_dir, manifest = fixture_sources
+    path = raw_dir / "pai_instance_table.csv"
+    calls = _count_csv_hashes(monkeypatch, path)
+    load_table("pai_instance_table", raw_dir=raw_dir, manifest=manifest)
+    original_text = path.read_text()
+    original_mtime = path.stat().st_mtime_ns
+
+    # Same size, different content, new modification time: hashed again and rejected.
+    path.write_text(original_text.replace("w1", "w9", 1))
+    os.utime(path, ns=(original_mtime + 1_000_000_000, original_mtime + 1_000_000_000))
+    with pytest.raises(SourceVerificationError, match="checksum mismatch"):
+        load_table("pai_instance_table", raw_dir=raw_dir, manifest=manifest)
+    with pytest.raises(SourceVerificationError, match="checksum mismatch"):
+        next(iter_table_chunks("pai_instance_table", raw_dir=raw_dir, manifest=manifest))
+    assert len(calls) == 3
+
+    # Restored content with yet another modification time: hashed again and accepted.
+    path.write_text(original_text)
+    os.utime(path, ns=(original_mtime + 2_000_000_000, original_mtime + 2_000_000_000))
+    load_table("pai_instance_table", raw_dir=raw_dir, manifest=manifest)
+    assert len(calls) == 4
+
+
+def test_loads_verify_again_against_a_different_manifest_entry(fixture_sources):
+    raw_dir, manifest = fixture_sources
+    load_table("pai_job_table", raw_dir=raw_dir, manifest=manifest)
+
+    other = copy.deepcopy(manifest)
+    other["tables"]["pai_job_table"]["csv"]["sha256"] = "0" * 64
+    with pytest.raises(SourceVerificationError, match="checksum mismatch"):
+        load_table("pai_job_table", raw_dir=raw_dir, manifest=other)
+
+
+def test_loads_verify_a_deleted_file_again(fixture_sources):
+    raw_dir, manifest = fixture_sources
+    load_table("pai_job_table", raw_dir=raw_dir, manifest=manifest)
+    (raw_dir / "pai_job_table.csv").unlink()
+
+    with pytest.raises(SourceVerificationError, match="not found"):
+        load_table("pai_job_table", raw_dir=raw_dir, manifest=manifest)
+
+
 def test_committed_manifest_matches_schemas_and_documented_counts():
     manifest = loader.load_manifest()
 
@@ -309,6 +428,21 @@ def test_real_tables_verify_and_load():
         frame = load_table(table, verify=False)
         assert len(frame) == manifest["tables"][table]["csv"]["data_lines"]
         np.testing.assert_array_equal(frame[SOURCE_ROW_NUMBER], np.arange(1, len(frame) + 1))
+
+    # The large tables are loaded with one column to keep memory low; the
+    # chunked load must equal the full load, including source_row_number.
+    for table in ("pai_instance_table", "pai_sensor_table"):
+        frame = load_table(table, columns=["job_name"])
+        assert len(frame) == manifest["tables"][table]["csv"]["data_lines"]
+        np.testing.assert_array_equal(frame[SOURCE_ROW_NUMBER], np.arange(1, len(frame) + 1))
+        chunked = pd.concat(iter_table_chunks(table, columns=["job_name"], chunksize=1_000_000), ignore_index=True)
+        pd.testing.assert_frame_equal(chunked, frame)
+
+    provenance = source_provenance()
+    assert provenance["source_version"] == manifest["source_version"]
+    for table in loader.TABLES:
+        assert provenance["source_files"][table] == manifest["tables"][table]["csv"]["file"]
+        assert provenance["source_checksums"][table] == manifest["tables"][table]["csv"]["sha256"]
 
 
 

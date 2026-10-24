@@ -84,7 +84,8 @@ for chunk in iter_table_chunks("pai_sensor_table", columns=["worker_name", "max_
     ...
 ```
 
-- Every call verifies the file against the manifest first (`verify=False` skips this).
+- Every call verifies the file against the manifest first and checks the loaded row count afterwards (`verify=False` skips both). Within one Python process, a file that has already passed verification and whose path, size and modification time are unchanged is not hashed again; the row-count check still runs on every load. `verify_table`, `verify_sources`, `source_provenance` and `scripts/verify_data_setup.py` always hash the files.
+- `source_provenance(tables=None)` verifies the tables and returns `source_version`, `source_files` (table to CSV file name in `data/raw/alibaba_gpu_2020/`, as in the manifest) and `source_checksums` (table to the SHA-256 from that verification) for the adapter metadata. `telemetry_window` is computed from the data by the adapter (Task 3).
 - Rows are returned in **source-file order**.
 - `source_row_number` is the **1-based data-line number in the checksum-verified decompressed CSV**. It is assigned while reading, before any filtering, sorting, or joining, and is identical across full, column-selected, repeated, and chunked loads.
 - Only empty fields are treated as missing. Text such as `NA` or `None` stays text.
@@ -131,8 +132,8 @@ This setup does not create a cache. A local Parquet cache may be written under `
 
 ## 7. Tests
 
-- `tests/test_alibaba_gpu_2020_loader.py` runs on small fixture files: column names and types, source order, exact float parsing, missing-value handling, `source_row_number` stability across full, column-selected, repeated, and chunked loads, and failures for modified, truncated, or missing files and mismatched headers.
-- A full-data test runs only with the official tables present and `TRACEADVISOR_FULL_DATA_TESTS=1`:
+- `tests/test_alibaba_gpu_2020_loader.py` runs on small fixture files: column names and types, source order, exact float parsing, missing-value handling, `source_row_number` stability across full, column-selected, repeated, and chunked loads, and failures for modified, truncated, or missing files and mismatched headers. They also check `source_provenance` against the manifest, and that loads hash an unchanged file once but hash a modified file again.
+- A full-data test (all six tables, including column-selected and chunked loads of the instance and sensor tables, and `source_provenance`) runs only with the official tables present and `TRACEADVISOR_FULL_DATA_TESTS=1`:
 
 ```bash
 TRACEADVISOR_FULL_DATA_TESTS=1 python -m pytest tests/test_alibaba_gpu_2020_loader.py
