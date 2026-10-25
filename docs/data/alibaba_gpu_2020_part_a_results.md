@@ -9,6 +9,8 @@
 **For the report:** cite this document for **pipeline validation** (the adapter's output on the full tables is correct). Cite `docs/data/alibaba_gpu_2020_source_data_checks.md` for **data validation** (the source tables match the design).
 **Decision IDs:** D-01 to D-24 are the schema design decisions in `docs/design/canonical_schema_design_decisions.md`; each is named where it is first cited.
 
+**Checked with the Task 2 loader (2026-10-24):** after the loader (`src/sources/alibaba_gpu_2020.py`, `load_table`) was merged, `prepare_sources` was run again on its output. Row counts, rejection flags, join coverage, and every identity and time column are identical to the run described above.
+
 **Result: Part A is complete. Every reconciliation holds exactly, linkage passes on accepted and rejected rows, and the source data raised no case that needed a new decision. The three Part B decisions (excluded-role resource values, extension column names, rejected-output dtypes) were approved afterwards (2026-10-24).**
 
 ---
