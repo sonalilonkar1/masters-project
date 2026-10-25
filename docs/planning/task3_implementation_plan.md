@@ -86,7 +86,7 @@ Task 2 loader ──► six verified tables (+ source_row_number)
 |---|---|---|
 | Task 1 adapter framework | `BaseDatasetAdapter`, `adapt_sources`, the `prepare_sources` / `map_prepared_sources` hooks, rejected output with levels, `validate_role_instance_linkage`, `validate_rejected_output`, `rejected_required_columns`, `build_multiview_metadata` | Available on `main` |
 | Capability profile | `ALIBABA_GPU_2020_CAPABILITIES` in `src/canonical/schema.py`, with the 14 exclusion reasons in rule order | Available on `main` |
-| Task 2 loader | Loads each table and adds `source_row_number` (int64, 1-based data-line number, unique, non-null); checksum manifest and `verify_sources` | Not yet merged (PR #93). Needed only by the build script (B7) |
+| Task 2 loader | Loads each table and adds `source_row_number` (int64, 1-based data-line number, unique, non-null); checksum manifest, `verify_sources` and `source_provenance` | Available on `main`. Used only by the build script (B7) |
 | Raw data | `data/raw/alibaba_gpu_2020/`, gitignored. 18 of 18 official SHA-256 values verified on 2026-10-23 | Available locally |
 
 
@@ -204,7 +204,7 @@ Part A builds four internal frames and checks their structure. Part B decides el
 | A8 | Part A tests | `tests/test_alibaba_gpu_2020_adapter.py` | Done (116 tests) |
 | B1–B5 | Exclusions, validity, mappings, aggregation, views | `map_prepared_sources` | Next |
 | B6 | Metadata | `build_multiview_metadata` override | Next |
-| B7 | Build script | `scripts/build_alibaba_gpu_2020_canonical.py` | After the Task 2 loader merges |
+| B7 | Build script | `scripts/build_alibaba_gpu_2020_canonical.py` | After B1–B6 |
 | B8 | Part B tests | Same test module | Next |
 
 All code is in `src/adapters/alibaba_gpu_2020.py`, with Part A and Part B in separate marked sections, and exported from `src/adapters/__init__.py`. `to_canonical` raises `NotImplementedError`: the adapter has only the six-table path.
@@ -599,7 +599,7 @@ Every difference from an expected value is explained in `count_report.md`, never
 | Part A | S1, A1–A8 | Done (2026-10-24) |
 | Decisions | All of §7 | Closed (2026-10-24) |
 | Part B | B1–B6, B8 | Next |
-| Build and full-data run | B7, §8.2 | After the Task 2 loader merges |
+| Build and full-data run | B7, §8.2 | After Part B |
 
 **Delivery.** One Task 3 pull request with the adapter, tests, build script, metadata and count report; full-data artifact generation may follow in a short second pull request.
 
@@ -612,7 +612,6 @@ Every difference from an expected value is explained in `count_report.md`, never
 | Risk | Mitigation |
 |---|---|
 | Memory: the `instances` frame takes 9.34 GB | Load only the needed columns; remove the extra deep copy in the default `BaseDatasetAdapter.prepare_sources` if needed |
-| The Task 2 loader may change before it merges | The build script is written last |
 | Full-data counts may differ from the evidence document | Explained in `count_report.md` |
 
 Results must state the dataset limitations in schema §3: selection bias toward completed, fully observed workloads; CPU is a lifetime average, not a peak; telemetry covers only about 50 of 68.9 days; 96.7% of eligible roles are single-instance; group sizes are very uneven.

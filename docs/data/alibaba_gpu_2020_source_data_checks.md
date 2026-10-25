@@ -81,7 +81,7 @@ Machine specifications are missing only for unplaced instances, which have no ma
 
 - **`source_row_number` is mandatory only on the instance table.** It is the instance audit identity and the attempt-order tie-breaker (schema §5.4, D-21 Instance identity, framework §9.2), and is required in `rejected_required_columns["instance"]`. Schema §9.5 requires it for rejected instance rows only.
 - **Job and task row numbers are optional.** Each rejected job row is traced by `job_name` and each rejected role row by `(job_name, task_name)`, which are unique and non-null in their source tables (above). When present, they are kept as `job_source_row_number` and `task_source_row_number` (plan §5.1).
-- The Task 2 loader adds `source_row_number` to every loaded table (PR #93 branch), so these optional columns are present on the full-data run.
+- The Task 2 loader adds `source_row_number` to every loaded table (`src/sources/alibaba_gpu_2020.py`), so these optional columns are present on the full-data run.
 
 ### 3.5 Consistency of duplicated source columns
 
