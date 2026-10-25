@@ -84,7 +84,7 @@ Defined by the frozen design; summarized here so the assumptions are in one plac
 | Area | Assumption | Source |
 |---|---|---|
 | Source | Full official `cluster-trace-gpu-v2020` tables, checksum-verified. `source_row_number` is the data-line number in the decompressed instance file, and the loader preserves file order | Framework §5, §9.2; D-21 |
-| Workload and recurrence | `workload_id = group`; `recurrence_key = group||task_name` (`official_with_role`). The 469 jobs without `group` use fallback keys and are excluded as `no_recurrence_key` | Schema §5.3; D-04, D-05 |
+| Workload and recurrence | `workload_id = group`; `recurrence_key = group||task_name` (`official_with_role`). The 1,530 jobs without `group` (1,460 accepted) use fallback keys and are excluded as `no_recurrence_key` | Schema §5.3; D-04, D-05 |
 | Evaluation unit | One `role_occurrence` row per task role per job, plus `instance` audit rows (one per instance-table row, every retry kept) | Schema §4.1; D-03 |
 | Time | Role rows are ordered by job submission. Instance rows carry the parent submission in `event_time_us`. Timestamps are never inferred or substituted. Jobs without a submission time go whole to the rejected output | Schema §7, §9.5; D-22, D-23 |
 | Memory | Primary resource: per-instance lifetime peak in GB, the maximum over the role's eligible workers; worker peaks are never summed | Schema §6.3, §8; D-11 |

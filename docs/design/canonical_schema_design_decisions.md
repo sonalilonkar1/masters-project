@@ -85,7 +85,7 @@ The adapter-side contract is in `docs/design/adapter_framework.md`.
 
 ### D-05. Jobs without `group`
 **Decision.**
-- The 469 jobs without `group` use fallback keys: `workload_id = job_name`, `occurrence_id = job_name`, `role_key = job_name||task_name`, `recurrence_key` null.
+- The 1,530 jobs without `group` (1,460 accepted; schema §5.3) use fallback keys: `workload_id = job_name`, `occurrence_id = job_name`, `role_key = job_name||task_name`, `recurrence_key` null.
 - Every role row of these jobs gets `exclusion_reason = no_recurrence_key` (§5.3).
 
 **Rationale.**
@@ -273,7 +273,7 @@ The adapter-side contract is in `docs/design/adapter_framework.md`.
 - Every retry stays a separate instance row. `multi_attempt_worker` applies when the same non-null worker appears on more than one instance row of the role.
 
 **Rationale.**
-- `(job_name, task_name, inst_name)` repeats on 906,751 of 7,522,002 rows, because 231,258 slots are retried.
+- `(job_name, task_name, inst_name)` repeats on 906,751 of 7,522,002 rows, because 231,632 slots are retried (corrected from 231,258; see `docs/data/alibaba_gpu_2020_source_data_checks.md` §3.7).
 - An attempt index is unique by construction, separates retries, is reproducible from the verified file, and needs no change to the validator.
 - `source_row_number` keeps every row traceable to its raw line.
 
