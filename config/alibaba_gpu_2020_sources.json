@@ -1,0 +1,193 @@
+{
+  "dataset_id": "alibaba_gpu_v2020",
+  "source_version": "cluster-trace-gpu-v2020",
+  "official_readme": "https://github.com/alibaba/clusterdata/blob/master/cluster-trace-gpu-v2020/README.md",
+  "checksum_algorithm": "sha256",
+  "checksum_source": "Archive, header and decompressed CSV SHA-256 values are the official values published in the cluster-trace-gpu-v2020 README; sizes and data-line counts were measured on the verified files.",
+  "source_row_number": "1-based data-line number in the checksum-verified decompressed CSV (the CSV files have no header line)",
+  "tables": {
+    "pai_job_table": {
+      "archive": {
+        "file": "archives/pai_job_table.tar.gz",
+        "url": "https://aliopentrace.oss-cn-beijing.aliyuncs.com/v2020GPUTraces/pai_job_table.tar.gz",
+        "sha256": "5aad7f7caac501136d14ed6a48e40546f825d7b0617a3a4f337e2348fe0a6cb0",
+        "size_bytes": 62065432
+      },
+      "header": {
+        "file": "pai_job_table.header",
+        "url": "https://raw.githubusercontent.com/alibaba/clusterdata/master/cluster-trace-gpu-v2020/data/pai_job_table.header",
+        "sha256": "3ac33aefab9a4d81338794fa145fe280594a379444961a9c639f00181c508567",
+        "size_bytes": 49,
+        "columns": [
+          "job_name",
+          "inst_id",
+          "user",
+          "status",
+          "start_time",
+          "end_time"
+        ]
+      },
+      "csv": {
+        "file": "pai_job_table.csv",
+        "sha256": "379ecb3becaba347f44a53bf7eb53e54b185221b2a0338a3f828828d269ba96c",
+        "size_bytes": 133288147,
+        "data_lines": 1055501
+      }
+    },
+    "pai_task_table": {
+      "archive": {
+        "file": "archives/pai_task_table.tar.gz",
+        "url": "https://aliopentrace.oss-cn-beijing.aliyuncs.com/v2020GPUTraces/pai_task_table.tar.gz",
+        "sha256": "cd1d6dc3215d2a8607ccf6b6dd952b5db776df86926c73259fea7c1499ac40e5",
+        "size_bytes": 35514117
+      },
+      "header": {
+        "file": "pai_task_table.header",
+        "url": "https://raw.githubusercontent.com/alibaba/clusterdata/master/cluster-trace-gpu-v2020/data/pai_task_table.header",
+        "sha256": "978bbaabfc8695874c605c01c144b2977f611ceca73aeb72189988cdfbfb0a9c",
+        "size_bytes": 91,
+        "columns": [
+          "job_name",
+          "task_name",
+          "inst_num",
+          "status",
+          "start_time",
+          "end_time",
+          "plan_cpu",
+          "plan_mem",
+          "plan_gpu",
+          "gpu_type"
+        ]
+      },
+      "csv": {
+        "file": "pai_task_table.csv",
+        "sha256": "6954802b457305f8a9e480ef97c40060baee59649fd3adc62c5a1e048aa058de",
+        "size_bytes": 113398956,
+        "data_lines": 1261050
+      }
+    },
+    "pai_instance_table": {
+      "archive": {
+        "file": "archives/pai_instance_table.tar.gz",
+        "url": "https://aliopentrace.oss-cn-beijing.aliyuncs.com/v2020GPUTraces/pai_instance_table.tar.gz",
+        "sha256": "1bf1e423a7ce3f8d086699801c362fd56a7182abdb234139e5ebbed97995ca06",
+        "size_bytes": 694839139
+      },
+      "header": {
+        "file": "pai_instance_table.header",
+        "url": "https://raw.githubusercontent.com/alibaba/clusterdata/master/cluster-trace-gpu-v2020/data/pai_instance_table.header",
+        "sha256": "51f2585178eaaf30ad8cc88c50ec9243b0f7d9603603ab7602efccb7aa34f6b0",
+        "size_bytes": 84,
+        "columns": [
+          "job_name",
+          "task_name",
+          "inst_name",
+          "worker_name",
+          "inst_id",
+          "status",
+          "start_time",
+          "end_time",
+          "machine"
+        ]
+      },
+      "csv": {
+        "file": "pai_instance_table.csv",
+        "sha256": "b179f7d7e0927a6663d719b728c92640447c5a0fc3c6e4edff31e7207ab9dd17",
+        "size_bytes": 1975177534,
+        "data_lines": 7522002
+      }
+    },
+    "pai_sensor_table": {
+      "archive": {
+        "file": "archives/pai_sensor_table.tar.gz",
+        "url": "https://aliopentrace.oss-cn-beijing.aliyuncs.com/v2020GPUTraces/pai_sensor_table.tar.gz",
+        "sha256": "9a0b82e8bdf3949281e4ba1423d9b4b34847e52799eecb138966de46da69c7a0",
+        "size_bytes": 406119947
+      },
+      "header": {
+        "file": "pai_sensor_table.header",
+        "url": "https://raw.githubusercontent.com/alibaba/clusterdata/master/cluster-trace-gpu-v2020/data/pai_sensor_table.header",
+        "sha256": "d3e26eb31fb3b833821373b487266312151a3bfb2f18fc62017a438546cc1362",
+        "size_bytes": 161,
+        "columns": [
+          "job_name",
+          "task_name",
+          "worker_name",
+          "inst_id",
+          "machine",
+          "gpu_name",
+          "cpu_usage",
+          "gpu_wrk_util",
+          "avg_mem",
+          "max_mem",
+          "avg_gpu_wrk_mem",
+          "max_gpu_wrk_mem",
+          "read",
+          "write",
+          "read_count",
+          "write_count"
+        ]
+      },
+      "csv": {
+        "file": "pai_sensor_table.csv",
+        "sha256": "12dd9929b70f3efe18d1279d9873e3a519c64f431613b23b059ed8c46a376dd7",
+        "size_bytes": 1056899391,
+        "data_lines": 3033232
+      }
+    },
+    "pai_group_tag_table": {
+      "archive": {
+        "file": "archives/pai_group_tag_table.tar.gz",
+        "url": "https://aliopentrace.oss-cn-beijing.aliyuncs.com/v2020GPUTraces/pai_group_tag_table.tar.gz",
+        "sha256": "722fef30b7fb7aa50dabd79155614b5423a9d65cf45a9b26c590d57725423a14",
+        "size_bytes": 55064781
+      },
+      "header": {
+        "file": "pai_group_tag_table.header",
+        "url": "https://raw.githubusercontent.com/alibaba/clusterdata/master/cluster-trace-gpu-v2020/data/pai_group_tag_table.header",
+        "sha256": "320470fa8f77182bc6052c95ff359b75542c748e9516b3d8148a6e2bafc1798d",
+        "size_bytes": 42,
+        "columns": [
+          "inst_id",
+          "user",
+          "gpu_type_spec",
+          "group",
+          "workload"
+        ]
+      },
+      "csv": {
+        "file": "pai_group_tag_table.csv",
+        "sha256": "d23fcb56d88b2976fda4a62708d77b2a8c98635c4b443f100ed5553d4cd07fbe",
+        "size_bytes": 115521549,
+        "data_lines": 1055032
+      }
+    },
+    "pai_machine_spec": {
+      "archive": {
+        "file": "archives/pai_machine_spec.tar.gz",
+        "url": "https://aliopentrace.oss-cn-beijing.aliyuncs.com/v2020GPUTraces/pai_machine_spec.tar.gz",
+        "sha256": "cc0d38a4045af1b1af8179de8b1b54b1ddd995e6160d6d061a6b1000f1276c2d",
+        "size_bytes": 30449
+      },
+      "header": {
+        "file": "pai_machine_spec.header",
+        "url": "https://raw.githubusercontent.com/alibaba/clusterdata/master/cluster-trace-gpu-v2020/data/pai_machine_spec.header",
+        "sha256": "4c9ea25914ff3f0b73be9ff223fb91002e787138165abd3f584ba37281448e1c",
+        "size_bytes": 41,
+        "columns": [
+          "machine",
+          "gpu_type",
+          "cap_cpu",
+          "cap_mem",
+          "cap_gpu"
+        ]
+      },
+      "csv": {
+        "file": "pai_machine_spec.csv",
+        "sha256": "251e9e33649155a6a935fdc1dc0e90cd4698206936b60bd8fce60ff2ccd51439",
+        "size_bytes": 73311,
+        "data_lines": 1897
+      }
+    }
+  }
+}
