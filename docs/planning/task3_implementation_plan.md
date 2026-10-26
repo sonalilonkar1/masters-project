@@ -1,7 +1,7 @@
 # Task 3: Alibaba GPU 2020 Adapter — Implementation Plan
 
 **Issue:** #79 · **Schema version:** 0.2.0
-**Status (2026-10-25):** Part A and Part B steps B1–B6 are implemented and verified on the full source tables. B7 (build script) is next.
+**Status (2026-10-26):** Part A and Part B (B1–B7) are implemented and verified on the full source tables. The final build from the clean committed tree is next.
 
 This document tracks the work: steps, status, delivery and remaining items. **What the adapter does and why is in the design doc**, not here.
 
@@ -34,8 +34,8 @@ This document tracks the work: steps, status, delivery and remaining items. **Wh
 | B2 | Validity (built after B3 and B4) | §5.4 | Done (2026-10-25) |
 | B5 | View assembly | §5.5 | Done (2026-10-25) |
 | B6 | Metadata | §5.6 | Done (2026-10-25) |
-| B7 | Build script, artifacts, count report, `SHA256SUMS` and `--verify` | §5.7 | Next |
-| B8 | Part B tests | §7 | Done for B1–B6; B7 tests with B7 |
+| B7 | Build script, artifacts, count report, `SHA256SUMS` and `--verify` | §5.7 | Implemented (2026-10-26); final clean build next |
+| B8 | Part B tests | §7 | Done |
 
 Build order for Part B: B1 → B3 → B4 → B2 → B5 → B6 → B7 (design §3).
 
@@ -46,14 +46,13 @@ Build order for Part B: B1 → B3 → B4 → B2 → B5 → B6 → B7 (design §3
 | Part A (`feature/task3-alibaba-gpu-2020-part-a`, "Part of #79") | Part A code, tests and docs | Open for review |
 | Part B (`feature/task3-alibaba-gpu-2020-part-b`, "Closes #79") | B1–B7, design doc, results doc, contract updates | In progress; branched from Part A. Opened against `main` after the Part A PR merges (merge `main` into the Part B branch first) |
 
-**After the Part B PR merges (data handoff):** pull `main`, run the build script once, put the five output files and `SHA256SUMS` on the team shared drive, and post the team message pointing to the output contract's "How to get the data" section. Teammates download and run `--verify`, or rebuild with the script (about 10 minutes, about 10 GB RAM).
+**After the Part B PR merges (data handoff):** pull `main`, run the build script once, put the five output files and `SHA256SUMS` on the team shared drive, and post the team message pointing to the output contract's "How to get the data" section. Teammates download and run `--verify` (little memory needed). Rebuilding takes about 12 minutes and needs 32 GB RAM to be reliable; 16 GB works only with heavy swap (output contract §3.1).
 
 ## 4. Remaining items
 
 | Item | When |
 |---|---|
-| B7 proposal, review, implementation and full build | Next |
-| Output contract: "How to get the data" section; measured results in §11 | With B7 |
-| Results doc §11: artifact sizes, checksums, count report | With B7 |
+| Final build from the clean committed tree; results doc §11.2 | Next |
+| Memory follow-up (`docs/planning/github_issues/task3_followup_memory.md`) | After Task 3 merges; file the issue |
 | Framework follow-up: restore `validation.py` docstrings | Optional, separate small change; not needed for Task 3 |
 | Google data-preparation diagram | Later |

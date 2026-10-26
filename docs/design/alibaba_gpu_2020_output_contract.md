@@ -2,7 +2,7 @@
 
 **Task:** 3 (#79), Alibaba GPU 2020 adapter and canonical artifacts
 **Schema version:** `0.2.0` (`canonical_workload_schema.md`)
-**Status:** Design frozen. Part A and Part B steps B1–B6 are implemented and verified on the full tables (`docs/data/alibaba_gpu_2020_adapter_results.md`); the adapter design is in `docs/design/alibaba_gpu_2020_adapter_design.md`. The build script (B7) and its artifacts are next.
+**Status:** Design frozen. Parts A and B, including the build script (B7), are implemented and verified on the full tables (`docs/data/alibaba_gpu_2020_adapter_results.md`); the adapter design is in `docs/design/alibaba_gpu_2020_adapter_design.md`. How to get the data: §3.1.
 **Decision IDs:** D-01 to D-24 are the schema design decisions in `docs/design/canonical_schema_design_decisions.md`; each is named where it is first cited.
 
 ---
@@ -42,13 +42,40 @@ Jobs, tasks, instances, sensor summaries, group tags and machine specs are combi
 | `role_occurrence.parquet` | The evaluation view: one row per task role per accepted job | 1,254,108 |
 | `instance.parquet` | The audit view: one row per accepted instance-table row (every retry is its own row) | 7,410,783 |
 | `rejected.parquet` | Every rejected job, role and instance row (§6) | 121,824 |
-| `metadata.json` | Adapter metadata and provenance (§7) | — |
-| `count_report.md` | Counts per rule and reason, and every difference from the design figures, explained | — |
+| `metadata.json` | Adapter metadata, provenance and the build block (§7) | — |
+| `count_report.md` | Rows, exclusion reasons, eligibility, validity and join coverage, and expected versus actual headline counts (all differences zero, or the build is not published) | — |
+| `SHA256SUMS` | SHA-256 of the other five files, standard `sha256sum` format | — |
 
 - **Location:** `data/processed/alibaba_gpu_v2020/`.
-- **Not committed:** `.gitignore` ignores `data/processed/*` and `*.parquet`, so every file here is local only. They are rebuilt with `scripts/build_alibaba_gpu_2020_canonical.py` (design step B7) from the checksum-verified source tables.
+- **Not committed:** `.gitignore` ignores `data/processed/*` and `*.parquet`, so every file here is local only. They are built by `scripts/build_alibaba_gpu_2020_canonical.py` (design §5.7) from the checksum-verified source tables.
 - **Committed record:** this document (contract) and the measured results (`docs/data/alibaba_gpu_2020_adapter_results.md`). Task 8 adds an artifact manifest with paths, checksums, row counts, code commit and generating commands.
 - **Format:** Parquet (`pyarrow>=10.0.0`, in `requirements.txt`).
+
+### 3.1 How to get the data
+
+**Recommended: download the shared copy.** The six files (about 3 GB, mostly `instance.parquet`) are on the team shared drive, built once from a clean commit of `main` (`metadata.json` → `build.code_commit`, with `code_dirty: false`).
+
+1. Download all six files into an **empty** folder. Strict verification rejects any other file, including `.DS_Store` or `desktop.ini` added by Finder or a sync client.
+2. Check the copy:
+   ```bash
+   python3 scripts/build_alibaba_gpu_2020_canonical.py --verify <folder>
+   ```
+   Exit 0 means every checksum, row count and column list matches. This needs little memory and no source data. `shasum -a 256 -c SHA256SUMS` (or `sha256sum -c`) inside the folder checks the checksums alone.
+3. Point your code at the folder, or copy it to `data/processed/alibaba_gpu_v2020/`.
+
+**Rebuilding (only if needed).** With the six source tables in `data/raw/alibaba_gpu_2020/` (Task 2 setup) and a clean checkout:
+
+```bash
+caffeinate -i python3 scripts/build_alibaba_gpu_2020_canonical.py   # add --force to replace an existing build
+```
+
+| Machine | Rebuild |
+|---|---|
+| 32 GB RAM | Recommended; reliable |
+| 16 GB RAM | Completes only with heavy swap and few other applications open (tested: about 12 minutes) |
+| 8 GB RAM | Not realistic |
+
+The process peaks at about 27 GB of memory (results doc §11). A failed or killed build never replaces an existing output. A rebuild is compared with the shared copy by `metadata.json` and `count_report.md`, not by Parquet checksums, which are identical only with the same pandas and pyarrow versions.
 
 ---
 
@@ -178,6 +205,7 @@ Filled by `build_multiview_metadata` (`adapter_framework.md` §6) and its Alibab
 | `join_coverage_counts` | Per join: driving matched, unmatched and null-key rows; lookup rows used and unused. Taken from the adapter's own Part A counts |
 | `telemetry_window` | The profile string, `About day 19 to day 68.9`; in provenance, a mapping such as `{"description": "About day 19 to day 68.9", "start_day": 19, "end_day": 68.9}` |
 | `eligibility_summary` (B6) | `accepted_roles` (the denominator); roles passing every rule except `multi_attempt_worker`; eligible roles; eligible roles with missing CPU |
+| `build` (B7) | `code_commit`, `code_dirty` (tracked changes; `false` for the shared build), `python_version`, `pandas_version`, `pyarrow_version`. No timestamp, so the file is deterministic |
 
 ---
 
@@ -264,7 +292,7 @@ Full figures are in `docs/data/alibaba_gpu_2020_adapter_results.md`. Headline fi
 | Eligible roles by row validity | 461,564 `valid`, 336 `partial`, 0 `invalid` |
 | Linkage (accepted and rejected) | 0 orphans, 0 mismatches |
 
-Artifact checksums and the code commit are added by the build (B7).
+File sizes, checksums, the code commit, run time and memory of the build are in results doc §11.
 
 ---
 

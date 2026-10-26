@@ -143,10 +143,34 @@ The first estimate (849,508) left out the rule-13 roles, which always have full 
 
 ### 10. Run cost
 
-Loading the six tables takes 43 s (4.3 GB). A full `adapt_sources` run with metadata takes 551 s in total, with a peak resident memory of 9.3 GB on a 17 GB machine.
+Loading the six tables takes 43 s. A full `adapt_sources` run with metadata took 551 s. Its peak *resident* memory was 9.3 GB on the 16 GB (17.2 billion byte) test machine, but resident memory leaves out what macOS compressed or swapped: the full process footprint is about 27 GB (§11).
 
 ---
 
-## 11. Artifacts (B7)
+## 11. Build script and artifacts (B7)
 
-Added after the build script runs: file sizes, checksums and the count report.
+### 11.1 Memory profile
+
+A read-only profile of the full build (2026-10-26) sampled the Python process's macOS `phys_footprint` (all memory it uses, including what macOS compressed or swapped) and resident size every 0.5 s, labelled by stage. Publishing was disabled; the canonical output was not touched.
+
+| Stage | Time | Peak footprint | Peak resident |
+|---|---|---|---|
+| Load the six tables | 0–53 s | 3.3 GB | 3.8 GB |
+| Framework source copies | 68–69 s | 5.4 GB | 5.5 GB |
+| `prepare_sources` | 69–316 s | 15.0 GB | 7.2 GB |
+| `map_prepared_sources` | 339–465 s | 25.4 GB | 8.2 GB |
+| **Framework validation** (`adapt_sources`) | 498–648 s | **27.2 GB** | 7.9 GB |
+| Metadata | 648–660 s | 16.2 GB | 6.6 GB |
+| Write `role_occurrence` / `instance` / `rejected` | 660–734 s | 10.8 / 16.4 / 11.0 GB | 6.8 / 5.5 / 1.4 GB |
+| After the build returns | 752 s | 0.4 GB | 1.1 GB |
+
+- The machine already had 8.5 GB of swap in use; the build added up to about 7.3 GB (15.8 GB at the peak).
+- The peak comes from whole-frame copies alive at once: the prepared frames, the views, and the framework's validation copies (one copy of the instance view is about 2.8 GB). Text stored as Python objects is not the cause: the CSV parser shares one object per repeated value. On 2M instance rows, Arrow-backed strings used 660 MB against 585 MB for Python strings.
+- §10's 9.3 GB was resident memory only.
+- The remaining hotspots are in `base.py`, `validation.py` and the adapter; they are listed in `docs/planning/github_issues/task3_followup_memory.md`. B7 itself drops the adapter result before writing and frees each frame after writing it.
+
+### 11.2 Final build
+
+Added after the build from the clean committed tree: run time, memory, file sizes, checksums, the build block and the nine checks.
+
+`EXPECTED_COUNTS` in `scripts/build_alibaba_gpu_2020_canonical.py` is a copy of §5 and §9: a change that moves a count must update both.

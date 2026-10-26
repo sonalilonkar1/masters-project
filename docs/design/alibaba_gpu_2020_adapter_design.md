@@ -309,7 +309,39 @@ Null comparisons are never invalid. **Row status** (both frames): `invalid` if a
 
 ### 5.7 B7 Build script
 
-`scripts/build_alibaba_gpu_2020_canonical.py`: verify the sources, load the needed columns, build provenance, run `adapt_sources`, and write the five files to `data/processed/alibaba_gpu_v2020/` (gitignored), with `SHA256SUMS` and a `--verify` option for copies downloaded from the shared drive. Its detailed design is reviewed before implementation and recorded here.
+`scripts/build_alibaba_gpu_2020_canonical.py` builds the six output files into `data/processed/alibaba_gpu_v2020/` (gitignored; `--out-dir` to change), or checks a downloaded copy with `--verify DIR`. It only calls the loader, the adapter and the framework.
+
+**Build**
+1. **Pre-checks** (exit 2, nothing loaded): the output folder is missing or empty, or `--force` is given; the code is a Git checkout with no tracked changes, or `--allow-dirty` is given. Stale `.<name>.tmp-*` and `.<name>.previous-*` folders next to the output are reported, never deleted.
+2. **Sources:** `source_provenance()` hashes the six tables against the manifest; `load_table(table, columns=SOURCE_COLUMNS[table], verify=False)` loads only the adapter's columns.
+3. **Adapter:** `adapt_sources(sources, primary_view="role_occurrence", provenance=...)`, with `telemetry_window = {"description": "About day 19 to day 68.9", "start_day": 19, "end_day": 68.9}` (the sensor table has no timestamps; the window is from the checks report).
+4. **Write** to a temporary folder `.<name>.tmp-<pid>` beside the output: the three Parquet files (pyarrow, no index), `metadata.json`, `count_report.md`, then `SHA256SUMS`. The adapter result is dropped first, because it holds every view; the script keeps only the three frames and frees each one after writing it.
+5. **Check** the temporary folder with the `--verify` routine, then compare the headline counts with `EXPECTED_COUNTS` (a copy of results doc §5 and §9: view and rejected rows, the 14 rule counts and `<null>`, the eligibility summary).
+6. **Publish** only if every check passes: rename an existing output to `.<name>.previous-<pid>`, rename the temporary folder to the output, then delete the previous folder. If the second rename fails, the first is reversed. This prevents partial or mixed output; it cannot guarantee the output is never briefly absent if the process is killed between the renames, which is why the previous folder is kept until the new one is installed.
+
+**`metadata.json`** is the adapter metadata plus a `build` block: `code_commit` (`git rev-parse HEAD`; null outside Git), `code_dirty` (a tracked file differs from HEAD; untracked files ignored), `python_version`, `pandas_version`, `pyarrow_version`. It holds no timestamp, host or path, so it is deterministic. The framework keeps only its four provenance keys, so the build block is added by the script, not passed as provenance.
+
+**`count_report.md`**: rows per view and rejected rows per level, exclusion reasons in rule order, the eligibility summary, validity counts per view, join coverage, and the expected / actual / difference table. Run time and memory are printed to the console only.
+
+**`--verify DIR`** fails (exit 1) if:
+1. `SHA256SUMS` is missing, malformed or has a duplicate entry. Format: `<64 lowercase hex>  <file name>`, sorted, LF, bare names, not listing itself; `sha256sum -c` and `shasum -a 256 -c` accept it;
+2. its file set is not exactly the other five files;
+3. a listed file is missing or its SHA-256 differs;
+4. the folder holds anything else, including `.DS_Store`, `desktop.ini` or subfolders. Download into an empty folder;
+5. `metadata.json` does not parse or lacks `canonical_row_counts` or `rejection_count`;
+6. a Parquet row count (from the footer) differs from `metadata.json`, or its column names differ from `ROLE_VIEW_COLUMNS` / `INSTANCE_VIEW_COLUMNS`.
+
+**Failures.** Every failure leaves an existing output unchanged, publishes nothing, removes the temporary folder (kept, and its path printed, with `--keep-failed-output`; never renamed to the output name) and exits non-zero. Cleanup runs in `try/finally`, including on Ctrl-C; a hard kill (for example running out of memory) can leave a temporary folder, which the next run reports.
+
+| Failure | Exit |
+|---|---|
+| Bad arguments; output exists without `--force`; dirty tree or no Git without `--allow-dirty` | 2 |
+| Source file missing or verification failed; adapter validation; writing, checksum, verify or publish failure | 3 |
+| Expected-count difference (diagnostic output only, never published) | 1 |
+
+**Memory.** Measured on the full tables (results doc §11): the process peaks at about 27 GB, during the framework's validation in `adapt_sources`, because several whole-frame copies are alive at once (prepared frames, views, validation copies). A 16 GB machine completes the build only with heavy swap and few other applications open, in about 12 minutes; 32 GB is recommended for rebuilding and 8 GB is not realistic. Downloading the shared output and running `--verify` need little memory, so that is how teammates get the data. Arrow-backed strings were measured and do not help (13% larger on load). The remaining hotspots are in `base.py`, `validation.py` and the adapter's `.assign` chain, outside B7; they are recorded in `docs/planning/github_issues/task3_followup_memory.md`.
+
+**Reproducibility.** The same sources, commit, Python, pandas and pyarrow give identical outputs. Parquet bytes are not promised across library versions, so rebuilds are compared by `metadata.json`, the count report, the column lists and a passing `--verify`; downloaded copies by `--verify`.
 
 ---
 
@@ -356,10 +388,16 @@ Choices the frozen schema left open, with the date approved.
 | Join coverage in metadata (2026-10-25) | From the adapter | Computed in `prepare_sources`; provenance would be circular |
 | Exclusion count order (2026-10-25) | Rule order with zeros, `<null>` last | Matches the contract and the report table |
 | Eligibility summary (2026-10-25) | Four integers incl. `accepted_roles`, from B1's results | Every figure has its denominator; B1 runs once |
-| Memory (2026-10-25) | No optimisation now; B7 narrows loading or uses PyArrow strings if needed, never `base.py` | Outputs verified; most teammates download |
+| Memory (2026-10-25; superseded 2026-10-26) | No optimisation now; B7 narrows loading or uses PyArrow strings if needed, never `base.py` | Outputs verified; most teammates download. Narrowed loading is done; PyArrow strings were measured and dropped |
 | No job totals | Not emitted | Not in the #79 mapping; one row cannot have two scopes |
 | Parquet artifacts | Parquet | Keeps column types; `pyarrow` already required |
-| Data handoff (2026-10-25) | Script is the source of truth; built once after merge and shared with checksums | Outputs are gitignored; a rebuild needs about 10 min and 10 GB RAM |
+| Data handoff (2026-10-25) | Script is the source of truth; built once after merge and shared with checksums | Outputs are gitignored; a rebuild takes about 12 minutes and needs 32 GB RAM to be reliable (16 GB with heavy swap) |
+| Count mismatch (2026-10-26) | Written to a temporary folder only, never published; exit 1 | A changed count must be explained before anyone uses the output |
+| Replacing output (2026-10-26) | Refused unless `--force`; two renames, previous kept until the new output is installed | A 10-minute build or a downloaded copy is never lost by accident |
+| Strict `--verify` (2026-10-26) | Any extra file fails | Predictable; teammates download into an empty folder |
+| Clean code tree (2026-10-26) | Dirty or non-Git refused unless `--allow-dirty`; recorded in `build` | The shared copy must name an exact commit |
+| Memory (2026-10-26) | B7 releases the result and writes one frame at a time; no Arrow strings, chunking or framework changes in Task 3 | Measured: the peak is in framework validation; Arrow strings do not help; teammates download instead of rebuilding |
+| Build block (2026-10-26) | Commit and library versions in `metadata.json` `build`, not provenance | The framework keeps only four provenance keys; versions explain Parquet byte differences |
 
 ### 6.3 Count corrections
 
@@ -381,7 +419,7 @@ If later data contradicts a frozen rule, the schema section and D-decision are r
 
 | Item | Detail |
 |---|---|
-| Memory | A full build peaks at 9.3 GB; the framework keeps deep copies of the sources. Most teammates download instead of rebuilding |
+| Memory | A full build peaks at about 27 GB of process memory (the earlier 9.3 GB was resident memory only, which hid the swapped part). 16 GB works only with heavy swap; 32 GB recommended. Teammates download and `--verify`. Fixes are in a follow-up issue |
 | CPU | Lifetime average, not a peak; results must say so |
 | Validity | Row validity equals memory validity for this dataset only |
 | Population | Eligible roles are completed, fully observed workloads; 96.7% single-instance; group sizes very uneven; telemetry covers about 50 of 68.9 days |
