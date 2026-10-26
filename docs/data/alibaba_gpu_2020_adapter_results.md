@@ -209,6 +209,8 @@ The test machine has 16 GB RAM. Releasing the adapter result before writing (B7)
 | — | Tampered copy | One changed byte and an added `.DS_Store`: `--verify` fails (exit 1) and names both |
 | — | Publish | Previous output replaced only after all checks passed; no `.tmp-*` or `.previous-*` folders left |
 
+These checksums belong to this pre-merge validation build. The shared copy is rebuilt from the merge commit, so its `metadata.json`, `count_report.md` and `SHA256SUMS` differ (they record the commit) even when the Parquet files are byte-identical; check a download against its own `SHA256SUMS`.
+
 The three Parquet files are also byte-identical to the earlier `--allow-dirty` build (commit `11de456` plus uncommitted B7 code); only `metadata.json` and `count_report.md` differ, because they record the commit.
 
 `EXPECTED_COUNTS` in `scripts/build_alibaba_gpu_2020_canonical.py` is a copy of §5 and §9: a change that moves a count must update both.

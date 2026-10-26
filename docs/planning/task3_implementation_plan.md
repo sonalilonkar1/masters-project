@@ -46,7 +46,13 @@ Build order for Part B: B1 → B3 → B4 → B2 → B5 → B6 → B7 (design §3
 | Part A (`feature/task3-alibaba-gpu-2020-part-a`, "Part of #79") | Part A code, tests and docs | Open for review |
 | Part B (`feature/task3-alibaba-gpu-2020-part-b`, "Closes #79") | B1–B7, design doc, results doc, contract updates | In progress; branched from Part A. Opened against `main` after the Part A PR merges (merge `main` into the Part B branch first) |
 
-**After the Part B PR merges (data handoff):** pull `main`, run the build script once, put the five output files and `SHA256SUMS` on the team shared drive, and post the team message pointing to the output contract's "How to get the data" section. Teammates download and run `--verify` (little memory needed). Rebuilding takes about 12 minutes and needs 32 GB RAM to be reliable; 16 GB works only with heavy swap (output contract §3.1).
+**After the Part B PR merges (data handoff):**
+1. Pull `main` and check the tree is clean (`git status`).
+2. Rebuild from the merge commit: `caffeinate -i python3 scripts/build_alibaba_gpu_2020_canonical.py --force`. This regenerates all six files. Do **not** reuse the `SHA256SUMS` recorded in results doc §11.2: `metadata.json` records the code commit, so its checksum, and therefore `count_report.md` and `SHA256SUMS`, change even when the three Parquet files stay byte-identical.
+3. Check `metadata.json` → `build`: `code_commit` is the merge commit and `code_dirty` is `false`. Run `--verify` on the folder.
+4. Upload all six files, including the new `SHA256SUMS`, to the team shared drive, and post the team message pointing to output contract §3.1.
+
+Teammates download and run `--verify` (little memory needed). Rebuilding takes about 12 minutes and needs 32 GB RAM to be reliable; 16 GB works only with heavy swap (output contract §3.1).
 
 ## 4. Remaining items
 

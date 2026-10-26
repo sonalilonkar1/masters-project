@@ -53,7 +53,7 @@ Jobs, tasks, instances, sensor summaries, group tags and machine specs are combi
 
 ### 3.1 How to get the data
 
-**Recommended: download the shared copy.** The six files (about 3 GB, mostly `instance.parquet`) are on the team shared drive, built once from a clean commit of `main` (`metadata.json` → `build.code_commit`, with `code_dirty: false`).
+**Recommended: download the shared copy.** The six files (about 3 GB, mostly `instance.parquet`) are on the team shared drive, built once from the Task 3 merge commit on `main` (`metadata.json` → `build.code_commit`, with `code_dirty: false`). Its `SHA256SUMS` is the one to check against; the checksums in results doc §11.2 belong to the pre-merge validation build.
 
 1. Download all six files into an **empty** folder. Strict verification rejects any other file, including `.DS_Store` or `desktop.ini` added by Finder or a sync client.
 2. Check the copy:
