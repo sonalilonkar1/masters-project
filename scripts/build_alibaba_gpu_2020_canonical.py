@@ -240,15 +240,11 @@ def count_report(metadata: Mapping, comparison: Optional[list[tuple]]) -> str:
     lines += _table(["Rejected level", "Reason", "Rows"], rejected)
 
     lines += ["## Reconciliation (source = accepted + rejected)", ""]
-    levels = metadata.get("reconciliation")
-    if levels is None:
-        lines += ["Not computed.", ""]
-    else:
-        lines += _table(["Level", "Source table", "Source", "Accepted", "Rejected", "Difference"],
-                        [[level, f"`{v['source_table']}`", v["source"], v["accepted"], v["rejected"],
-                          v["difference"]] for level, v in levels.items()])
-        bad = unreconciled(metadata)
-        lines += ["Every level reconciles." if not bad else f"**{len(bad)} level(s) do not reconcile.**", ""]
+    lines += _table(["Level", "Source table", "Source", "Accepted", "Rejected", "Difference"],
+                    [[level, f"`{v['source_table']}`", v["source"], v["accepted"], v["rejected"],
+                      v["difference"]] for level, v in metadata["reconciliation"].items()])
+    bad = unreconciled(metadata)
+    lines += ["Every level reconciles." if not bad else f"**{len(bad)} level(s) do not reconcile.**", ""]
 
     lines += ["## Exclusion reasons (role_occurrence, rule order)", ""]
     lines += _table(["`exclusion_reason`", "Roles"],

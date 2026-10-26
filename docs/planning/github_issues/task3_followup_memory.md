@@ -11,7 +11,7 @@ Lower the peak memory of `scripts/build_alibaba_gpu_2020_canonical.py` so the ca
 ## Acceptance criteria
 
 1. A profiled full build (Appendix A) shows a peak `phys_footprint` **at or below 14 GB**, so a 16 GB machine builds without heavy swap.
-2. **Outputs unchanged:** `role_occurrence.parquet`, `instance.parquet` and `rejected.parquet` are **byte-identical** (`SHA256SUMS`) to the build from commit `9d08d0d` with the same Python, pandas and pyarrow. `metadata.json` differs only in `build.code_commit`.
+2. **Outputs unchanged:** `role_occurrence.parquet`, `instance.parquet` and `rejected.parquet` are **byte-identical** (`SHA256SUMS`) to the build from commit `64d3234` (results doc §11.2) with the same Python, pandas and pyarrow. `metadata.json` differs only in `build.code_commit`.
 3. All tests pass; the existing framework tests listed per hotspot still pass unchanged.
 4. Every validation still runs and still fails on the same inputs (no check removed or weakened).
 5. The new peak and stage table are recorded in `docs/data/alibaba_gpu_2020_adapter_results.md` §11 and the 16/32 GB guidance in the output contract §3.1 is updated.
