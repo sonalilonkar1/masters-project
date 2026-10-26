@@ -338,8 +338,8 @@ Worker-level data therefore cannot automatically be treated as job-level data.
 | Identifiers | `job_name`, `inst_id` (= job), `user`, `task_name`, `inst_name`, `worker_name`, `machine`, **`group`**, `workload` | [DOC] |
 | Official meaning of `group` | "Instances with the same group tag are considered as repeated instances." It is a semantic tag derived from entry scripts, command-line parameters and data sources/sinks. Upstream issue #114 adds that jobs with the same group are "treated as recurring ones". | [DOC]; upstream issue #114 |
 | Official or inferred | **Officially defined by the source** | [DOC] |
-| Coverage | **99.86%** of jobs have a `group` row (1,055,032 group rows vs 1,055,501 jobs) | [DL] |
-| Missing group keys | **469 jobs (0.04%)** | [DL] |
+| Coverage | **99.86%** of jobs have a `group` row (1,530 of 1,055,501 jobs have no group-tag row; 1,061 group-tag rows match no job) | [DL] |
+| Missing group keys | **1,530 jobs (0.14%)**; 1,460 of them accepted (corrected from 469 by the Task 3 source data checks, `docs/data/alibaba_gpu_2020_source_data_checks.md`) | [DL] |
 | User consistency | 0 groups span more than one `user`; 0 user mismatches between the job and group tables | [DL] |
 | Group sizes | 316,458 groups. Median 1, 90th percentile 3, 99th percentile 61, **maximum 22,641**. | [DL] |
 | Repetition, all statuses | Groups with ≥ 2 jobs: 43,060 (780,573 jobs, 74.0%). ≥ 5: 21,971 (68.6%). ≥ 10: 12,891 (63.1%). | [DL] |
@@ -640,7 +640,7 @@ PR #70's `DatasetCapabilities` has 10 boolean flags. The inspection shows the ca
 | Timestamp normalization | µs, unchanged | s × 10⁶; keep the time-of-day note | s × 10⁶; null `end == 0` and `end < start` |
 | Resource-unit tagging | Tag NCU / normalized; no conversion | Tag pct_vcpu and GB. Any CPU conversion to vCPU (÷100) must apply **identically** to requests and actuals. | Tag pct_core and normalized; no cross-dataset conversion |
 | Status mapping and flags | Flag FAIL, LOST, EVICT, KILL (policy is a design question; currently none excluded) | Flag non-Terminated jobs; Interrupted, Ready and Waiting instances; workers without sensors; `max_mem > cap_mem` (5,322 rows); duplicate `worker_name` rows | Flag non-Terminated rows; `mem_max < mem_avg`; `cpu_max < cpu_avg`; invalid ends |
-| Recurrence construction or preservation | Construct `user‖collection_logical_name`, provenance `constructed` | **Preserve** `group`, provenance `official`; null for the 469 jobs without one | Leave null |
+| Recurrence construction or preservation | Construct `user‖collection_logical_name`, provenance `constructed` | **Preserve** `group`, provenance `official`; null for the 1,530 jobs without one (1,460 accepted) | Leave null |
 | Occurrence construction | `recurrence_key‖execution_start_time_us` | One per job, ordered by job `start_time` within `group` | None |
 | Resource aggregation | Aligned-window sum across executions, then maximum (existing notebook 03 logic) | Worker → job or role aggregation (**design question**). A plain sum of per-worker maxima is only an upper bound. | None at instance level |
 | Missing-value preservation | Keep nulls (774 requests, 60 memory peaks) | Keep `peak_cpu` null for every row; keep `max_mem` null where there is no sensor | Keep nulls (10.5% `mem_max` in head) |

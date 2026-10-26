@@ -67,7 +67,7 @@ The schema code, JSON configuration and examples must move to 0.2.0 in one chang
   - the scored validation population is 329 occurrences.
 
 ### Alibaba GPU 2020 (required second full integration)
-- The official `group` field is the workload grouping source (99.86% of jobs; 469 jobs have none).
+- The official `group` field is the workload grouping source (99.86% of accepted jobs; 1,530 jobs have none, 1,460 of them accepted).
 - Evaluation is at task-role level: one row per task role per job ([section 4](#4-record-levels-and-terminology)).
 - **Memory is the primary evaluated resource** (per-instance lifetime peak, GB).
 - **CPU is lifetime-average usage only. No CPU peak is available.**
@@ -194,7 +194,9 @@ Any double-bar character (`‖`) used in other documents' explanatory examples i
 
 **Why `recurrence_key` includes `task_name` for Alibaba GPU 2020.** Shared history and next-occurrence logic groups rows by `recurrence_key`. If the key were `group` alone, the history of a `worker` role would mix with the history of a `ps` role and other roles in the same group, and the "next occurrence" of a worker row could be a parameter-server row. Adding `task_name` keeps each role's history separate. This is supported by the data: 99.47% of repeated groups have the same task-role set in every job, and 99.72% of role-occurrences belong to roles present in every job of their group.
 
-**Jobs without `group` (469 jobs).**
+**Jobs without `group` (1,530 jobs; 1,460 accepted).**
+- Counts from the full source tables (Task 3 source data checks, 2026-10-23): 1,530 jobs have no group-tag row. 70 of them have no submission time and are rejected whole (section 9.5); the other 1,460 accepted jobs use the fallback keys. Group coverage among accepted jobs is 99.8612%.
+- The earlier figure of 469 was the difference between the job-table and group-tag row counts (1,055,501 − 1,055,032). It is not a job count, because 1,061 group-tag rows match no job.
 - No official recurrence grouping is available, so these jobs cannot support recurrence-based prediction.
 - The fallbacks in the table above keep `workload_id` and `role_key` non-null. A null `workload_id` would fail validation, and a null `role_key` would escape the uniqueness check.
 - Every role row of these jobs has `exclusion_reason = no_recurrence_key`.
@@ -209,7 +211,7 @@ Any double-bar character (`‖`) used in other documents' explanatory examples i
 instance_id = job_name||task_name||inst_name||instance_attempt_index
 ```
 
-**Why the slot alone is not enough.** In the full official instance table (7,522,002 rows), `(job_name, task_name, inst_name)` repeats on 906,751 rows because failed or interrupted instances are retried in the same slot (231,258 slots have more than one row). Every retry is kept as a separate instance row.
+**Why the slot alone is not enough.** In the full official instance table (7,522,002 rows), `(job_name, task_name, inst_name)` repeats on 906,751 rows because failed or interrupted instances are retried in the same slot (231,632 slots have more than one row; 6,846,883 distinct slots). Every retry is kept as a separate instance row.
 
 **Attempt index**
 - `instance_attempt_index` is a deterministic, 1-based integer within the slot `(job_name, task_name, inst_name)`.
@@ -701,7 +703,7 @@ Dataset-level provenance belongs in the adapter result metadata, not on every ro
 | 4 | Terms defined per dataset; Google full-workload and Alibaba role rows are different scopes | 4.2 |
 | 5 | `occurrence_key` is conceptual and stored in `occurrence_id`; `role_key` is the unique role identity | 5.1 |
 | 6 | Literal separators: `\|\|` for Google and Alibaba GPU 2020; `\|` for Alibaba 2018 | 5.2 |
-| 7 | Alibaba GPU 2020 `recurrence_key = group\|\|task_name`; fallback keys and `no_recurrence_key` for the 469 jobs without `group` | 5.3 |
+| 7 | Alibaba GPU 2020 `recurrence_key = group\|\|task_name`; fallback keys and `no_recurrence_key` for the 1,530 jobs without `group` (1,460 accepted) | 5.3 |
 | 8 | `observed_*` = average, `peak_*` = peak; Alibaba GPU 2020 `peak_cpu` always null | 6.1, 6.3 |
 | 9 | Units `percent_of_vcpu`, `percent_of_gpu` and `gb` for Alibaba GPU 2020; Alibaba 2018 source units retained | 6.2 |
 | 10 | GPU fields retained; GPU evaluation outside the current version | 6.4 |

@@ -198,7 +198,7 @@ All facts in this section are **verified**, unless labeled otherwise. They come 
 
 | Measure | Value |
 |---|---|
-| Jobs with a `group` | **99.86%**; 469 jobs (0.04%) have none |
+| Jobs with a `group` | **99.86%**; 1,530 jobs (0.14%) have none, 1,460 of them accepted (corrected from 469 by the Task 3 source data checks, `docs/data/alibaba_gpu_2020_source_data_checks.md`) |
 | Groups spanning more than one user | 0 |
 | Number of groups | 316,458. Median size 1, 99th percentile 61, maximum 22,641. |
 | Groups with ≥ 2 jobs (all statuses) | 43,060, covering 74.0% of jobs |
@@ -635,7 +635,7 @@ This lowers semantic risk, but the Google occurrence code must not be reused as-
 | Field mapping | `plan_*` → `requested_*`; `max_mem` → `peak_memory`; `cpu_usage` → `observed_cpu_avg` (never `peak_cpu`) | `plan_*` → `requested_*`; `cpu_max` / `mem_max` → `peak_*` |
 | Timestamp normalization | Seconds × 10⁶; submission as occurrence time; UTC+8 note | Seconds × 10⁶; null `end == 0` and `end < start` |
 | Unit tagging | `pct_vcpu`, `gb` (identical for request and actual) | `pct_core`, `normalized` |
-| Recurrence interpretation | Preserve `group` (`recurrence_key_origin = official`); null for the 469 jobs without one | None |
+| Recurrence interpretation | Preserve `group` (`recurrence_key_origin = official`); null for the 1,530 jobs without one (1,460 accepted) | None |
 | Occurrence construction | Job within group; role rows `group‖job_name‖task_name` | None |
 | Resource aggregation | Maximum across eligible workers per role; job totals descriptive only | None (instance level) |
 | Status rules | Eligibility and exclusion reasons as in section 5.7 | Terminated only; value-consistency checks |
