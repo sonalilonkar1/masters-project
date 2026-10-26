@@ -1,7 +1,7 @@
 # Task 3: Alibaba GPU 2020 Adapter — Implementation Plan
 
 **Issue:** #79 · **Schema version:** 0.2.0
-**Status (2026-10-26):** Part A and Part B (B1–B7) are implemented and verified on the full source tables. The final build from the clean committed tree is next.
+**Status (2026-10-26):** Part A and Part B (B1–B7) are implemented and verified on the full source tables, including a final build from the clean committed tree (results doc §11.2).
 
 This document tracks the work: steps, status, delivery and remaining items. **What the adapter does and why is in the design doc**, not here.
 
@@ -34,7 +34,7 @@ This document tracks the work: steps, status, delivery and remaining items. **Wh
 | B2 | Validity (built after B3 and B4) | §5.4 | Done (2026-10-25) |
 | B5 | View assembly | §5.5 | Done (2026-10-25) |
 | B6 | Metadata | §5.6 | Done (2026-10-25) |
-| B7 | Build script, artifacts, count report, `SHA256SUMS` and `--verify` | §5.7 | Implemented (2026-10-26); final clean build next |
+| B7 | Build script, artifacts, count report, `SHA256SUMS` and `--verify` | §5.7 | Done (2026-10-26) |
 | B8 | Part B tests | §7 | Done |
 
 Build order for Part B: B1 → B3 → B4 → B2 → B5 → B6 → B7 (design §3).
@@ -52,7 +52,6 @@ Build order for Part B: B1 → B3 → B4 → B2 → B5 → B6 → B7 (design §3
 
 | Item | When |
 |---|---|
-| Final build from the clean committed tree; results doc §11.2 | Next |
 | Memory follow-up (`docs/planning/github_issues/task3_followup_memory.md`) | After Task 3 merges; file the issue |
 | Framework follow-up: restore `validation.py` docstrings | Optional, separate small change; not needed for Task 3 |
 | Google data-preparation diagram | Later |

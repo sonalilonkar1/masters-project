@@ -143,7 +143,7 @@ The first estimate (849,508) left out the rule-13 roles, which always have full 
 
 ### 10. Run cost
 
-Loading the six tables takes 43 s. A full `adapt_sources` run with metadata took 551 s. Its peak *resident* memory was 9.3 GB on the 16 GB (17.2 billion byte) test machine, but resident memory leaves out what macOS compressed or swapped: the full process footprint is about 27 GB (§11).
+Loading the six tables takes 43 s. A full `adapt_sources` run with metadata took 551 s. Its peak *resident* memory was 9.3 GB on the 16 GB (17.2 billion byte) test machine, but resident memory leaves out what macOS compressed or swapped: the full process footprint is about 29 GB (§11).
 
 ---
 
@@ -169,8 +169,46 @@ A read-only profile of the full build (2026-10-26) sampled the Python process's 
 - §10's 9.3 GB was resident memory only.
 - The remaining hotspots are in `base.py`, `validation.py` and the adapter; they are listed in `docs/planning/github_issues/task3_followup_memory.md`. B7 itself drops the adapter result before writing and frees each frame after writing it.
 
+In the profile, the stage peaks were sampled every 0.5 s; `/usr/bin/time -l` records the exact peak, which is higher because short spikes fall between samples (§11.2).
+
 ### 11.2 Final build
 
-Added after the build from the clean committed tree: run time, memory, file sizes, checksums, the build block and the nine checks.
+Built 2026-10-26 from the clean committed tree with `--force`, replacing the earlier `--allow-dirty` validation build only after every check passed. A second build from the same commit into a separate folder checked determinism.
+
+**Build block:** `code_commit` `9d08d0dce2f38fb9c0dfd82f1e9dc2ba95aec8e9`, `code_dirty: false`, Python 3.10.0, pandas 2.3.3, pyarrow 23.0.1.
+
+| Measure (`/usr/bin/time -l`) | Build 1 (published) | Build 2 (determinism) |
+|---|---|---|
+| Run time | 624 s | 634 s |
+| Peak memory footprint | 29.2 GB | 29.2 GB |
+| Peak resident memory | 9.1 GB | 9.2 GB |
+| Machine swap: at start → peak | 6.1 → 14.1 GB | 9.0 → 14.2 GB |
+
+The test machine has 16 GB RAM. Releasing the adapter result before writing (B7) does not change the peak, which is in framework validation (§11.1).
+
+| File | Bytes | SHA-256 |
+|---|---|---|
+| `role_occurrence.parquet` | 289,775,773 | `e1823b92b2851675d567a9b4f55cdce47036b74082e7eb8247c1b77d1c33b107` |
+| `instance.parquet` | 2,687,477,627 | `c209d4aebfbaabb2222ccdb0b0c6aaa83edb2de32dfffcc50567abe404b18b63` |
+| `rejected.parquet` | 33,112,990 | `f1891c5bd544e3e3a184c642d0c2f054ee29039e7242b0a7efe21bb00ff94ef4` |
+| `metadata.json` | 6,328 | `959c477ea1d9bcb6e51b6373b2344fc341ec7a6d48e2821aaa0a3ed286838363` |
+| `count_report.md` | 3,685 | `da918da30cf4a7206c8f9540613c3803bf70fc86d2d78472a78e8709e22b8baf` |
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Row counts | 1,254,108 / 7,410,783 / 121,824 |
+| 2 | Expected vs actual (22 headline figures) | All differences zero |
+| 3 | Column lists | 46 role and 47 instance columns, equal to contract §4–5 |
+| 4 | `metadata.json` | All 18 expected keys; 6 source checksums; telemetry window mapping; build block as above |
+| 5 | Rejected dtypes | 31 `string`, 19 `float64`, 8 `Int64`, 6 `boolean`, no `object`; 3,663 job / 6,942 role / 111,219 instance rows |
+| 6 | `shasum -a 256 -c SHA256SUMS` | 5 / 5 OK |
+| 7 | `--verify` | Exit 0 |
+| 8 | Run time | 624 s |
+| 9 | Memory | Footprint 29.2 GB, resident 9.1 GB, swap +8.0 GB |
+| — | Determinism | Build 2's `SHA256SUMS` identical to build 1's, all five files |
+| — | Tampered copy | One changed byte and an added `.DS_Store`: `--verify` fails (exit 1) and names both |
+| — | Publish | Previous output replaced only after all checks passed; no `.tmp-*` or `.previous-*` folders left |
+
+The three Parquet files are also byte-identical to the earlier `--allow-dirty` build (commit `11de456` plus uncommitted B7 code); only `metadata.json` and `count_report.md` differ, because they record the commit.
 
 `EXPECTED_COUNTS` in `scripts/build_alibaba_gpu_2020_canonical.py` is a copy of §5 and §9: a change that moves a count must update both.

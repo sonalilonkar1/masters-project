@@ -339,7 +339,7 @@ Null comparisons are never invalid. **Row status** (both frames): `invalid` if a
 | Source file missing or verification failed; adapter validation; writing, checksum, verify or publish failure | 3 |
 | Expected-count difference (diagnostic output only, never published) | 1 |
 
-**Memory.** Measured on the full tables (results doc §11): the process peaks at about 27 GB, during the framework's validation in `adapt_sources`, because several whole-frame copies are alive at once (prepared frames, views, validation copies). A 16 GB machine completes the build only with heavy swap and few other applications open, in about 12 minutes; 32 GB is recommended for rebuilding and 8 GB is not realistic. Downloading the shared output and running `--verify` need little memory, so that is how teammates get the data. Arrow-backed strings were measured and do not help (13% larger on load). The remaining hotspots are in `base.py`, `validation.py` and the adapter's `.assign` chain, outside B7; they are recorded in `docs/planning/github_issues/task3_followup_memory.md`.
+**Memory.** Measured on the full tables (results doc §11): the process peaks at about 29 GB (`/usr/bin/time -l`, three full builds), during the framework's validation in `adapt_sources`, because several whole-frame copies are alive at once (prepared frames, views, validation copies). A 16 GB machine completes the build only with heavy swap and few other applications open, in about 12 minutes; 32 GB is recommended for rebuilding and 8 GB is not realistic. Downloading the shared output and running `--verify` need little memory, so that is how teammates get the data. Arrow-backed strings were measured and do not help (13% larger on load). The remaining hotspots are in `base.py`, `validation.py` and the adapter's `.assign` chain, outside B7; they are recorded in `docs/planning/github_issues/task3_followup_memory.md`.
 
 **Reproducibility.** The same sources, commit, Python, pandas and pyarrow give identical outputs. Parquet bytes are not promised across library versions, so rebuilds are compared by `metadata.json`, the count report, the column lists and a passing `--verify`; downloaded copies by `--verify`.
 
@@ -419,7 +419,7 @@ If later data contradicts a frozen rule, the schema section and D-decision are r
 
 | Item | Detail |
 |---|---|
-| Memory | A full build peaks at about 27 GB of process memory (the earlier 9.3 GB was resident memory only, which hid the swapped part). 16 GB works only with heavy swap; 32 GB recommended. Teammates download and `--verify`. Fixes are in a follow-up issue |
+| Memory | A full build peaks at about 29 GB of process memory (the earlier 9.3 GB was resident memory only, which hid the swapped part). 16 GB works only with heavy swap; 32 GB recommended. Teammates download and `--verify`. Fixes are in a follow-up issue |
 | CPU | Lifetime average, not a peak; results must say so |
 | Validity | Row validity equals memory validity for this dataset only |
 | Population | Eligible roles are completed, fully observed workloads; 96.7% single-instance; group sizes very uneven; telemetry covers about 50 of 68.9 days |

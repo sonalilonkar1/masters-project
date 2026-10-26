@@ -75,7 +75,7 @@ caffeinate -i python3 scripts/build_alibaba_gpu_2020_canonical.py   # add --forc
 | 16 GB RAM | Completes only with heavy swap and few other applications open (tested: about 12 minutes) |
 | 8 GB RAM | Not realistic |
 
-The process peaks at about 27 GB of memory (results doc §11). A failed or killed build never replaces an existing output. A rebuild is compared with the shared copy by `metadata.json` and `count_report.md`, not by Parquet checksums, which are identical only with the same pandas and pyarrow versions.
+The process peaks at about 29 GB of memory (results doc §11). A failed or killed build never replaces an existing output. A rebuild is compared with the shared copy by `metadata.json` and `count_report.md`, not by Parquet checksums, which are identical only with the same pandas and pyarrow versions.
 
 ---
 
