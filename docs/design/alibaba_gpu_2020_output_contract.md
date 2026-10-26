@@ -2,7 +2,7 @@
 
 **Task:** 3 (#79), Alibaba GPU 2020 adapter and canonical artifacts
 **Schema version:** `0.2.0` (`canonical_workload_schema.md`)
-**Status:** Design frozen. Part A is implemented and verified on the full tables (`docs/data/alibaba_gpu_2020_part_a_results.md`). Part B (exclusions, validity, resources, views, artifacts) is not yet implemented. The excluded-role resource values, extension column names and rejected-output dtypes decisions are approved (plan §7, 2026-10-24). Items marked **(Part B)** are fixed by the plan and are confirmed when Part B is built.
+**Status:** Design frozen. Part A and Part B steps B1–B6 are implemented and verified on the full tables (`docs/data/alibaba_gpu_2020_adapter_results.md`); the adapter design is in `docs/design/alibaba_gpu_2020_adapter_design.md`. The build script (B7) and its artifacts are next.
 **Decision IDs:** D-01 to D-24 are the schema design decisions in `docs/design/canonical_schema_design_decisions.md`; each is named where it is first cited.
 
 ---
@@ -20,38 +20,18 @@ This document is the contract between Task 3 and the tasks that use its output:
 
 It describes how Alibaba GPU 2020 fills the canonical schema. Field meanings, vocabularies and validation rules are defined in `canonical_workload_schema.md` and `adapter_framework.md`; this document points to them and does not redefine them.
 
-**Not in Task 3 output:** splits, history features, `actual_cpu`, `actual_memory`, target statuses (Task 4); recommendations and metrics (Tasks 5–7); job totals (not emitted, plan §7); GPU evaluation (schema §6.4).
+**Not in Task 3 output:** splits, history features, `actual_cpu`, `actual_memory`, target statuses (Task 4); recommendations and metrics (Tasks 5–7); job totals (not emitted, design §6); GPU evaluation (schema §6.4).
 
 ---
 
 ## 2. Source to output
 
 ```
-six source tables (Task 2 loader, each with source_row_number)
-        │
-        ▼
-Part A  prepare_sources ── joins, identity, timestamps, rejection routing, linkage
-        │   jobs · roles · instances · rejected   (in memory only)
-        ▼
-Part B  map_prepared_sources ── exclusions, validity, resource mapping, aggregation
-        │
-        ▼
-adapt_sources ── per-view validation, linkage, rejected-output checks
-        │
-        ▼
-role_occurrence.parquet · instance.parquet · rejected.parquet · metadata.json · count_report.md
+six source tables (Task 2 loader) ─► Part A prepare_sources ─► Part B map_prepared_sources
+   ─► adapt_sources (validation) ─► role_occurrence · instance · rejected · metadata.json · count_report.md
 ```
 
-| Source table | Joined on | Supplies |
-|---|---|---|
-| `pai_job_table` | — | Job identity, status, submission and completion times |
-| `pai_group_tag_table` | `inst_id` (to job) | `group` (workload), `workload` tag, `gpu_type_spec` |
-| `pai_task_table` | `job_name` (to job) | Task role, requests (`plan_cpu`, `plan_mem`, `plan_gpu`), `inst_num`, `gpu_type`, task status and launch time |
-| `pai_instance_table` | `job_name`, `task_name` (to task) | One row per instance attempt: status, own start and end, `worker_name`, `machine` |
-| `pai_sensor_table` | `job_name`, `task_name`, `worker_name` (to instance) | Lifetime CPU, memory and GPU usage per worker |
-| `pai_machine_spec` | `machine` (to instance) | Host capacity (`cap_cpu`, `cap_mem`, `cap_gpu`) and host GPU type |
-
-All joins are left joins. A lookup row never adds a row, and an unmatched value stays null (plan §5.1).
+Jobs, tasks, instances, sensor summaries, group tags and machine specs are combined with left joins only: a lookup never adds a row, and an unmatched value stays null. The joins and every step are described in the adapter design (`docs/design/alibaba_gpu_2020_adapter_design.md`).
 
 ---
 
@@ -66,8 +46,8 @@ All joins are left joins. A lookup row never adds a row, and an unmatched value 
 | `count_report.md` | Counts per rule and reason, and every difference from the design figures, explained | — |
 
 - **Location:** `data/processed/alibaba_gpu_v2020/`.
-- **Not committed:** `.gitignore` ignores `data/processed/*` and `*.parquet`, so every file here is local only. They are rebuilt with `scripts/build_alibaba_gpu_2020_canonical.py` (plan step B7) from the checksum-verified source tables.
-- **Committed record:** this document (contract), `docs/data/alibaba_gpu_2020_part_a_results.md` (Part A figures) and the measured results in §11. Task 8 adds an artifact manifest with paths, checksums, row counts, code commit and generating commands.
+- **Not committed:** `.gitignore` ignores `data/processed/*` and `*.parquet`, so every file here is local only. They are rebuilt with `scripts/build_alibaba_gpu_2020_canonical.py` (design step B7) from the checksum-verified source tables.
+- **Committed record:** this document (contract) and the measured results (`docs/data/alibaba_gpu_2020_adapter_results.md`). Task 8 adds an artifact manifest with paths, checksums, row counts, code commit and generating commands.
 - **Format:** Parquet (`pyarrow>=10.0.0`, in `requirements.txt`).
 
 ---
@@ -101,7 +81,7 @@ All joins are left joins. A lookup row never adds a row, and an unmatched value 
 | | `peak_memory` | float | Yes | Maximum `max_mem`, `gb`. **The primary evaluated value** |
 | | `observed_gpu` | float | Yes | Maximum `gpu_wrk_util`, `percent_of_gpu`; descriptive only |
 | | `peak_gpu_memory` | float | Yes | Maximum `max_gpu_wrk_mem`, `gb`; descriptive only |
-| | `<field>_unit` | string | Null when the value is null | The unit of each populated resource field |
+| | `<field>_unit` | string | No, except `peak_cpu_unit`, which is always null | A constant unit on every row (B3 decision), also where the value is null. The schema requires a unit wherever a value is populated |
 | Scope (schema §8) | `resource_scope` | string | No | `task_role_per_instance` |
 | | `request_aggregation_method` | string | No | `none` |
 | | `observed_aggregation_method` | string | No | `maximum_over_instances` |
@@ -127,6 +107,7 @@ Exclusion rules are evaluated in the order of schema §9.3. The first failed rul
 - **Eligible row:** `exclusion_reason` is null. Design figure: **461,900** eligible roles; 1,224 of them have missing CPU (schema §9.3).
 - Excluded rows stay in the view for audit. They are never used for history or targets.
 - Missing CPU on an eligible role: `observed_cpu` null, `cpu_validity_status = partial`, still eligible for memory.
+- Eligibility comes only from `exclusion_reason`. Validity is data quality and never decides eligibility: an excluded role can be `valid`.
 
 ---
 
@@ -145,9 +126,9 @@ Exclusion rules are evaluated in the order of schema §9.3. The first failed rul
 | Parent (schema §5.5) | `workload_id`, `recurrence_key`, `occurrence_id`, `role_key` | Copied from the parent role, never recomputed |
 | Time | `event_time_us` | Parent job submission, always present |
 | | `start_time_us`, `end_time_us` | The instance's own times, or null. Never filled from another time |
-| Resources | The fields of §4.1 | Each worker's own source values, no aggregation. `resource_scope = instance`, both aggregation methods `none` |
+| Resources | Usage fields only: `observed_cpu`, `observed_memory`, `peak_memory`, `observed_gpu`, `peak_gpu_memory`, `peak_cpu` (always null), each with its unit | Each worker's own source values, no aggregation. `resource_scope = instance`, both aggregation methods `none`. Requests are not on instance rows: they belong to the parent role and are read through `role_key` |
 | Quality | `validity_status`, `cpu_validity_status`, `memory_validity_status` | Per instance |
-| | `exclusion_reason` | Not applicable: eligibility is decided at the role (schema §9.4). A null here does not mean eligible |
+| | `exclusion_reason` | Present and always null. Not applicable: eligibility is decided at the role (schema §9.4), so a null here does not mean eligible; use the parent role's `exclusion_reason` through `role_key` |
 | Provenance | `source_row_number` | Data-line number in the verified `pai_instance_table.csv` |
 | | `source_inst_name`, `source_worker_name`, `source_status`, `source_machine` | Raw source values |
 | Extensions (extension column names decision) | `job_name`, `task_name`, `cap_cpu`, `cap_mem`, `cap_gpu`, `machine_gpu_type` (host GPU type), `avg_gpu_wrk_mem` | Source values; capacity columns null for the 331,057 unplaced instances |
@@ -182,7 +163,7 @@ A job without a submission time has no usable canonical time, so it is rejected 
 
 ## 7. `metadata.json`
 
-Filled by `build_multiview_metadata` (`adapter_framework.md` §6) and its Alibaba GPU 2020 override (plan step B6).
+Filled by `build_multiview_metadata` (`adapter_framework.md` §6) and its Alibaba GPU 2020 override (design step B6).
 
 | Field | Content |
 |---|---|
@@ -192,11 +173,11 @@ Filled by `build_multiview_metadata` (`adapter_framework.md` §6) and its Alibab
 | `source_version`, `source_files`, `source_checksums` | `cluster-trace-gpu-v2020`, file paths and SHA-256 values from the Task 2 manifest |
 | `source_row_counts`, `canonical_row_counts` | Per source table and per view |
 | `validity_counts`, `cpu_validity_counts`, `memory_validity_counts` | Counts per status |
-| `exclusion_reason_counts` | Counts per reason, in rule order |
+| `exclusion_reason_counts` | Counts per reason, in rule order, every reason including zeros; `<null>` (eligible) last |
 | `rejection_counts` | Per level and reason |
-| `join_coverage_counts` | Per join: driving matched, unmatched and null-key rows; lookup rows used and unused |
+| `join_coverage_counts` | Per join: driving matched, unmatched and null-key rows; lookup rows used and unused. Taken from the adapter's own Part A counts |
 | `telemetry_window` | The profile string, `About day 19 to day 68.9`; in provenance, a mapping such as `{"description": "About day 19 to day 68.9", "start_day": 19, "end_day": 68.9}` |
-| Task 3 additions (B6) | Roles passing every rule except `multi_attempt_worker`; eligible roles; eligible roles with missing CPU |
+| `eligibility_summary` (B6) | `accepted_roles` (the denominator); roles passing every rule except `multi_attempt_worker`; eligible roles; eligible roles with missing CPU |
 
 ---
 
@@ -231,6 +212,8 @@ GPU type is therefore available as a pre-execution field (`gpu_type`, `gpu_type_
 - Splits use `start_time_us` (job submission). Every role of one job shares that time, so they fall in the same split.
 - History may use a prior occurrence only if its `end_time_us` is at or before the current `start_time_us`. A null `end_time_us` is never usable as history.
 - The request and the actual it is compared with use the same unit and scope: per instance of the role. `peak_memory` (GB) is the primary target. CPU (`observed_cpu`, `percent_of_vcpu`) is a lifetime average, never a peak, and results must say so.
+- CPU denominators use rows with non-null `observed_cpu` and `cpu_validity_status` not `invalid`. Memory denominators use rows with non-null `peak_memory` and `memory_validity_status` not `invalid`. `partial` alone never removes a populated value.
+- Dataset-specific: for Alibaba GPU 2020, row `validity_status` equals `memory_validity_status` (measured 2026-10-25). CPU is either valid or not populated, so it never changes a row's status. Other datasets must not assume this.
 - No any-resource metric (`any_resource_metric_valid = false`).
 - Never compare Alibaba GPU 2020 and Google CPU values numerically (schema §13).
 
@@ -245,7 +228,7 @@ Each of these is checked in the adapter and fails the build if violated.
 | `role_key` unique on roles; `instance_id` unique on instances | A2 and A3 guards; per-view validation |
 | Every instance links to one role of the same accepted or rejected set, with equal identity fields and `event_time_us` = parent `start_time_us` | A7 `_check_linkage`; `adapt_sources` again on the views |
 | No missing value is zero-filled; no time is inferred, carried forward or substituted | A1, A5 and A6 rules and tests |
-| Every source row is accounted for: views + rejected = source, at task, instance and job level | Plan §8.2; `count_report.md` |
+| Every source row is accounted for: views + rejected = source, at task, instance and job level | Results doc; `count_report.md` |
 | `peak_cpu` never populated | Profile `has_cpu_peak = false`, per-view validation |
 | `recurrence_key` null only with `exclusion_reason = no_recurrence_key` | Per-view validation |
 | No split or target column populated | `validate_adapter_output` |
@@ -271,44 +254,17 @@ These are properties of the source data, kept as they are, and reported with eve
 
 ## 11. Measured results
 
-### 11.1 Part A (2026-10-24)
+Full figures are in `docs/data/alibaba_gpu_2020_adapter_results.md`. Headline figures:
 
-From `docs/data/alibaba_gpu_2020_part_a_results.md`:
-
-| Check | Result |
+| Figure | Value |
 |---|---|
-| Task reconciliation | 1,261,050 = 1,254,108 accepted + 6,942 rejected |
-| Instance reconciliation | 7,522,002 = 7,410,783 accepted + 111,219 rejected |
-| Job reconciliation | 1,055,501 = 1,051,838 accepted + 3,663 rejected |
-| Linkage, accepted and rejected | 0 orphans, 0 mismatches |
-| Fallback roles | 1,888 (1,788 accepted) |
-| Instances inheriting a null `recurrence_key` | 12,810 |
+| `role_occurrence` / `instance` / rejected rows | 1,254,108 / 7,410,783 / 121,824 |
+| Eligible roles | 461,900 (1,224 with missing CPU) |
+| Roles passing every rule except `multi_attempt_worker` | 462,156 |
+| Eligible roles by row validity | 461,564 `valid`, 336 `partial`, 0 `invalid` |
+| Linkage (accepted and rejected) | 0 orphans, 0 mismatches |
 
-### 11.2 Part B
-
-A read-only scratch run of the 14 rules on the accepted Part A frames (2026-10-24, not the B1 code) reproduced the design figures:
-
-| Reason (first failed rule) | Roles |
-|---|---|
-| `no_recurrence_key` | 1,788 |
-| `job_failed` | 282,027 |
-| `job_incomplete` | 87,980 |
-| `task_not_terminated` | 0 |
-| `missing_or_invalid_request` | 2 |
-| `instance_failed` | 33,022 |
-| `instance_interrupted` | 31 |
-| `instance_incomplete` | 0 |
-| `missing_worker_name` | 0 |
-| `multi_attempt_worker` | 2,048 |
-| `missing_sensor` | 287,780 |
-| `partial_sensor_coverage` | 97,018 |
-| `invalid_memory_exceeds_capacity` | 512 |
-| `invalid_resource` | 0 |
-| Eligible (null) | **461,900** (1,224 with missing CPU) |
-
-462,156 roles pass every rule except `multi_attempt_worker`. B1 must produce the same counts.
-
-To be added from the build **(Part B)**: validity counts, artifact checksums and the code commit.
+Artifact checksums and the code commit are added by the build (B7).
 
 ---
 
@@ -316,8 +272,6 @@ To be added from the build **(Part B)**: validity counts, artifact checksums and
 
 | Item | Status |
 |---|---|
-| Excluded-role resource values: observed and peak values on roles excluded by rules 1–12 | Approved, 2026-10-24 (§4.1) |
-| Extension column names | Approved, 2026-10-24 (§4.1, §5) |
-| Rejected-output dtypes: dtypes of `rejected.parquet` | Approved, 2026-10-24 (§6) |
-| Rule 13 without host capacity: a null `cap_mem` | Not failed when null; 0 roles affected |
 | Artifact manifest format | Open, Task 8 (its decision D-1) |
+
+All Task 3 design decisions are recorded in the adapter design §6.

@@ -1,10 +1,10 @@
 # Task 3 (#79) Source Data Checks: Alibaba GPU 2020
 
 **Date:** 2026-10-23
-**Plan step:** Part A, A0 (`docs/planning/task3_implementation_plan.md` §3.3)
+**Design step:** Part A, A0 (`docs/design/alibaba_gpu_2020_adapter_design.md` §2.5)
 **Data:** `data/raw/alibaba_gpu_2020/` (gitignored). All 18 official SHA-256 values verified; sizes and line counts match the Task 2 manifest.
 **Method:** read-only scripts, not committed. Each table is read with its official header, `quoting=QUOTE_NONE`, and only empty fields treated as missing.
-**For the report:** cite this document for **data validation** (the source tables match the design). Cite `docs/data/alibaba_gpu_2020_part_a_results.md` for **pipeline validation** (the adapter's output on these tables is correct).
+**For the report:** cite this document for **data validation** (the source tables match the design). Cite `docs/data/alibaba_gpu_2020_adapter_results.md` for **pipeline validation** (the adapter's output on these tables is correct).
 **Decision IDs:** D-01 to D-24 are the schema design decisions in `docs/design/canonical_schema_design_decisions.md`; each is named where it is first cited.
 
 **Result: the data matches the frozen design. No source anomaly needs a new decision. One count is corrected (jobs without `group`).**
@@ -80,12 +80,12 @@ Machine specifications are missing only for unplaced instances, which have no ma
 | `machine` | Machine spec | Unique and non-null on all 1,897 rows |
 
 - **`source_row_number` is mandatory only on the instance table.** It is the instance audit identity and the attempt-order tie-breaker (schema §5.4, D-21 Instance identity, framework §9.2), and is required in `rejected_required_columns["instance"]`. Schema §9.5 requires it for rejected instance rows only.
-- **Job and task row numbers are optional.** Each rejected job row is traced by `job_name` and each rejected role row by `(job_name, task_name)`, which are unique and non-null in their source tables (above). When present, they are kept as `job_source_row_number` and `task_source_row_number` (plan §5.1).
+- **Job and task row numbers are optional.** Each rejected job row is traced by `job_name` and each rejected role row by `(job_name, task_name)`, which are unique and non-null in their source tables (above). When present, they are kept as `job_source_row_number` and `task_source_row_number` (design §4.1).
 - The Task 2 loader adds `source_row_number` to every loaded table (`src/sources/alibaba_gpu_2020.py`), so these optional columns are present on the full-data run.
 
 ### 3.5 Consistency of duplicated source columns
 
-These checks justify the columns that A1 drops (plan §5.1).
+These checks justify the columns that A1 drops (design §4.1).
 
 | Check | Result |
 |---|---|
@@ -96,7 +96,7 @@ These checks justify the columns that A1 drops (plan §5.1).
 
 ### 3.6 Lookup rows that no driving row uses
 
-Left joins from the driving table ignore lookup rows that nothing points at. They are reported in the two-way join coverage (plan §5.1), not silently lost.
+Left joins from the driving table ignore lookup rows that nothing points at. They are reported in the two-way join coverage (design §4.1), not silently lost.
 
 | Lookup | Unused rows | Breakdown |
 |---|---|---|
@@ -104,7 +104,7 @@ Left joins from the driving table ignore lookup rows that nothing points at. The
 | Task (by instances) | 130 | Tasks with no instance rows; all are removed by whole-job rejection (§3.2) |
 | Sensor | 13,883, across 2,978 jobs | 8,713 belong to jobs not in the job table; 116 to `Waiting` jobs without a submission time; the rest belong to existing jobs, including 3,397 rows whose job and task have instance rows but under a different `worker_name` |
 
-The sensor table adds columns only (plan §5.1), and rules 11–12 count sensor coverage per worker of the instance table, so unused sensor rows cannot change eligibility.
+The sensor table adds columns only (design §4.1), and rules 11–12 count sensor coverage per worker of the instance table, so unused sensor rows cannot change eligibility.
 
 ### 3.7 Retried instance slots
 
@@ -120,7 +120,7 @@ The sensor table adds columns only (plan §5.1), and rules 11–12 count sensor 
 - The design stated 231,258 retried slots. The corrected value, 231,632, is confirmed independently from the raw `pai_instance_table.csv` by counting the slot key `(job_name, task_name, inst_name)` over all rows, including the 331,057 rows with a missing `worker_name` (`sort | uniq -c`, without the adapter). The A3 implementation gives the same result.
 - The earlier figure matches a count restricted to rows that have a `worker_name` (231,259 retried slots, 905,967 rows), so it was most likely taken with null-worker rows dropped, while 906,751 was taken on all rows.
 - Adding `worker_name` to the slot leaves exactly 1 repeated key (2 rows), as D-21 states.
-- Corrected in schema §5.4, D-21 and plan §7.
+- Corrected in schema §5.4, D-21 and design §6.
 
 ### 3.8 Null timestamps (from A5)
 
@@ -161,8 +161,8 @@ The design already handles these: a missing resource gives `validity_status = pa
 
 ## 5. Effect on the plan
 
-- Decision gate: no source anomaly needs a new decision. The excluded-role resource values, extension column names and rejected-output dtypes decisions were approved on 2026-10-24 (plan §7).
-- Expected counts: jobs without `group` are now 1,530 in total and 1,460 accepted (plan §3.4).
-- Rejection counts (3,663 / 6,942 / 111,219) are confirmed for the three-level reconciliation (plan §5.6).
-- A1 join specification (plan §5.1): `source_row_number` required only on instances (§3.4); dropped columns justified by §3.5; unused lookup rows reported through two-way join coverage (§3.6).
+- Decision gate: no source anomaly needs a new decision. The excluded-role resource values, extension column names and rejected-output dtypes decisions were approved on 2026-10-24 (design §6).
+- Expected counts: jobs without `group` are now 1,530 in total and 1,460 accepted (design §2).
+- Rejection counts (3,663 / 6,942 / 111,219) are confirmed for the three-level reconciliation (design §4.6).
+- A1 join specification (design §4.1): `source_row_number` required only on instances (§3.4); dropped columns justified by §3.5; unused lookup rows reported through two-way join coverage (§3.6).
 - Corrected: the 469 figure in schema §3, §5.3 and the §15 checklist, D-05 Jobs without `group` in `canonical_schema_design_decisions.md`, `assumptions.md`, `dataset_inspection_and_integration_design.md` and `alibaba_dataset_selection_feasibility.md`.

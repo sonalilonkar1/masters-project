@@ -1,0 +1,152 @@
+# Alibaba GPU 2020 Adapter Results (Task 3, #79)
+
+**Measured:** Part A on 2026-10-24, Part B (B1–B6) on 2026-10-25, on the full source tables.
+**Design:** `docs/design/alibaba_gpu_2020_adapter_design.md` · **Contract:** `docs/design/alibaba_gpu_2020_output_contract.md`
+**Data:** `data/raw/alibaba_gpu_2020/` (gitignored), loaded with the Task 2 loader after checksum verification.
+**Method:** each step was run on the full tables and every figure compared with an independently computed expectation (for example, role maxima recomputed by sorting instead of the adapter's group-by). The run scripts are read-only and not committed.
+**For the report:** cite this document for **pipeline validation**. Cite `docs/data/alibaba_gpu_2020_source_data_checks.md` for **data validation**.
+
+**Result: every reconciliation holds and every expected figure is reproduced exactly. The full `adapt_sources` pipeline passes on the full tables.**
+
+---
+
+## Part A: preparation
+
+### 1. Prepared frames
+
+| Frame | Rows | Columns | Memory (deep) | Accepted | Rejected |
+|---|---|---|---|---|---|
+| `jobs` | 1,055,501 | 12 | 0.23 GB | 1,051,838 | 3,663 |
+| `roles` | 1,261,050 | 31 | 0.82 GB | 1,254,108 | 6,942 |
+| `instances` | 7,522,002 | 41 | 9.34 GB | 7,410,783 | 111,219 |
+| `rejected` | 121,824 | 64 | 0.18 GB | — | 3,663 job + 6,942 role + 111,219 instance |
+
+One row per source row, in source order; no join drops, adds or duplicates a row. The only rejection reason is `missing_submission_time`; all 3,663 rejected jobs are `Waiting`.
+
+### 2. Reconciliation
+
+| Level | Reconciliation |
+|---|---|
+| Task | 1,261,050 = 1,254,108 accepted + 6,942 rejected |
+| Instance | 7,522,002 = 7,410,783 accepted + 111,219 rejected |
+| Job | 1,055,501 = 1,051,838 accepted + 3,663 rejected |
+
+0 accepted keys appear in the rejected output; 0 accepted roles or instances lack a canonical time.
+
+### 3. Join coverage
+
+`driving_unmatched` includes the null-key rows. These values are written to `metadata.json` (B6).
+
+| Join | Driving matched | Driving unmatched | Of which null key | Lookup used | Lookup unused |
+|---|---|---|---|---|---|
+| `job_group_tag` | 1,053,971 | 1,530 | 0 | 1,053,971 | 1,061 |
+| `task_job` | 1,261,050 | 0 | 0 | 1,055,501 | 0 |
+| `instance_task` | 7,522,002 | 0 | 0 | 1,260,920 | 130 |
+| `instance_sensor` | 3,027,318 | 4,494,684 | 331,057 | 3,019,349 | 13,883 |
+| `instance_machine_spec` | 7,190,945 | 331,057 | 331,057 | 1,897 | 0 |
+
+- 1,530 jobs without a group tag use fallback identity (1,460 accepted). 130 tasks have no instance rows.
+- 3,027,318 instance matches use 3,019,349 sensor rows: every attempt of a retried worker carries that worker's single sensor row (7,969 extra matches). Rule 10 excludes these roles.
+- The only machine-spec misses are the 331,057 instances with no machine, the same rows that have no `worker_name`.
+
+### 4. Identity, time and linkage
+
+| Check | Result |
+|---|---|
+| `role_key` / `instance_id` unique | Yes, on all 1,261,050 roles and 7,522,002 instances |
+| Fallback roles (null `recurrence_key`) | 1,888 (1,788 accepted, 100 rejected) |
+| Slots / retried slots / rows in retried slots | 6,846,883 / 231,632 / 906,751; largest attempt index 338 |
+| Inherited identity (A4) | 0 differences; 12,810 instances inherit a null `recurrence_key` |
+| Null times (all rows) | Roles: `start_time_us` 6,942, `end_time_us` 324,028, `launch_time_us` 3,714. Instances: `event_time_us` 111,219, `start_time_us` 1,773,468, `end_time_us` 2,267,582 |
+| Accepted instances without their own start | 1,673,976 |
+| Linkage, accepted (1,254,108 roles / 7,410,783 instances) | 0 orphans, 0 identity mismatches, 0 event-time mismatches |
+| Linkage, rejected (6,942 roles / 111,219 instances) | 0 orphans, 0 identity mismatches, 0 non-null times |
+
+Rerunning `prepare_sources` on the merged Task 2 loader output gave identical row counts, rejection flags, join coverage, and identity and time columns.
+
+---
+
+## Part B: eligibility, resources and outputs
+
+### 5. B1 Exclusion rules
+
+Over the 1,254,108 accepted roles, each counted once under its first failed rule.
+
+| Order | `exclusion_reason` | Roles |
+|---|---|---|
+| 1 | `no_recurrence_key` | 1,788 |
+| 2 | `job_failed` | 282,027 |
+| 3 | `job_incomplete` | 87,980 |
+| 4 | `task_not_terminated` | 0 |
+| 5 | `missing_or_invalid_request` | 2 |
+| 6 | `instance_failed` | 33,022 |
+| 7 | `instance_interrupted` | 31 |
+| 8 | `instance_incomplete` | 0 |
+| 9 | `missing_worker_name` | 0 |
+| 10 | `multi_attempt_worker` | 2,048 |
+| 11 | `missing_sensor` | 287,780 |
+| 12 | `partial_sensor_coverage` | 97,018 |
+| 13 | `invalid_memory_exceeds_capacity` | 512 |
+| 14 | `invalid_resource` | 0 |
+| — | **Eligible** | **461,900** (1,224 with missing CPU) |
+
+462,156 roles fail none of rules 1–9 and 11–14; rule 10 alone removes 256. No rejected role received a reason; no accepted row has a null status.
+
+### 6. B3 Resource mappings
+
+Every canonical value equals its source column, nulls included; every unit is the expected constant; no value is negative; `peak_cpu` is null everywhere.
+
+| Field | Null |
+|---|---|
+| `requested_cpu`, `requested_memory` (roles) | 18,454 each (only 2 have rule 5 as their first reason) |
+| `requested_gpu` (roles) | 223,965 |
+| `observed_cpu` (instances) | 4,500,495 (4,494,684 without a sensor row + 5,811 null `cpu_usage`) |
+| `observed_memory` (instances) | 4,495,890 (+ 1,206 null `avg_mem`) |
+| `peak_memory`, `observed_gpu`, `peak_gpu_memory` (instances) | 4,494,684 each |
+
+### 7. B4 Role aggregation
+
+| Check | Result |
+|---|---|
+| Role value = maximum over sensor-covered instances (five fields, recomputed independently) | Every role |
+| Eligible roles with null `observed_cpu` / `observed_memory` / `peak_memory` | 1,224 / 336 / 0 |
+| Accepted roles with any usage value | 850,020 = 461,900 eligible + 387,608 excluded by rules 1–12 + 512 by rule 13 |
+| Rejected roles with any usage value | 13 |
+| Scope columns | Only the per-frame constants |
+
+The first estimate (849,508) left out the rule-13 roles, which always have full sensor coverage.
+
+### 8. B2 Validity
+
+| Rows (row status) | `valid` | `partial` | `invalid` |
+|---|---|---|---|
+| Eligible roles | 461,564 | 336 | 0 |
+| Accepted roles | 677,334 | 574,793 | 1,981 |
+| Accepted instances | 3,020,973 | 4,384,687 | 5,123 |
+
+- Eligible: memory `invalid` 0; CPU `partial` 1,224 (row still `valid`, since CPU is not populated); memory `partial` 336.
+- 1,981 roles are memory-invalid, of which 512 have rule 13 as their first reason; the other 1,469 fail an earlier rule first.
+- CPU above host capacity: 0. Null statuses: 0.
+- Row status counts equal memory status counts: for this dataset CPU never changes a row's status.
+
+### 9. B5 Views and B6 metadata
+
+| Check | Result |
+|---|---|
+| `role_occurrence` / `instance` / rejected rows | 1,254,108 / 7,410,783 / 121,824 |
+| View columns | Equal the contract lists (46 role, 47 instance) |
+| Rejected dtypes | No `object` columns (31 `string`, 19 `float64`, 8 `Int64`, 6 `boolean`) |
+| `adapt_sources` (validation, linkage, rejected checks, overlap) | Passes |
+| `exclusion_reason_counts` | §5 in rule order with zeros; `<null>` 461,900 |
+| `eligibility_summary` | 1,254,108 accepted / 462,156 / 461,900 eligible / 1,224 missing CPU |
+| `join_coverage_counts` | Identical to §3 |
+
+### 10. Run cost
+
+Loading the six tables takes 43 s (4.3 GB). A full `adapt_sources` run with metadata takes 551 s in total, with a peak resident memory of 9.3 GB on a 17 GB machine.
+
+---
+
+## 11. Artifacts (B7)
+
+Added after the build script runs: file sizes, checksums and the count report.
