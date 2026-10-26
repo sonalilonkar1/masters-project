@@ -69,13 +69,16 @@ PARQUET_COLUMNS = {
 # data checks (docs/data/alibaba_gpu_2020_source_data_checks.md).
 TELEMETRY_WINDOW = {"description": "About day 19 to day 68.9", "start_day": 19, "end_day": 68.9}
 
-# Verified full-table figures. This is a copy of results doc §5 and §9
+# Verified full-table figures. This is a copy of results doc §1, §5 and §9
 # (docs/data/alibaba_gpu_2020_adapter_results.md): a code change that moves a
 # count must update both in the same commit.
 EXPECTED_COUNTS = {
     "rows: role_occurrence": 1_254_108,
     "rows: instance": 7_410_783,
     "rows: rejected": 121_824,
+    "rejected: job": 3_663,
+    "rejected: role_occurrence": 6_942,
+    "rejected: instance": 111_219,
     "exclusion: no_recurrence_key": 1_788,
     "exclusion: job_failed": 282_027,
     "exclusion: job_incomplete": 87_980,
@@ -95,6 +98,14 @@ EXPECTED_COUNTS = {
     "eligibility: pass_all_but_multi_attempt_worker": 462_156,
     "eligibility: eligible": 461_900,
     "eligibility: eligible_missing_cpu": 1_224,
+}
+
+# Rejection level -> source table it reconciles against. Accepted jobs are the
+# distinct job_name values in the role view; roles and instances are view rows.
+RECONCILIATION_SOURCES = {
+    "job": "pai_job_table",
+    "role_occurrence": "pai_task_table",
+    "instance": "pai_instance_table",
 }
 
 EXIT_OK, EXIT_MISMATCH, EXIT_REFUSED, EXIT_FAILED = 0, 1, 2, 3
@@ -165,6 +176,8 @@ def headline_counts(metadata: Mapping) -> dict:
     """The metadata values that EXPECTED_COUNTS describes, under the same labels."""
     counts = {f"rows: {view}": n for view, n in metadata.get("canonical_row_counts", {}).items()}
     counts["rows: rejected"] = metadata.get("rejection_count")
+    counts.update({f"rejected: {level}": sum(reasons.values())
+                   for level, reasons in metadata.get("rejection_counts", {}).items()})
     counts.update({f"exclusion: {k}": n for k, n in metadata.get("exclusion_reason_counts", {}).items()})
     counts.update({f"eligibility: {k}": n for k, n in metadata.get("eligibility_summary", {}).items()})
     return counts
@@ -178,6 +191,23 @@ def compare_counts(metadata: Mapping, expected: Mapping[str, int]) -> list[tuple
         got = actual.get(label)
         rows.append((label, value, got, None if got is None else got - value))
     return rows
+
+
+def reconciliation(metadata: Mapping, accepted_jobs: int) -> dict:
+    """source = accepted + rejected at each level (issue #79); difference is source - accepted - rejected."""
+    accepted = {"job": accepted_jobs, **metadata["canonical_row_counts"]}
+    levels = {}
+    for level, table in RECONCILIATION_SOURCES.items():
+        source = metadata["source_row_counts"][table]
+        rejected = sum(metadata.get("rejection_counts", {}).get(level, {}).values())
+        levels[level] = {"source_table": table, "source": source, "accepted": accepted[level],
+                         "rejected": rejected, "difference": source - accepted[level] - rejected}
+    return levels
+
+
+def unreconciled(metadata: Mapping) -> list[str]:
+    """Levels whose difference is not zero."""
+    return [level for level, v in metadata.get("reconciliation", {}).items() if v["difference"] != 0]
 
 
 def _table(header: list[str], rows: list[list]) -> list[str]:
@@ -208,6 +238,17 @@ def count_report(metadata: Mapping, comparison: Optional[list[tuple]]) -> str:
         for reason, n in reasons.items()
     ]
     lines += _table(["Rejected level", "Reason", "Rows"], rejected)
+
+    lines += ["## Reconciliation (source = accepted + rejected)", ""]
+    levels = metadata.get("reconciliation")
+    if levels is None:
+        lines += ["Not computed.", ""]
+    else:
+        lines += _table(["Level", "Source table", "Source", "Accepted", "Rejected", "Difference"],
+                        [[level, f"`{v['source_table']}`", v["source"], v["accepted"], v["rejected"],
+                          v["difference"]] for level, v in levels.items()])
+        bad = unreconciled(metadata)
+        lines += ["Every level reconciles." if not bad else f"**{len(bad)} level(s) do not reconcile.**", ""]
 
     lines += ["## Exclusion reasons (role_occurrence, rule order)", ""]
     lines += _table(["`exclusion_reason`", "Roles"],
@@ -295,7 +336,8 @@ def verify_output(folder: Path) -> dict:
     problems: list[str] = []
     manifest = _read_manifest(folder, problems)
 
-    if manifest and set(manifest) != set(CHECKED_FILES):
+    # Checked whenever the manifest exists, so an empty one cannot skip the hashes.
+    if (folder / CHECKSUM_FILE).is_file() and set(manifest) != set(CHECKED_FILES):
         missing = sorted(set(CHECKED_FILES) - set(manifest))
         extra = sorted(set(manifest) - set(CHECKED_FILES))
         problems.append(f"{CHECKSUM_FILE} must list exactly {sorted(CHECKED_FILES)}"
@@ -416,6 +458,8 @@ def build(
         frames = take_frames(result)
         del result
         gc.collect()
+        accepted_jobs = int(frames[VIEW_FILES["role_occurrence"]]["job_name"].nunique())
+        metadata["reconciliation"] = reconciliation(metadata, accepted_jobs)
 
         # 4–5. Write to a temporary folder, then check it.
         out_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -429,6 +473,15 @@ def build(
             print("COUNT MISMATCH: not published.")
             for label, want, got, _ in mismatches:
                 print(f"  {label}: expected {_cell(want)}, actual {_cell(got)}")
+        # Checked even with expected=None: it needs no reference figures.
+        not_reconciled = unreconciled(metadata)
+        if not_reconciled:
+            print("NOT RECONCILED: not published.")
+            for level in not_reconciled:
+                v = metadata["reconciliation"][level]
+                print(f"  {level}: {v['source_table']} {_cell(v['source'])} != accepted "
+                      f"{_cell(v['accepted'])} + rejected {_cell(v['rejected'])}")
+        if mismatches or not_reconciled:
             return EXIT_MISMATCH
 
         # 6. Publish.

@@ -8,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from test_alibaba_gpu_2020_adapter import PROVENANCE, make_sources
+from test_alibaba_gpu_2020_adapter import PROVENANCE, _sources_with_rejected_j1, make_sources
 
 
 def _script():
@@ -62,6 +62,73 @@ def test_metadata_has_the_adapter_metadata_and_a_build_block(built):
     assert metadata["build"]["code_commit"] is None
     assert set(metadata["build"]) == {
         "code_commit", "code_dirty", "python_version", "pandas_version", "pyarrow_version"}
+
+
+def test_metadata_reconciles_source_rows_at_each_level(tmp_path):
+    # j1 has no submission time, so every level has rejected rows.
+    out_dir = tmp_path / "out"
+    options = {"allow_dirty": True, "expected": None, "repo": tmp_path}
+    assert script.build(out_dir, sources_loader=lambda: (_sources_with_rejected_j1(), dict(PROVENANCE)),
+                        **options) == script.EXIT_OK
+    metadata = json.loads((out_dir / "metadata.json").read_text())
+    levels = metadata["reconciliation"]
+    assert {k: (v["source"], v["accepted"], v["rejected"], v["difference"]) for k, v in levels.items()} == {
+        "job": (2, 1, 1, 0), "role_occurrence": (2, 1, 1, 0), "instance": (4, 1, 3, 0)}
+    roles = pd.read_parquet(out_dir / "role_occurrence.parquet")
+    assert levels["job"]["accepted"] == roles["job_name"].nunique()
+    assert sum(level["rejected"] for level in levels.values()) == metadata["rejection_count"]
+
+    report = (out_dir / "count_report.md").read_text()
+    assert "## Reconciliation (source = accepted + rejected)" in report
+    assert "| instance | `pai_instance_table` | 4 | 1 | 3 | 0 |" in report
+    assert "Every level reconciles." in report
+
+
+def test_rejected_counts_are_compared_per_level():
+    metadata = script.AlibabaGPU2020Adapter().adapt_sources(
+        _sources_with_rejected_j1(), primary_view="role_occurrence", provenance=PROVENANCE).metadata
+    counts = script.headline_counts(metadata)
+    assert (counts["rejected: job"], counts["rejected: role_occurrence"], counts["rejected: instance"]) == (1, 1, 3)
+    assert {"rejected: job", "rejected: role_occurrence", "rejected: instance"} <= set(script.EXPECTED_COUNTS)
+    [(_, _, _, difference)] = script.compare_counts(metadata, {"rejected: instance": 2})
+    assert difference == 1
+
+
+def test_unreconciled_build_is_never_published(built, tmp_path, monkeypatch, capsys):
+    before = (built / "SHA256SUMS").read_text()
+    real = script.reconciliation
+
+    def lose_an_instance(metadata, accepted_jobs):
+        levels = real(metadata, accepted_jobs)
+        levels["instance"]["difference"] += 1
+        return levels
+
+    monkeypatch.setattr(script, "reconciliation", lose_an_instance)
+    assert _build(built, tmp_path, force=True) == script.EXIT_MISMATCH
+    assert "NOT RECONCILED: not published." in capsys.readouterr().out
+    assert (built / "SHA256SUMS").read_text() == before
+    assert _leftovers(built) == []
+
+    assert _build(built, tmp_path, force=True, keep_failed_output=True) == script.EXIT_MISMATCH
+    [kept] = _leftovers(built)
+    assert "**1 level(s) do not reconcile.**" in (built.parent / kept / "count_report.md").read_text()
+
+
+def test_reconciliation_on_the_full_table_figures():
+    metadata = {
+        "source_row_counts": {"pai_job_table": 1_055_501, "pai_task_table": 1_261_050,
+                              "pai_instance_table": 7_522_002},
+        "canonical_row_counts": {"role_occurrence": 1_254_108, "instance": 7_410_783},
+        "rejection_counts": {"job": {"missing_submission_time": 3_663},
+                             "role_occurrence": {"missing_submission_time": 6_942},
+                             "instance": {"missing_submission_time": 111_219}},
+    }
+    levels = script.reconciliation(metadata, accepted_jobs=1_051_838)
+    assert {k: v["difference"] for k, v in levels.items()} == {"job": 0, "role_occurrence": 0, "instance": 0}
+    assert levels["job"]["rejected"] == 3_663
+    # A lost row shows up as a non-zero difference.
+    metadata["canonical_row_counts"]["instance"] -= 1
+    assert script.reconciliation(metadata, accepted_jobs=1_051_838)["instance"]["difference"] == 1
 
 
 def test_checksums_use_the_standard_format(built):
@@ -326,12 +393,16 @@ def test_verify_fails(built, damage, message):
         script.verify_output(built)
 
 
-def test_verify_fails_on_a_duplicate_or_missing_manifest_entry(built):
+def test_verify_fails_on_a_duplicate_missing_or_empty_manifest(built):
     lines = (built / "SHA256SUMS").read_text().splitlines()
     (built / "SHA256SUMS").write_text("\n".join([lines[0], *lines]) + "\n")
     with pytest.raises(script.VerifyError, match="twice"):
         script.verify_output(built)
     (built / "SHA256SUMS").write_text("\n".join(lines[1:]) + "\n")
+    with pytest.raises(script.VerifyError, match="must list exactly"):
+        script.verify_output(built)
+    # An empty manifest must not skip the checksum check.
+    (built / "SHA256SUMS").write_text("")
     with pytest.raises(script.VerifyError, match="must list exactly"):
         script.verify_output(built)
 

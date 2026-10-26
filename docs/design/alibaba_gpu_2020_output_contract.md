@@ -43,7 +43,7 @@ Jobs, tasks, instances, sensor summaries, group tags and machine specs are combi
 | `instance.parquet` | The audit view: one row per accepted instance-table row (every retry is its own row) | 7,410,783 |
 | `rejected.parquet` | Every rejected job, role and instance row (§6) | 121,824 |
 | `metadata.json` | Adapter metadata, provenance and the build block (§7) | — |
-| `count_report.md` | Rows, exclusion reasons, eligibility, validity and join coverage, and expected versus actual headline counts (all differences zero, or the build is not published) | — |
+| `count_report.md` | Rows, the source = accepted + rejected reconciliation at job, task and instance level, exclusion reasons, eligibility, validity and join coverage, and expected versus actual headline counts (every level reconciles and all differences are zero, or the build is not published) | — |
 | `SHA256SUMS` | SHA-256 of the other five files, standard `sha256sum` format | — |
 
 - **Location:** `data/processed/alibaba_gpu_v2020/`.
@@ -205,6 +205,7 @@ Filled by `build_multiview_metadata` (`adapter_framework.md` §6) and its Alibab
 | `join_coverage_counts` | Per join: driving matched, unmatched and null-key rows; lookup rows used and unused. Taken from the adapter's own Part A counts |
 | `telemetry_window` | The profile string, `About day 19 to day 68.9`; in provenance, a mapping such as `{"description": "About day 19 to day 68.9", "start_day": 19, "end_day": 68.9}` |
 | `eligibility_summary` (B6) | `accepted_roles` (the denominator); roles passing every rule except `multi_attempt_worker`; eligible roles; eligible roles with missing CPU |
+| `reconciliation` (B7) | Per level (`job`, `role_occurrence`, `instance`): `source_table`, `source`, `accepted`, `rejected`, `difference` = source − accepted − rejected. Accepted jobs are the distinct `job_name` values in the role view. Every difference is 0 in a published build |
 | `build` (B7) | `code_commit`, `code_dirty` (tracked changes; `false` for the shared build), `python_version`, `pandas_version`, `pyarrow_version`. No timestamp, so the file is deterministic |
 
 ---
@@ -256,7 +257,7 @@ Each of these is checked in the adapter and fails the build if violated.
 | `role_key` unique on roles; `instance_id` unique on instances | A2 and A3 guards; per-view validation |
 | Every instance links to one role of the same accepted or rejected set, with equal identity fields and `event_time_us` = parent `start_time_us` | A7 `_check_linkage`; `adapt_sources` again on the views |
 | No missing value is zero-filled; no time is inferred, carried forward or substituted | A1, A5 and A6 rules and tests |
-| Every source row is accounted for: views + rejected = source, at task, instance and job level | Results doc; `count_report.md` |
+| Every source row is accounted for: views + rejected = source, at task, instance and job level | `metadata.json` `reconciliation` and `count_report.md`; the build does not publish otherwise |
 | `peak_cpu` never populated | Profile `has_cpu_peak = false`, per-view validation |
 | `recurrence_key` null only with `exclusion_reason = no_recurrence_key` | Per-view validation |
 | No split or target column populated | `validate_adapter_output` |

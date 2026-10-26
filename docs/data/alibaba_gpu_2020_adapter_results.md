@@ -33,6 +33,8 @@ One row per source row, in source order; no join drops, adds or duplicates a row
 
 0 accepted keys appear in the rejected output; 0 accepted roles or instances lack a canonical time.
 
+The build script checks these three equations on every build (`reconciliation` in `metadata.json` and `count_report.md`) and does not publish if one fails; the rejected rows per level are also in `EXPECTED_COUNTS` (PR #95 review).
+
 ### 3. Join coverage
 
 `driving_unmatched` includes the null-key rows. These values are written to `metadata.json` (B6).
@@ -213,4 +215,4 @@ These checksums belong to this pre-merge validation build. The shared copy is re
 
 The three Parquet files are also byte-identical to the earlier `--allow-dirty` build (commit `11de456` plus uncommitted B7 code); only `metadata.json` and `count_report.md` differ, because they record the commit.
 
-`EXPECTED_COUNTS` in `scripts/build_alibaba_gpu_2020_canonical.py` is a copy of §5 and §9: a change that moves a count must update both.
+`EXPECTED_COUNTS` in `scripts/build_alibaba_gpu_2020_canonical.py` is a copy of §1, §5 and §9: a change that moves a count must update both.
