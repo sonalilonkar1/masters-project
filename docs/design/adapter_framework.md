@@ -262,8 +262,8 @@ Google episode reconstruction and aligned-window summing are Google-specific. Th
 - **Downstream:** chronological splits operate only on eligible `role_occurrence` rows. Instance audit rows do not receive splits, targets or history features.
 - **Resources:**
   - per-instance requests: `plan_cpu` in `percent_of_vcpu`; `plan_mem` in `gb`; `plan_gpu` in `percent_of_gpu`, retained;
-  - role values are the maximum over the role's eligible instances;
-  - `observed_cpu` is a lifetime average and is null if any eligible worker's CPU is missing;
+  - role values are the maximum over the role's sensor-covered instances (every instance for an eligible role), computed for every accepted role;
+  - `observed_cpu` is a lifetime average and is null if any covered worker's CPU is missing;
   - `peak_cpu` is always null;
   - `peak_memory` is from `max_mem`;
   - GPU values are retained and not evaluated;
