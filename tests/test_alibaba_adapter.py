@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+import numpy as np
 
 from src.adapters.alibaba import Alibaba2018Adapter
 from src.adapters.validation import AdapterValidationError
@@ -140,6 +141,36 @@ def test_alibaba_non_terminated_status_is_partial(status):
     assert row["validity_status"] == "partial"
 
 
+@pytest.mark.parametrize(
+    "missing_status",
+    [
+        None,
+        pd.NA,
+        np.nan,
+    ],
+)
+def test_alibaba_missing_status_is_partial(missing_status):
+    instances = make_instances().copy()
+
+    instances.loc[
+        instances["instance_name"] == "i1",
+        "status",
+    ] = missing_status
+
+    out = Alibaba2018Adapter().adapt_tables(
+        make_task(),
+        instances,
+    ).canonical
+
+    row = out.loc[
+        out["instance_id"] == "i1"
+    ].iloc[0]
+
+    assert row["cpu_validity_status"] == "partial"
+    assert row["memory_validity_status"] == "partial"
+    assert row["validity_status"] == "partial"
+    
+    
 def test_alibaba_terminated_status_is_valid_when_other_checks_pass():
     out = Alibaba2018Adapter().adapt_tables(
         make_task(),

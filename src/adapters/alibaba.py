@@ -308,6 +308,8 @@ class Alibaba2018Adapter(BaseDatasetAdapter):
             source["status"]
             .astype("string")
             .eq("Terminated")
+            .fillna(False)
+            .to_numpy(dtype=bool)
         )
 
         cpu_complete = (
