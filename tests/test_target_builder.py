@@ -56,7 +56,8 @@ def test_split_defaults_metadata_and_input_preservation():
     assert result.metadata["split"]["validation_rows"] == 15
     assert result.metadata["eligible_rows"] == 100
     assert result.metadata["excluded_rows"] == 0
-    assert "data built from c2ae87f" in result.metadata["results_documentation"]
+    assert "c2ae87f" not in json.dumps(result.metadata)
+    assert "source_provenance" not in result.metadata
     json.dumps(result.metadata)
     for split, meta in result.metadata["per_split"].items():
         part = result.rows.loc[result.rows["split"].eq(split)]
@@ -68,6 +69,63 @@ def test_split_defaults_metadata_and_input_preservation():
             assert counts["available"] == part[f"actual_{resource}"].notna().sum()
     assert result.metadata["split"]["train_end"] < result.metadata["split"]["validation_start"]
     assert result.metadata["split"]["validation_end"] < result.metadata["split"]["test_start"]
+
+
+@pytest.mark.parametrize("commit", ["c2ae87f4aa357384a3cc8bdc72f776f1012c3ab7", "a" * 40])
+def test_explicit_source_metadata_controls_provenance_without_changing_results(commit, tmp_path):
+    # The caller supplies metadata only after checking the input artifact's
+    # manifest. These fixture identities test the API without reading Task 3 data.
+    source_metadata = {
+        "dataset_id": PROFILE.dataset_id, "primary_view": "role_occurrence",
+        "build": {"code_commit": commit, "code_dirty": False},
+    }
+    source = make_roles()
+    baseline = build_targets(source, PROFILE)
+    result = build_targets(source, PROFILE, verified_source_metadata=source_metadata)
+    pd.testing.assert_frame_equal(result.rows, baseline.rows)
+    expected_metadata = dict(baseline.metadata)
+    expected_metadata.update({
+        "source_provenance": source_metadata,
+        "results_documentation": result.metadata["results_documentation"],
+    })
+    assert result.metadata == expected_metadata
+    assert f"data built from {commit[:7]}" in result.metadata["results_documentation"]
+    if not commit.startswith("c2ae87f"):
+        assert "c2ae87f" not in json.dumps(result.metadata)
+    # Preserve explicit provenance when writing, without retaining mutable input.
+    source_metadata["build"]["code_commit"] = "b" * 40
+    assert result.metadata["source_provenance"]["build"]["code_commit"] == commit
+    written = write_target_tables(result, tmp_path / "targets")
+    assert written["source_provenance"] == result.metadata["source_provenance"]
+    assert json.loads((tmp_path / "targets" / "metadata.json").read_text()) == written
+
+
+@pytest.mark.parametrize("updates,message", [
+    ({"dataset_id": "other"}, "dataset_id"),
+    ({"primary_view": "instance"}, "primary_view"),
+    ({"build": None}, "build block"),
+    ({"build": {}}, "code_commit"),
+    ({"build": {"code_commit": "c2ae87f", "code_dirty": False}}, "code_commit"),
+    ({"build": {"code_commit": "z" * 40, "code_dirty": False}}, "code_commit"),
+    ({"build": {"code_commit": "a" * 40}}, "code_dirty"),
+    ({"build": {"code_commit": "a" * 40, "code_dirty": True}}, "code_dirty"),
+])
+def test_incomplete_or_mismatched_source_metadata_is_rejected(updates, message):
+    source_metadata = {
+        "dataset_id": PROFILE.dataset_id, "primary_view": "role_occurrence",
+        "build": {"code_commit": "a" * 40, "code_dirty": False},
+        **updates,
+    }
+    with pytest.raises(ValueError, match=message):
+        build_targets(make_roles(), PROFILE, verified_source_metadata=source_metadata)
+
+
+def test_unknown_source_provenance_stays_unknown_when_written(tmp_path):
+    result = build_targets(make_roles(), PROFILE)
+    written = write_target_tables(result, tmp_path / "unknown")
+    assert written["results_documentation"] == "Source provenance not supplied."
+    assert "source_provenance" not in written
+    assert "c2ae87f" not in json.dumps(written)
 
 
 def test_all_roles_and_timestamp_groups_stay_in_one_split():

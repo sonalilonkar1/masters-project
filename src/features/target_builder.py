@@ -8,10 +8,12 @@ must not be used as submission-time features.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 import heapq
 import json
 from pathlib import Path
+import re
 import shutil
 import tempfile
 
@@ -145,8 +147,35 @@ def _history(ordered: pd.DataFrame, usable: dict[str, pd.Series]) -> dict[str, p
     return counts
 
 
+def _source_provenance(source_metadata: Mapping[str, object] | None,
+                       profile: DatasetCapabilities) -> dict[str, object] | None:
+    """Validate supplied build identity, without inferring it from capabilities."""
+    if source_metadata is None:
+        return None
+    if source_metadata.get("dataset_id") != profile.dataset_id:
+        raise ValueError("Source metadata dataset_id does not match the dataset profile")
+    if source_metadata.get("primary_view") != profile.evaluation_record_level:
+        raise ValueError("Source metadata primary_view does not match the evaluation record level")
+    build = source_metadata.get("build")
+    if not isinstance(build, Mapping):
+        raise ValueError("Source metadata requires a build block")
+    commit = build.get("code_commit")
+    if not isinstance(commit, str) or re.fullmatch(r"[0-9a-fA-F]{40}", commit) is None:
+        raise ValueError("Source metadata requires a full 40-character code_commit")
+    if build.get("code_dirty") is not False:
+        raise ValueError("Source metadata requires code_dirty=False to identify a clean source build")
+    # Copy the identity fields: later changes to the caller's metadata must not
+    # change the provenance recorded in an already completed result.
+    return {
+        "dataset_id": profile.dataset_id,
+        "primary_view": profile.evaluation_record_level,
+        "build": {"code_commit": commit.lower(), "code_dirty": False},
+    }
+
+
 def build_targets(role_occurrences: pd.DataFrame,
-                  profile: DatasetCapabilities) -> TargetBuildResult:
+                  profile: DatasetCapabilities, *,
+                  verified_source_metadata: Mapping[str, object] | None = None) -> TargetBuildResult:
     """Build 70/15/15 splits, history and targets without mutating input.
 
     History requires a deterministic predecessor with end <= current start.
@@ -154,7 +183,13 @@ def build_targets(role_occurrences: pd.DataFrame,
     precedence, then no successor, split isolation, invalid resource, available.
     Same-second means equal integer second buckets of submission timestamps.
     At least three eligible timestamp groups are required by chronological_split.
+
+    Supply verified_source_metadata only after verifying the source artifacts
+    against their manifest and confirming this frame came from that build. This
+    function checks metadata identity, but cannot authenticate a DataFrame's
+    origin. Omit it for synthetic or unknown inputs; no source commit is assumed.
     """
+    source_provenance = _source_provenance(verified_source_metadata, profile)
     fields = {r: _resource_field(profile, r) for r in ("cpu", "memory")}
     _validate(role_occurrences, profile, fields)
     # Internal unique positions prevent ambiguous pandas alignment when the caller supplies duplicate indexes. Restore the caller's index at return.
@@ -264,8 +299,14 @@ def build_targets(role_occurrences: pd.DataFrame,
         "reference_notes": "References predate the final 256-row multi_attempt_worker exclusion. Exclusion can remove rows, change successors and move split boundaries. Structural successor counts and available CPU/memory counts are reported separately; exact historical attribution is unavailable from the final eligible population alone.",
         "output_paths": {},
     }
-    if references:
-        metadata["results_documentation"] = "data built from c2ae87f; Task 4 consumes the validated Task 3 role_occurrence view without rebuilding it."
+    metadata["results_documentation"] = "Source provenance not supplied."
+    if source_provenance is not None:
+        metadata["source_provenance"] = source_provenance
+        commit = source_provenance["build"]["code_commit"]
+        metadata["results_documentation"] = (
+            f"data built from {commit[:7]}; source code_commit: {commit}; "
+            "Task 4 consumes the verified Task 3 role_occurrence view without rebuilding it."
+        )
     rows.index = original_index
     return TargetBuildResult(rows=rows, metadata=metadata)
 
