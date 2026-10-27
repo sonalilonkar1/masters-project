@@ -8,12 +8,14 @@ must not be used as submission-time features.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass
 import heapq
+from itertools import islice
 import json
 from pathlib import Path
 import re
+import operator
 import shutil
 import tempfile
 
@@ -114,37 +116,104 @@ def _validate(rows: pd.DataFrame, profile: DatasetCapabilities,
                 raise ValueError(f"{field} must contain finite non-negative numbers or null")
 
 
-def _history(ordered: pd.DataFrame, usable: dict[str, pd.Series]) -> dict[str, pd.Series]:
-    """Sweep predecessors; release their resource values only upon completion.
+class HistoryValues(Sequence[float]):
+    """Read-only, fixed-length prefix of an append-only history buffer.
 
-    The current row is queried before insertion, including zero-duration rows.
-    Complexity is O(n log n), with no pairwise joins or dependence on split.
+    Iteration and len() do not copy values. A yielded view remains unchanged as
+    the generator advances. Slicing or explicitly calling list/tuple materializes
+    only on the consumer's request. Task 6 should consume views as they arrive,
+    rather than retain every snapshot or materialize a history table per row.
+    Values are in completion-release order, not sorted by resource magnitude.
     """
-    counts = {r: pd.Series(0, index=ordered.index, dtype="Int64") for r in usable}
-    masks = {r: s.to_dict() for r, s in usable.items()}
+
+    __slots__ = ("_values", "_length")
+
+    def __init__(self, values: list[float]):
+        self._values = values
+        self._length = len(values)
+
+    def __len__(self) -> int:
+        return self._length
+
+    def __iter__(self) -> Iterator[float]:
+        return islice(self._values, self._length)
+
+    def __getitem__(self, index: int | slice) -> float | tuple[float, ...]:
+        if isinstance(index, slice):
+            return tuple(self._values[i] for i in range(*index.indices(self._length)))
+        index = operator.index(index)
+        if index < 0:
+            index += self._length
+        if not 0 <= index < self._length:
+            raise IndexError("history index out of range")
+        return self._values[index]
+
+
+@dataclass(frozen=True)
+class ResourceHistory:
+    """Completed usable values known at one eligible role's submission."""
+
+    role_key: str
+    cpu_values: HistoryValues
+    memory_values: HistoryValues
+
+
+def iter_resource_history(role_occurrences: pd.DataFrame,
+                          profile: DatasetCapabilities) -> Iterator[ResourceHistory]:
+    """Stream point-in-time histories using Task 4's exact eligibility rule.
+
+    Pass canonical role rows (including exclusions), or Task 4 output rows;
+    existing derived columns are ignored. Include earlier partitions when
+    computing validation history (for example train plus validation, not just
+    validation alone). Order is recurrence_key, start_time_us, occurrence_id, role_key.
+    Each yielded snapshot contains only eligible predecessors whose resource
+    is populated and not invalid, and end_time_us <= current start_time_us.
+    The current row is yielded before insertion, including zero-duration runs.
+    Histories span earlier and current splits; split labels are not needed.
+
+    Example: for history in iter_resource_history(roles, profile):
+        cpu_count = len(history.cpu_values)
+        # Task 6 can calculate statistics by iterating history.cpu_values.
+
+    Sorting and the heap take O(n log n) time. Each usable value is stored once
+    in its recurrence's buffer, avoiding O(total historical memberships) copies.
+    """
+    fields = {r: _resource_field(profile, r) for r in ("cpu", "memory")}
+    # Task 6 consumes Task 4 tables. Their existing labels/counts are irrelevant
+    # to selection, while build_targets itself still refuses populated outputs.
+    derived = [c for c in (*DERIVED_COLUMNS, "_split") if c in role_occurrences]
+    canonical_rows = role_occurrences.drop(columns=derived) if derived else role_occurrences
+    _validate(canonical_rows, profile, fields)
+    columns = ["recurrence_key", "role_key", "occurrence_id", "start_time_us", "end_time_us"]
+    for resource, field in fields.items():
+        if field:
+            columns.extend((field, f"{resource}_validity_status"))
+    ordered = role_occurrences.loc[role_occurrences["exclusion_reason"].isna(), columns].sort_values(
+        ["recurrence_key", "start_time_us", "occurrence_id", "role_key"], kind="mergesort")
     for _, group in ordered.groupby("recurrence_key", sort=False):
-        # Start order and completion order can differ when runs overlap. The
-        # heap exposes the earliest completion among predecessors seen so far.
-        # Each entry stores (end time, unique row position, CPU usable, memory
-        # usable); the row position makes equal completion times deterministic.
-        pending: list[tuple[int, int, bool, bool]] = []
-        completed = [0, 0]
-        for index, start, end in zip(group.index, group["start_time_us"], group["end_time_us"]):
-            # Completion exactly at submission is allowed by schema §11.
-            # Adding booleans increments each resource's count independently.
+        # Runs can complete out of start order. Position breaks completion ties
+        # without relying on the caller's potentially duplicated index labels.
+        pending: list[tuple[int, int, float | None, float | None]] = []
+        completed: list[list[float]] = [[], []]
+        resources = []
+        for resource, field in fields.items():
+            resources.append(
+                zip(group[field], group[f"{resource}_validity_status"])
+                if field else ((None, "invalid") for _ in range(len(group))))
+        for position, (role_key, start, end, cpu, memory) in enumerate(zip(
+                group["role_key"], group["start_time_us"], group["end_time_us"], *resources)):
             while pending and pending[0][0] <= start:
-                _, _, cpu, memory = heapq.heappop(pending)
-                completed[0] += cpu
-                completed[1] += memory
-            for pos, resource in enumerate(("cpu", "memory")):
-                counts[resource].at[index] = completed[pos]
-            # Insert only after recording this row's history: a zero-duration
-            # Run cannot count itself, but can count for a later tied row.
-            # A missing completion time never establishes availability.
+                _, _, released_cpu, released_memory = heapq.heappop(pending)
+                for buffer, value in zip(completed, (released_cpu, released_memory)):
+                    if value is not None:
+                        buffer.append(value)
+            yield ResourceHistory(role_key, HistoryValues(completed[0]), HistoryValues(completed[1]))
+            # Insert after yielding: a run cannot count itself, but an earlier
+            # zero-duration tied run can count for the next row at that time.
             if pd.notna(end):
-                heapq.heappush(pending, (int(end), int(index),
-                                        bool(masks["cpu"][index]), bool(masks["memory"][index])))
-    return counts
+                values = tuple(float(value) if pd.notna(value) and status != "invalid" else None
+                               for value, status in (cpu, memory))
+                heapq.heappush(pending, (int(end), position, *values))
 
 
 def _source_provenance(source_metadata: Mapping[str, object] | None,
@@ -215,7 +284,12 @@ def build_targets(role_occurrences: pd.DataFrame,
                             & ordered[f"{resource}_validity_status"].ne("invalid")) if field else pd.Series(
                                 False, index=ordered.index)
     # History intentionally spans earlier and current splits, subject to the completion check. Target isolation below is a separate restriction.
-    counts = _history(ordered, usable)
+    counts = {r: pd.Series(0, index=ordered.index, dtype="Int64") for r in fields}
+    positions = dict(zip(ordered["role_key"], ordered.index))
+    for history in iter_resource_history(role_occurrences, profile):
+        index = positions[history.role_key]
+        counts["cpu"].at[index] = len(history.cpu_values)
+        counts["memory"].at[index] = len(history.memory_values)
     # Nullable integers avoid float rounding at a second boundary when shift, introduces a missing successor (including timestamps above 2**53).
     successor = ordered.assign(start_time_us=ordered["start_time_us"].astype("Int64")).groupby("recurrence_key", sort=False)[
         ["start_time_us", "split", "role_key"]].shift(-1)
@@ -296,7 +370,19 @@ def build_targets(role_occurrences: pd.DataFrame,
         "predictive_feature_columns": ["cpu_history_count", "memory_history_count"],
         "same_second_policy": "equal start_time_us // 1000000; immediate eligible successor; independent of resource availability",
         "reference_comparison": references,
-        "reference_notes": "References predate the final 256-row multi_attempt_worker exclusion. Exclusion can remove rows, change successors and move split boundaries. Structural successor counts and available CPU/memory counts are reported separately; exact historical attribution is unavailable from the final eligible population alone.",
+        "reference_notes": (
+            "References predate the final 256-row multi_attempt_worker exclusion. "
+            "Structural successor counts and available CPU/memory counts are reported separately. "
+            "The reviewer's reconciliation of the shared Task 3 build found that final counts "
+            "are lower because 256 roles are excluded by multi_attempt_worker: validation "
+            "42,069 versus reference 42,104 (-35), test 44,053 versus 44,087 (-34). "
+            "Restoring those roles reproduces validation exactly (42,104) and test within one "
+            "row (44,086 against 44,087); that row lies at the validation/test boundary, which "
+            "the reference analysis placed one timestamp group differently. Validation "
+            "cross-split counts are 7,736 final, 7,743 restored, and 7,742 in the reference. "
+            "Same-second validation/test counts remain 245/251. This is a historical "
+            "reconciliation, not a recomputation on arbitrary input fixtures."
+        ),
         "output_paths": {},
     }
     metadata["results_documentation"] = "Source provenance not supplied."
@@ -324,8 +410,8 @@ def write_target_tables(result: TargetBuildResult, output_dir: Path) -> dict[str
     # Copy metadata before adding paths so writing does not mutate the build result. JSON conversion also checks that the metadata can be serialized.
     metadata = json.loads(json.dumps(result.metadata))
     metadata["output_paths"] = {
-        **{s: str(output_dir / f"{s}.parquet") for s in SPLITS},
-        "metadata": str(output_dir / "metadata.json"),
+        **{s: f"{s}.parquet" for s in SPLITS},
+        "metadata": "metadata.json",
     }
     # A failure leaves no published partial set and cleans up its staging files.
     staging = Path(tempfile.mkdtemp(prefix=f".{output_dir.name}.", dir=output_dir.parent))

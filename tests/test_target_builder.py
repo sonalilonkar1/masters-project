@@ -2,13 +2,14 @@
 
 from dataclasses import replace
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from canonical.schema import ALIBABA_GPU_2020_CAPABILITIES as PROFILE, TARGET_STATUSES
-from features.target_builder import DERIVED_COLUMNS, build_targets, write_target_tables
+from features.target_builder import DERIVED_COLUMNS, build_targets, iter_resource_history, write_target_tables
 
 
 def make_roles(n=20):
@@ -321,6 +322,8 @@ def test_group_isolation_and_history_against_independent_brute_force_oracle():
     source.loc[::9, "memory_validity_status"] = "invalid"
     source.loc[::13, "exclusion_reason"] = "job_failed"
     result = build_targets(source.sample(frac=1, random_state=9), PROFILE).rows
+    histories = {h.role_key: h for h in iter_resource_history(source, PROFILE)}
+    assert len(histories) == source["exclusion_reason"].isna().sum()
     eligible = source.loc[source["exclusion_reason"].isna()].sort_values(
         ["start_time_us", "occurrence_id", "role_key"])
     # The deliberately simple reference scans every predecessor rather than
@@ -335,6 +338,15 @@ def test_group_isolation_and_history_against_independent_brute_force_oracle():
                 and pd.notna(prior[field]) and prior[f"{resource}_validity_status"] != "invalid"
                 for prior in previous)
             assert result.loc[index, f"{resource}_history_count"] == expected
+            values = getattr(histories[current["role_key"]], f"{resource}_values")
+            expected_values = [prior[field] for prior in previous
+                               if prior["recurrence_key"] == current["recurrence_key"]
+                               and pd.notna(prior["end_time_us"])
+                               and prior["end_time_us"] <= current["start_time_us"]
+                               and pd.notna(prior[field])
+                               and prior[f"{resource}_validity_status"] != "invalid"]
+            assert len(values) == expected
+            assert sorted(values) == sorted(expected_values)
         previous.append(current)
 
 
@@ -422,7 +434,8 @@ def test_writer_round_trip_excluded_rows_paths_and_existing_destination(tmp_path
     assert json.loads((destination / "metadata.json").read_text()) == metadata
     total = 0
     for split in ("train", "validation", "test"):
-        part = pd.read_parquet(metadata["output_paths"][split])
+        assert not Path(metadata["output_paths"][split]).is_absolute()
+        part = pd.read_parquet(destination / metadata["output_paths"][split])
         expected = result.rows.loc[result.rows["split"].eq(split)].reset_index(drop=True)
         pd.testing.assert_frame_equal(part, expected)
         assert part["exclusion_reason"].isna().all()
@@ -451,3 +464,57 @@ def test_writer_failure_does_not_publish_partial_tables(tmp_path, monkeypatch):
     with pytest.raises(OSError, match="simulated"):
         write_target_tables(result, tmp_path / "targets")
     assert list(tmp_path.iterdir()) == []
+
+
+def test_streaming_views_are_read_only_stable_and_share_buffers():
+    histories = iter_resource_history(make_roles(), PROFILE)
+    first, second, third = next(histories), next(histories), next(histories)
+    assert list(first.cpu_values) == []
+    assert list(second.cpu_values) == [10.]
+    assert list(third.cpu_values) == [10., 11.]
+    # Only the prefix length changes; no growing historical array is copied.
+    assert first.cpu_values._values is second.cpu_values._values is third.cpu_values._values
+    list(histories)
+    assert list(second.cpu_values) == [10.]
+    assert second.cpu_values[-1] == 10.
+    assert second.cpu_values[:] == (10.,)
+    with pytest.raises(TypeError):
+        second.cpu_values[0] = 999
+    with pytest.raises(IndexError):
+        _ = second.cpu_values[1]
+
+
+def test_streaming_ties_exclusions_and_duplicate_indexes():
+    source = make_roles()
+    source.loc[:2, "start_time_us"] = 0
+    source.loc[:2, "end_time_us"] = 0
+    source.loc[:2, "occurrence_id"] = ["b", "a", "a"]
+    source.loc[:2, "role_key"] = ["z", "y", "x"]
+    source.loc[3, "exclusion_reason"] = "job_failed"
+    source = source.sample(frac=1, random_state=81)
+    source.index = [7] * len(source)
+    histories = list(iter_resource_history(source, PROFILE))
+    assert [h.role_key for h in histories[:3]] == ["x", "y", "z"]
+    assert [list(h.cpu_values) for h in histories[:3]] == [[], [12.], [12., 11.]]
+    rows = build_targets(source, PROFILE).rows.set_index("role_key")
+    for history in histories:
+        assert len(history.cpu_values) == rows.loc[history.role_key, "cpu_history_count"]
+        assert len(history.memory_values) == rows.loc[history.role_key, "memory_history_count"]
+
+
+def test_output_metadata_is_identical_across_output_directories(tmp_path):
+    result = build_targets(make_roles(), PROFILE)
+    for folder in (tmp_path / "one", tmp_path / "elsewhere" / "two"):
+        write_target_tables(result, folder)
+    assert (tmp_path / "one/metadata.json").read_bytes() == (tmp_path / "elsewhere/two/metadata.json").read_bytes()
+
+
+def test_task6_can_stream_train_and_validation_outputs_without_reading_test():
+    rows = build_targets(make_roles(), PROFILE).rows
+    visible = rows.loc[rows["split"].isin(("train", "validation"))]
+    histories = list(iter_resource_history(visible, PROFILE))
+    assert len(histories) == len(visible)
+    expected = visible.set_index("role_key")
+    for history in histories:
+        assert len(history.cpu_values) == expected.loc[history.role_key, "cpu_history_count"]
+        assert len(history.memory_values) == expected.loc[history.role_key, "memory_history_count"]
