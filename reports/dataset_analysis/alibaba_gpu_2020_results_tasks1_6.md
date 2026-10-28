@@ -189,5 +189,5 @@ With the D1 fix the selected `min_runs` is 10, so the PR #97 output files hold t
 
 1. Download the shared Task 3 copy (`alibaba_gpu_v2020_c2ae87f`) into `data/processed/alibaba_gpu_v2020/` and check it with `python3 scripts/build_alibaba_gpu_2020_canonical.py --verify data/processed/alibaba_gpu_v2020`.
 2. Build the Task 4 tables: `python3 scripts/build_alibaba_gpu_2020_targets.py` (about 1 minute, 5 GB peak memory).
-3. On the PR #97 branch: `python3 scripts/run_alibaba_gpu_2020_baselines.py` (about 1 minute). Outputs: `validation_comparison.csv`, `sensitivity_validation.csv`, `baseline_selection.json`, `history_statistics.parquet`, `recommendations_{train,validation,test}.parquet`, `metadata.json` in `data/processed/alibaba_gpu_v2020_baselines/`.
+3. On the PR #97 branch: `python3 scripts/run_alibaba_gpu_2020_baselines.py` (about 2 minutes, 1.9 GB peak memory). Outputs: `validation_comparison.csv`, `sensitivity_validation.csv`, `baseline_selection.json`, `history_statistics.parquet`, `recommendations_{train,validation,test}.parquet`, `metadata.json` in `data/processed/alibaba_gpu_v2020_baselines/`.
 4. With the D1 fix applied the run selects P99 at `min_runs = 10`, so `sensitivity_validation.csv` (§5.5) is produced directly at that setting.
