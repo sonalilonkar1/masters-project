@@ -42,6 +42,21 @@ PERCENTILE_POLICIES: Mapping[str, float] = {"P90": 90.0, "P95": 95.0, "P99": 99.
 HISTORY_POLICIES: tuple[str, ...] = ("Mean", "P90", "P95", "P99")
 BASELINE_POLICIES: tuple[str, ...] = ("Request", *HISTORY_POLICIES)
 
+# Request is the status-quo reference: it is scored and reported in every table,
+# but it is NOT a selection candidate. Only the history policies compete for the
+# locked baseline, so the selected baseline (and min_runs) always comes from real
+# history, and the Hybrid rule max(ML, baseline) can size below the current
+# request instead of only ever adding to it (review D1 / issue #87 W1).
+SELECTABLE_POLICIES: tuple[str, ...] = HISTORY_POLICIES
+
+# Profile-semantics labels that must travel into every output file so a reader
+# (or Task 7) never mistakes average-usage CPU numbers for peak-safe sizing.
+PROFILE_LABEL_KEYS: tuple[str, ...] = (
+    "cpu_result_semantics",
+    "primary_resource",
+    "any_resource_metric_reported",
+)
+
 # Per-policy recommendation-column suffix.
 _POLICY_SUFFIX: Mapping[str, str] = {
     "Request": "request",
@@ -332,6 +347,26 @@ def evaluate_policy(
     return evaluator.evaluate_canonical(frame)
 
 
+def profile_labels(
+    evaluator: RecommendationEvaluator,
+    evaluated: pd.DataFrame,
+) -> dict[str, object]:
+    """Semantics labels for an evaluated frame, straight from the evaluator.
+
+    Returns the ``summary_metadata`` fields that state CPU is average-usage and
+    memory is primary, plus the row-level ``cpu_usage_label``. Taken from the
+    evaluator (never hard-coded) so the labels are evidence of what actually ran.
+    """
+    metadata = evaluator.summary_metadata(evaluated)
+    labels: dict[str, object] = {key: metadata.get(key) for key in PROFILE_LABEL_KEYS}
+    cpu_label = None
+    if "cpu_usage_label" in evaluated.columns:
+        values = evaluated["cpu_usage_label"].dropna().unique()
+        cpu_label = values[0] if len(values) else None
+    labels["cpu_usage_label"] = cpu_label
+    return labels
+
+
 # ---------------------------------------------------------------------------
 # Common validation population
 # ---------------------------------------------------------------------------
@@ -406,9 +441,15 @@ def build_validation_comparison(
         for policy in BASELINE_POLICIES:
             evaluated = evaluate_policy(candidate, policy, evaluator)
             summary = evaluator.summarize(evaluated)
-            record: dict[str, object] = {"policy": policy, "min_runs": int(min_runs)}
+            record: dict[str, object] = {
+                "policy": policy,
+                "min_runs": int(min_runs),
+                # Request is reported but never selectable (review D1).
+                "selection_candidate": policy in SELECTABLE_POLICIES,
+            }
             for key in _SUMMARY_KEYS:
                 record[key] = summary.get(key, np.nan)
+            record.update(profile_labels(evaluator, evaluated))
             comparison_rows.append(record)
 
     return pd.DataFrame(comparison_rows)
@@ -438,7 +479,18 @@ def select_baseline(
     """
     if validation_comparison.empty:
         raise ValueError("validation_comparison is empty")
-    ranked = validation_comparison.sort_values(
+
+    # Rank only the selection candidates (history policies); Request is reported
+    # but never selectable, so the locked baseline and min_runs always come from
+    # real history (review D1 / issue #87 W1).
+    if "selection_candidate" in validation_comparison.columns:
+        candidates = validation_comparison[validation_comparison["selection_candidate"]]
+    else:
+        candidates = validation_comparison[validation_comparison["policy"].isin(SELECTABLE_POLICIES)]
+    if candidates.empty:
+        raise ValueError("No selectable (history) candidates in validation_comparison")
+
+    ranked = candidates.sort_values(
         by=list(sort_order), ascending=True, kind="mergesort", na_position="last"
     ).reset_index(drop=True)
     winner = ranked.iloc[0]
@@ -466,18 +518,30 @@ def select_baseline(
 # Locked recommendations for all splits
 # ---------------------------------------------------------------------------
 
+def cpu_usage_label(profile: DatasetCapabilities) -> str | None:
+    """"average_usage" when the profile has average CPU but no CPU peak."""
+    if profile.has_cpu_average and not profile.has_cpu_peak:
+        return "average_usage"
+    if profile.has_cpu_peak:
+        return "peak_usage"
+    return None
+
+
 def build_locked_recommendations(
     rows: pd.DataFrame,
     statistics: pd.DataFrame,
     selection: BaselineSelection,
+    profile: DatasetCapabilities,
 ) -> pd.DataFrame:
     """Produce all five baseline recommendations at the selected min_runs.
 
     Used for train, validation, and test rows after the selection is locked.
     The selected policy's recommendation is surfaced in ``rec_cpu_selected`` /
-    ``rec_memory_selected`` and ``selected_baseline_policy``. This touches only
-    history statistics, requests, and features; it reads no target and scores
-    nothing, so it is safe for the test split.
+    ``rec_memory_selected`` and ``selected_baseline_policy``. A ``cpu_usage_label``
+    is stamped from the profile (the evaluator is not run on test), so the
+    average-usage nature of the CPU recommendations travels with every split.
+    This touches only history statistics, requests, and features; it reads no
+    target and scores nothing, so it is safe for the test split.
     """
     with_stats = attach_history_statistics(rows, statistics)
     recommended = add_baseline_recommendations(with_stats, min_runs=selection.selected_min_runs)
@@ -490,6 +554,9 @@ def build_locked_recommendations(
     recommended["recommended_cpu_unit"] = RESOURCE_UNIT["cpu"]
     recommended["recommended_memory_unit"] = RESOURCE_UNIT["memory"]
     recommended["recommended_resource_scope"] = RESOURCE_SCOPE
+    label = cpu_usage_label(profile)
+    if label is not None:
+        recommended["cpu_usage_label"] = label
 
     # Emit a focused, leakage-proof handoff: identity, pre-execution requests,
     # point-in-time history counts, and the recommendations only. Current-run
@@ -507,9 +574,10 @@ def build_locked_recommendations(
                 if c.startswith(("rec_cpu_", "rec_memory_", "uses_history_"))]
     selected = ["selected_baseline_policy", "selected_min_runs", "rec_cpu_selected", "rec_memory_selected"]
     units = ["recommended_cpu_unit", "recommended_memory_unit", "recommended_resource_scope"]
+    labels = [c for c in ("cpu_usage_label",) if c in recommended.columns]
 
     ordered: list[str] = []
-    for column in (*identity, *requests, *counts, *rec_cols, *selected, *units):
+    for column in (*identity, *requests, *counts, *rec_cols, *selected, *units, *labels):
         if column not in ordered:
             ordered.append(column)
     return recommended[ordered].copy()
@@ -580,6 +648,7 @@ def _score_subset(
             summary = evaluator.summarize(evaluated)
             for key in _SUMMARY_KEYS:
                 record[key] = summary.get(key, np.nan)
+        record.update(profile_labels(evaluator, evaluated))
         rows.append(record)
     return rows
 
@@ -603,18 +672,23 @@ def build_sensitivity_tables(
     recommended = add_baseline_recommendations(with_stats, min_runs=selection.selected_min_runs)
     evaluator = RecommendationEvaluator(capabilities=profile)
 
+    # Both sensitivity dimensions are required (issue #87 §8, acceptance 12).
+    # Fail loudly rather than silently dropping a cut and recording 0 rows
+    # if a required column is ever missing from the input (review I3).
+    for column in ("next_occurrence_same_second", "inst_num"):
+        if column not in recommended.columns:
+            raise ValueError(f"sensitivity analysis requires column {column!r}")
+
     all_rows = pd.Series(True, index=recommended.index)
     records: list[dict[str, object]] = []
     records += _score_subset(recommended, all_rows, "occurrence_weighted", evaluator)
 
-    if "next_occurrence_same_second" in recommended.columns:
-        flagged = recommended["next_occurrence_same_second"].eq(True)
-        records += _score_subset(recommended, ~flagged, "same_second_excluded", evaluator)
-        records += _score_subset(recommended, flagged, "same_second_only", evaluator)
+    flagged = recommended["next_occurrence_same_second"].eq(True)
+    records += _score_subset(recommended, ~flagged, "same_second_excluded", evaluator)
+    records += _score_subset(recommended, flagged, "same_second_only", evaluator)
 
-    if "inst_num" in recommended.columns:
-        multi = recommended["inst_num"] > 1
-        records += _score_subset(recommended, multi, "multi_instance", evaluator)
+    multi = recommended["inst_num"] > 1
+    records += _score_subset(recommended, multi, "multi_instance", evaluator)
 
     records += _score_subset(recommended, all_rows, "group_weighted", evaluator, group_weighted=True)
 

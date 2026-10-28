@@ -135,7 +135,7 @@ Task 8 verifies four distinct stages of test-data access:
 
 - [ ] Baseline history-statistic counts match the Task 4 history counts.
 - [ ] The locked selection record predates the baseline test recommendations.
-- [ ] The selected policy and `min_runs` match the validation comparison under the documented sort order.
+- [ ] The selected policy and `min_runs` match the validation comparison under the documented sort order, among the selection candidates (Mean, P90, P95, P99; Request excluded).
 - [ ] Recommendation tables exist for all five baseline policies at the selected `min_runs` for train, validation and test, with the selected policy marked.
 - [ ] Task 6 metadata confirms it read test feature and request columns only, and that no evaluator call was made on test rows.
 

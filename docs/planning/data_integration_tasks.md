@@ -454,7 +454,7 @@ Baseline and `min_runs` selection are not part of this task (Task 6).
 **Work to complete:**
 1. **Baselines on canonical columns:** generalize `baseline1_percentile_margin.py` to `recurrence_key`, `actual_cpu` and `actual_memory`, keeping Google behavior; Request fallback when history is below `min_runs`.
 2. **Validation evaluation:** memory as the primary resource; CPU reported separately as average-usage sizing; no any-resource metric; no GPU metric.
-3. **Selection:** memory-first choice of the baseline and `min_runs`, using train and validation only; test is never read.
+3. **Selection:** memory-first choice of the baseline (Mean, P90, P95 or P99; Request is reported as the status-quo reference but is not a selection candidate) and `min_runs`, using train and validation only; test is never read.
 4. **Sensitivity:** same-second targets reported separately; group-weighted sensitivity (schema §14).
 5. **Artifacts:** validation tables and metadata.
 

@@ -60,6 +60,18 @@ HISTORY_INPUT_COLUMNS = (
     "observed_cpu", "peak_memory", "cpu_validity_status", "memory_validity_status",
 )
 
+# Explicit allow-list for the test read (review I1). Only identity, times,
+# requests (+units), point-in-time history inputs, and history counts are
+# loaded. Nothing target-side or future-derived (e.g. next_occurrence_same_second,
+# observed_gpu, source_*_status) is read, and a missing column fails the build.
+TEST_ALLOWED_COLUMNS = (
+    "dataset_id", "workload_id", "record_level", "role_key", "occurrence_id",
+    "recurrence_key", "split", "start_time_us", "end_time_us",
+    "requested_cpu", "requested_memory", "requested_cpu_unit", "requested_memory_unit",
+    "observed_cpu", "peak_memory", "cpu_validity_status", "memory_validity_status",
+    "exclusion_reason", "cpu_history_count", "memory_history_count",
+)
+
 OUTPUT_FILES = (
     "baseline_selection.json",
     "validation_comparison.csv",
@@ -102,10 +114,21 @@ def _read_split(targets_dir: Path, split: str, columns: list[str] | None = None)
     return pd.read_parquet(targets_dir / f"{split}.parquet", columns=columns)
 
 
-def _test_feature_columns(targets_dir: Path) -> list[str]:
-    """Every test column except the forbidden target/status columns."""
-    schema_names = pq.ParquetFile(targets_dir / "test.parquet").schema.names
-    return [c for c in schema_names if c not in TEST_FORBIDDEN_COLUMNS]
+def _test_allowed_columns(targets_dir: Path) -> list[str]:
+    """Return the explicit test allow-list, requiring every column to exist."""
+    schema_names = set(pq.ParquetFile(targets_dir / "test.parquet").schema.names)
+    missing = [c for c in TEST_ALLOWED_COLUMNS if c not in schema_names]
+    if missing:
+        raise InputError(f"test.parquet is missing required columns: {missing}")
+    return list(TEST_ALLOWED_COLUMNS)
+
+
+def _relpath(path: Path) -> str:
+    """Repo-relative path when possible, for portable metadata."""
+    try:
+        return str(Path(path).resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 
 def _counts(selection: a6.BaselineSelection, sensitivity: pd.DataFrame) -> dict[str, int]:
@@ -176,30 +199,55 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
         staged.mkdir()
 
         source_commits = _source_commits(targets_dir)
+        source_artifacts = {
+            "task4_input_dir": _relpath(targets_dir),
+            "task4_files": sorted(targets_build.CHECKED_FILES),
+            "task4_manifest": manifest,
+            **source_commits,
+        }
+        # Profile-semantics labels for the selected candidate, taken from the
+        # evaluator's own output (review I2), not hard-coded text.
+        selected_row = comparison[
+            (comparison["policy"] == selection.selected_policy)
+            & (comparison["min_runs"] == selection.selected_min_runs)
+        ].iloc[0]
+        selected_labels = {
+            "cpu_result_semantics": selected_row["cpu_result_semantics"],
+            "primary_resource": selected_row["primary_resource"],
+            "any_resource_metric_reported": bool(selected_row["any_resource_metric_reported"]),
+            "cpu_usage_label": selected_row["cpu_usage_label"],
+        }
+
         selection_record = {
             "selected_policy": selection.selected_policy,
             "selected_min_runs": selection.selected_min_runs,
+            "selection_candidate_policies": list(a6.SELECTABLE_POLICIES),
             "sort_order": list(selection.sort_order),
             "validation_population_size": selection.validation_population_size,
             "validation_metrics": selection.validation_metrics,
+            **selected_labels,
             "min_runs_candidates": list(a6.MIN_RUNS_CANDIDATES),
             "dataset_id": PROFILE.dataset_id,
             "build": canonical.build_info(commit, dirty),
-            "source_artifacts": {"task4_manifest": manifest, **source_commits},
+            "source_artifacts": source_artifacts,
             "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
         # Lock: the selection record is written BEFORE test.parquet is opened.
         (staged / "baseline_selection.json").write_text(
-            json.dumps(selection_record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            json.dumps(selection_record, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
         comparison.to_csv(staged / "validation_comparison.csv", index=False)
         sensitivity.to_csv(staged / "sensitivity_validation.csv", index=False)
 
         # ---- Phase B: locked recommendations (test read only after lock) ----
-        test_columns = _test_feature_columns(targets_dir)
+        test_columns = _test_allowed_columns(targets_dir)
         test = _read_split(targets_dir, "test", columns=test_columns)
-        leaked = [c for c in TEST_FORBIDDEN_COLUMNS if c in test.columns]
+        unexpected = [c for c in test.columns if c not in TEST_ALLOWED_COLUMNS]
+        if unexpected:
+            raise RuntimeError(f"Test read loaded columns outside the allow-list: {unexpected}")
+        leaked = [c for c in (*TEST_FORBIDDEN_COLUMNS, "next_occurrence_same_second")
+                  if c in test.columns]
         if leaked:
-            raise RuntimeError(f"Test read must exclude target/status columns, found: {leaked}")
+            raise RuntimeError(f"Test read must exclude target/future columns, found: {leaked}")
 
         all_rows = pd.concat([trainval[list(HISTORY_INPUT_COLUMNS)], test[list(HISTORY_INPUT_COLUMNS)]],
                              ignore_index=True)
@@ -212,9 +260,9 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
         )
 
         recommendations = {
-            "train": a6.build_locked_recommendations(train, stats_trainval, selection),
-            "validation": a6.build_locked_recommendations(validation, stats_trainval, selection),
-            "test": a6.build_locked_recommendations(test, stats_all, selection),
+            "train": a6.build_locked_recommendations(train, stats_trainval, selection, PROFILE),
+            "validation": a6.build_locked_recommendations(validation, stats_trainval, selection, PROFILE),
+            "test": a6.build_locked_recommendations(test, stats_all, selection, PROFILE),
         }
         for split, frame in recommendations.items():
             frame.to_parquet(staged / f"recommendations_{split}.parquet", index=False)
@@ -226,9 +274,12 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
             "profile": asdict(PROFILE),
             "units": {"cpu": a6.RESOURCE_UNIT["cpu"], "memory": a6.RESOURCE_UNIT["memory"]},
             "resource_scope": a6.RESOURCE_SCOPE,
-            "cpu_result_semantics": "average_usage",
-            "primary_resource": "memory",
-            "any_resource_metric_reported": False,
+            # Semantics taken from the evaluator's output for the selected
+            # candidate, not fixed text (review I2).
+            "cpu_result_semantics": selected_labels["cpu_result_semantics"],
+            "primary_resource": selected_labels["primary_resource"],
+            "any_resource_metric_reported": selected_labels["any_resource_metric_reported"],
+            "cpu_usage_label": selected_labels["cpu_usage_label"],
             "percentile_method": a6.PERCENTILE_METHOD,
             "min_runs_candidates": list(a6.MIN_RUNS_CANDIDATES),
             "selection_sort_order": list(a6.SELECTION_SORT_ORDER),
@@ -239,7 +290,7 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
                 "train": int(len(train)), "validation": int(len(validation)), "test": int(len(test)),
             },
             "build": canonical.build_info(commit, dirty),
-            "source_artifacts": {"task4_manifest": manifest, **source_commits},
+            "source_artifacts": source_artifacts,
             "output_files": list(OUTPUT_FILES),
         }
         (staged / "metadata.json").write_text(

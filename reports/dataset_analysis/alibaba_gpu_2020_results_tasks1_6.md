@@ -2,9 +2,9 @@
 
 **Question:** What do the Alibaba GPU 2020 pipeline results show so far, from the canonical data (Task 3) through the splits and targets (Task 4) to the baseline validation results (Task 6)?
 
-**Short answer:** 461,900 of 1,254,108 role occurrences are eligible, and they split 70/15/15 into 323,329 / 69,286 / 69,285 rows. 42,069 validation rows have a next-occurrence target. On validation, **P99 history sizing at `min_runs = 10` is the best history baseline**: 5.58% memory violations with 8.94 GB average memory waste. **Request** (the current allocation) has the lowest memory violation rate, 4.74%, but wastes 2.5× as much memory (22.26 GB), has twice the memory shortfall and more than twice the CPU violation rate. Task 6 as implemented in PR #97 selects Request at `min_runs = 1`; the PR #97 review recommends selecting among the history policies only, which gives P99 at `min_runs = 10`.
+**Short answer:** 461,900 of 1,254,108 role occurrences are eligible, and they split 70/15/15 into 323,329 / 69,286 / 69,285 rows. 42,069 validation rows have a next-occurrence target. On validation, **P99 history sizing at `min_runs = 10` is the best history baseline**: 5.58% memory violations with 8.94 GB average memory waste. **Request** (the current allocation) has the lowest memory violation rate, 4.74%, but wastes 2.5× as much memory (22.26 GB), has twice the memory shortfall and more than twice the CPU violation rate. With the PR #97 review's D1 fix applied, Task 6 selects among the history policies only (Request is reported as the status-quo reference but is not a selection candidate), which gives **P99 at `min_runs = 10`**.
 
-**Status:** **validation results only.** Test outcomes have not been read or scored; Task 7 performs the only final-test evaluation. PR #97 (Task 6) is still open, and its selection rule is under review (`docs/github_reviews/task6_pr97_review.md`, D1). All numbers here may change if Tasks 3–6 change.
+**Status:** **validation results only.** Test outcomes have not been read or scored; Task 7 performs the only final-test evaluation. PR #97 (Task 6) is still open; the review's D1 fix (history-only selection) is applied (`docs/github_reviews/task6_pr97_review.md`, D1). All numbers here may change if Tasks 3–6 change.
 
 **Scope:** Analysis only. No source files, notebooks, schemas or configurations were modified. This report is the only file created in the repository.
 
@@ -17,7 +17,7 @@
 | Task 3 canonical data | Shared copy built from `c2ae87f` (`data/processed/alibaba_gpu_v2020/`), its `count_report.md` and `metadata.json`; `--verify` passed during the Task 4 review |
 | Task 4 tables | Built locally during the PR #97 review with `scripts/build_alibaba_gpu_2020_targets.py` (Task 4 code as merged in PR #96, run at `af82838`), written to a scratch folder |
 | Task 5 evaluator | `src/evaluation/evaluator.py` on `main` (used through Task 6; no results of its own) |
-| Task 6 results | `scripts/run_alibaba_gpu_2020_baselines.py` from PR #97 (head `af82838`), run on the Task 4 tables above; outputs written to a scratch folder. Sensitivity cuts at `min_runs = 10` were computed with the same PR #97 module functions (`build_sensitivity_tables`) |
+| Task 6 results | `scripts/run_alibaba_gpu_2020_baselines.py` from PR #97 (with the D1 fix applied), run on the Task 4 tables above; outputs written to a scratch folder. Sensitivity cuts at the selected `min_runs = 10` are produced by the same run (`build_sensitivity_tables`) |
 | Software | Python 3.10.0, pandas 2.3.3, pyarrow 23.0.1 |
 
 Units: memory in **GB** (per instance of a task role); CPU in **`percent_of_vcpu`** (lifetime average per run). Waste and shortfall are averages per scored row.
@@ -149,10 +149,10 @@ Sorted by the agreed memory-first order (memory violation, memory waste, CPU vio
 
 | | Selected | Basis |
 |---|---|---|
-| PR #97 as implemented | **Request, `min_runs = 1`** | Request has the lowest memory violation; its four identical rows tie, and `min_runs` ascending picks 1 |
-| Recommended in the PR #97 review (D1) | **P99, `min_runs = 10`** | Same sort order applied to the history policies only; Request reported as the reference |
+| Before the D1 fix (Request selectable) | Request, `min_runs = 1` | Request has the lowest memory violation; its four identical rows tie, and `min_runs` ascending picks 1 |
+| After the D1 fix (applied in this PR) | **P99, `min_runs = 10`** | Same sort order applied to the history policies only; Request reported as the reference |
 
-Why the review recommends excluding Request: Task 7's Hybrid is `max(ML prediction, selected baseline)`, so with Request as the baseline Hybrid could never allocate less than the current request; and with Request@1 the four history baselines would be reported on test at their weakest setting.
+Why Request is excluded: Task 7's Hybrid is `max(ML prediction, selected baseline)`, so with Request as the baseline Hybrid could never allocate less than the current request; and with Request@1 the four history baselines would be reported on test at their weakest setting. The D1 fix makes only the history policies (Mean, P90, P95, P99) selectable, so the locked baseline is **P99 at `min_runs = 10`**.
 
 ### 5.5 Sensitivity on validation (at `min_runs = 10`)
 
@@ -170,14 +170,14 @@ Reported separately; none of these changes the selection.
 - **Multi-instance roles** (889 rows, 2% of the population) are harder to size: every policy is exceeded more often. Here **P99@10 beats Request on memory violation** (10.91% vs 13.39%) as well as waste.
 - **Weighting each recurrence equally** raises violation rates for every policy (the many small recurrences have short histories), but the order is the same: Request 7.12%, P99 7.69%, P95 9.86%. P99's memory waste rises to 14.09 GB, still well below Request's 22.99 GB.
 
-The PR #97 output files hold the same cuts at `min_runs = 1` (its selection); there P99's memory violation is 8.74% overall and 12.79% group-weighted.
+With the D1 fix the selected `min_runs` is 10, so the PR #97 output files hold these cuts at `min_runs = 10`.
 
 ---
 
 ## 6. Limitations and open points
 
 - **Validation only.** Test results come from Task 7, once, after the selection, models and Hybrid rule are locked.
-- **Selection rule not final.** PR #97 is under review; the selected baseline (Request@1 vs P99@10) depends on the D1 decision.
+- **Selection rule.** The D1 fix is applied: only the history policies are selectable, giving **P99 at `min_runs = 10`**. PR #97 is still open for review.
 - **CPU is average usage.** CPU violation rates do not measure peak safety; short CPU spikes above any recommendation are invisible in this trace.
 - **Selection bias.** Only 36.8% of role occurrences are eligible: completed, fully observed workloads.
 - **Mostly single-instance roles.** Only 889 of 42,069 validation rows (2%) are multi-instance, and they behave differently (§5.5).
@@ -189,5 +189,5 @@ The PR #97 output files hold the same cuts at `min_runs = 1` (its selection); th
 
 1. Download the shared Task 3 copy (`alibaba_gpu_v2020_c2ae87f`) into `data/processed/alibaba_gpu_v2020/` and check it with `python3 scripts/build_alibaba_gpu_2020_canonical.py --verify data/processed/alibaba_gpu_v2020`.
 2. Build the Task 4 tables: `python3 scripts/build_alibaba_gpu_2020_targets.py` (about 1 minute, 5 GB peak memory).
-3. On the PR #97 branch: `python3 scripts/run_alibaba_gpu_2020_baselines.py` (about 2 minutes, 2.2 GB peak memory). Outputs: `validation_comparison.csv`, `sensitivity_validation.csv`, `baseline_selection.json`, `metadata.json` in `data/processed/alibaba_gpu_v2020_baselines/`.
-4. Sensitivity at `min_runs = 10` (§5.5): call `build_sensitivity_tables` from `src/baselines/alibaba_gpu_2020.py` with a selection of P99 at `min_runs = 10`.
+3. On the PR #97 branch: `python3 scripts/run_alibaba_gpu_2020_baselines.py` (about 1 minute). Outputs: `validation_comparison.csv`, `sensitivity_validation.csv`, `baseline_selection.json`, `history_statistics.parquet`, `recommendations_{train,validation,test}.parquet`, `metadata.json` in `data/processed/alibaba_gpu_v2020_baselines/`.
+4. With the D1 fix applied the run selects P99 at `min_runs = 10`, so `sensitivity_validation.csv` (§5.5) is produced directly at that setting.

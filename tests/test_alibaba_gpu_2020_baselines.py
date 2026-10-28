@@ -183,7 +183,7 @@ def test_recommendation_units_and_scope_match_profile():
     rows = task4_rows(60)
     stats = a6.compute_history_statistics(rows, PROFILE)
     selection = a6.BaselineSelection("P95", 1, a6.SELECTION_SORT_ORDER, {}, 0)
-    locked = a6.build_locked_recommendations(rows, stats, selection)
+    locked = a6.build_locked_recommendations(rows, stats, selection, PROFILE)
     assert (locked["recommended_cpu_unit"] == "percent_of_vcpu").all()
     assert (locked["recommended_memory_unit"] == "gb").all()
     assert (locked["recommended_resource_scope"] == "task_role_per_instance").all()
@@ -216,32 +216,54 @@ def test_selection_is_deterministic_and_memory_first():
     selection_a = a6.select_baseline(comparison_a, validation_population_size=len(common))
     selection_b = a6.select_baseline(comparison_b, validation_population_size=len(common))
     assert selection_a == selection_b
-    assert selection_a.selected_policy in a6.BASELINE_POLICIES
+    assert selection_a.selected_policy in a6.SELECTABLE_POLICIES  # never Request
     assert selection_a.selected_min_runs in a6.MIN_RUNS_CANDIDATES
     assert selection_a.sort_order[0] == "memory_violation_pct"
 
 
 def test_selection_sort_order_prefers_lower_memory_violation():
     comparison = pd.DataFrame([
-        {"policy": "A", "min_runs": 1, "memory_violation_pct": 10.0, "average_memory_waste": 1.0,
+        {"policy": "P90", "min_runs": 1, "memory_violation_pct": 10.0, "average_memory_waste": 1.0,
          "cpu_violation_pct": 5.0, "average_cpu_waste": 1.0, "row_count": 100},
-        {"policy": "B", "min_runs": 1, "memory_violation_pct": 2.0, "average_memory_waste": 9.0,
+        {"policy": "P95", "min_runs": 1, "memory_violation_pct": 2.0, "average_memory_waste": 9.0,
          "cpu_violation_pct": 50.0, "average_cpu_waste": 9.0, "row_count": 100},
     ])
     selection = a6.select_baseline(comparison)
-    # B wins on memory violation despite worse waste and CPU.
-    assert selection.selected_policy == "B"
+    # P95 wins on memory violation despite worse waste and CPU.
+    assert selection.selected_policy == "P95"
 
 
 def test_selection_ignores_candidates_without_a_valid_denominator():
     comparison = pd.DataFrame([
-        {"policy": "NaNpolicy", "min_runs": 1, "memory_violation_pct": np.nan, "average_memory_waste": 0.0,
+        {"policy": "Mean", "min_runs": 1, "memory_violation_pct": np.nan, "average_memory_waste": 0.0,
          "cpu_violation_pct": np.nan, "average_cpu_waste": 0.0, "row_count": 100},
-        {"policy": "Real", "min_runs": 3, "memory_violation_pct": 7.0, "average_memory_waste": 2.0,
+        {"policy": "P99", "min_runs": 3, "memory_violation_pct": 7.0, "average_memory_waste": 2.0,
          "cpu_violation_pct": 3.0, "average_cpu_waste": 2.0, "row_count": 100},
     ])
     selection = a6.select_baseline(comparison)
-    assert selection.selected_policy == "Real"
+    assert selection.selected_policy == "P99"
+
+
+def test_request_is_reported_but_never_selected():
+    # D1: Request has the lowest memory violation, yet a history policy is
+    # selected. Request rows stay in the comparison with selection_candidate=False.
+    comparison = pd.DataFrame([
+        {"policy": "Request", "min_runs": mr, "selection_candidate": False,
+         "memory_violation_pct": 1.0, "average_memory_waste": 50.0,
+         "cpu_violation_pct": 1.0, "average_cpu_waste": 50.0, "row_count": 100}
+        for mr in (1, 3, 5, 10)
+    ] + [
+        {"policy": "P99", "min_runs": 10, "selection_candidate": True,
+         "memory_violation_pct": 5.0, "average_memory_waste": 8.0,
+         "cpu_violation_pct": 6.0, "average_cpu_waste": 260.0, "row_count": 100},
+        {"policy": "P95", "min_runs": 10, "selection_candidate": True,
+         "memory_violation_pct": 8.0, "average_memory_waste": 7.0,
+         "cpu_violation_pct": 9.0, "average_cpu_waste": 240.0, "row_count": 100},
+    ])
+    selection = a6.select_baseline(comparison)
+    assert selection.selected_policy == "P99"
+    assert selection.selected_policy != "Request"
+    assert selection.selected_min_runs == 10
 
 
 # ---------------------------------------------------------------------------
@@ -252,7 +274,7 @@ def test_locked_recommendations_cover_all_policies_and_mark_selected():
     rows = task4_rows(60)
     stats = a6.compute_history_statistics(rows, PROFILE)
     selection = a6.BaselineSelection("P95", 3, a6.SELECTION_SORT_ORDER, {}, 0)
-    locked = a6.build_locked_recommendations(rows, stats, selection)
+    locked = a6.build_locked_recommendations(rows, stats, selection, PROFILE)
     for policy in a6.BASELINE_POLICIES:
         cpu_col, mem_col = a6.recommendation_columns(policy)
         assert cpu_col in locked.columns and mem_col in locked.columns
@@ -260,6 +282,8 @@ def test_locked_recommendations_cover_all_policies_and_mark_selected():
     assert (locked["selected_min_runs"] == 3).all()
     assert locked["rec_cpu_selected"].equals(locked["rec_cpu_p95"])
     assert locked["rec_memory_selected"].equals(locked["rec_memory_p95"])
+    # CPU average-usage label travels with every recommendation row (review I2).
+    assert (locked["cpu_usage_label"] == "average_usage").all()
 
 
 def test_locked_recommendations_do_not_require_or_produce_test_targets():
@@ -271,7 +295,7 @@ def test_locked_recommendations_do_not_require_or_produce_test_targets():
         "cpu_target_status", "memory_target_status",
     ])
     selection = a6.BaselineSelection("P95", 1, a6.SELECTION_SORT_ORDER, {}, 0)
-    locked = a6.build_locked_recommendations(test_like, stats, selection)
+    locked = a6.build_locked_recommendations(test_like, stats, selection, PROFILE)
     # No evaluator/metric columns are produced, and no target column reappears.
     for forbidden in ("cpu_violation", "memory_violation", "actual_cpu", "cpu_target_status"):
         assert forbidden not in locked.columns
@@ -298,3 +322,46 @@ def test_sensitivity_tables_are_reproducible_and_cover_expected_cuts():
     # group-weighted rows report a group count rather than evaluator denominators.
     group_rows = table_a[table_a["sensitivity"] == "group_weighted"]
     assert "n_groups" in group_rows.columns and group_rows["n_groups"].notna().any()
+
+
+def test_sensitivity_requires_its_columns():
+    # I3: a missing sensitivity column must raise, not silently drop the cut.
+    rows = task4_rows(80, inst_num=2)
+    stats = a6.compute_history_statistics(rows, PROFILE)
+    common = a6.freeze_common_validation_population(rows)
+    selection = a6.BaselineSelection("P95", 1, a6.SELECTION_SORT_ORDER, {}, len(common))
+    for column in ("next_occurrence_same_second", "inst_num"):
+        with pytest.raises(ValueError, match=column):
+            a6.build_sensitivity_tables(common.drop(columns=[column]), stats, PROFILE, selection)
+
+
+# ---------------------------------------------------------------------------
+# Output labels (review I2) and candidate marking (review D1)
+# ---------------------------------------------------------------------------
+
+def test_validation_comparison_marks_request_and_carries_labels():
+    rows = task4_rows(80)
+    stats = a6.compute_history_statistics(rows, PROFILE)
+    common = a6.freeze_common_validation_population(rows)
+    comparison = a6.build_validation_comparison(common, stats, PROFILE)
+
+    assert "selection_candidate" in comparison.columns
+    assert not comparison.loc[comparison.policy == "Request", "selection_candidate"].any()
+    assert comparison.loc[comparison.policy.isin(["Mean", "P90", "P95", "P99"]),
+                          "selection_candidate"].all()
+    # Profile-semantics labels present on every comparison row.
+    assert (comparison["cpu_result_semantics"] == "average_usage").all()
+    assert (comparison["primary_resource"] == "memory").all()
+    assert (~comparison["any_resource_metric_reported"]).all()
+    assert (comparison["cpu_usage_label"] == "average_usage").all()
+
+
+def test_sensitivity_rows_carry_labels():
+    rows = task4_rows(80, inst_num=2)
+    stats = a6.compute_history_statistics(rows, PROFILE)
+    common = a6.freeze_common_validation_population(rows)
+    selection = a6.BaselineSelection("P95", 1, a6.SELECTION_SORT_ORDER, {}, len(common))
+    table = a6.build_sensitivity_tables(common, stats, PROFILE, selection)
+    non_empty = table[table["row_count"] > 0]
+    assert (non_empty["cpu_result_semantics"] == "average_usage").all()
+    assert (non_empty["primary_resource"] == "memory").all()
