@@ -1,7 +1,7 @@
 # Task 6 (#87) Review: PR #97 — Alibaba GPU 2020 Baselines and `min_runs` Selection
 
 **Branch:** PR #97 head (commit `af82838`, based on `main` at `d29d244`, the PR #96 merge)
-**Status:** Review notes only; no fixes applied.
+**Status:** Fixed. D1 and I1–I4 were fixed by the author in `a6b027b` and verified on the full data (P99 selected at `min_runs = 10`; 651 tests pass). W1.1–W1.4 were applied to issue #87 on GitHub; W1.5 and W1.6 are in `a6b027b`.
 **Tests on branch:** the 24 new tests pass. Full suite: 647 passed, 1 skipped (`tests/test_ml_prep.py` not run locally because `sklearn` isn't installed).
 **Full-data run:** during this review, the Task 4 tables were built locally from the shared Task 3 data (built from `c2ae87f`) with `scripts/build_alibaba_gpu_2020_targets.py`, and the PR's `scripts/run_alibaba_gpu_2020_baselines.py` was run on them at `af82838`. It finished in about 126 s with 2.2 GB peak memory. Result: **Request selected at `min_runs = 1`**; validation population 42,069 rows; 245 same-second rows; 889 multi-instance rows. The outputs were written to a scratch folder only.
 
