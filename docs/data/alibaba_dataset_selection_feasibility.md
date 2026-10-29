@@ -60,7 +60,7 @@ Results from different datasets are **not directly comparable**. Google measures
 These requirements are verified from:
 - the Google pipeline (`pipelines/google_subset/`);
 - the shared evaluator (`src/evaluation/metrics.py`, `src/evaluation/evaluator.py`);
-- the canonical schema on PR #70 (`src/canonical/schema.py`, `docs/data/canonical_workload_schema.md`).
+- the canonical schema on PR #70 (`src/canonical/schema.py`, `docs/design/canonical_workload_schema.md`).
 
 | Requirement | Why it matters | Full next-occurrence pipeline | Reduced adapter demonstration |
 |---|---|---|---|
@@ -87,7 +87,7 @@ These requirements are verified from:
   - `ReferenceOccurrenceAdapter` (a contract test adapter, not a production Google adapter);
   - tests.
   - Alibaba 2018 is registered with `supports_recurrence=False`, `supports_targets=False` and `supports_ml=False`.
-- **PR #70 semantics study** (`dataset_semantics_study_FINAL.md`):
+- **PR #70 semantics study** (`old_dataset_semantics_alibaba2018_azure.md`):
   - studied only Alibaba 2018 and Azure;
   - its Azure sample is actually the 2017 V1 trace (section 8.1);
   - Alibaba GPU v2020 and the 2023–2026 traces were not evaluated.
@@ -198,7 +198,7 @@ All facts in this section are **verified**, unless labeled otherwise. They come 
 
 | Measure | Value |
 |---|---|
-| Jobs with a `group` | **99.86%**; 469 jobs (0.04%) have none |
+| Jobs with a `group` | **99.86%**; 1,530 jobs (0.14%) have none, 1,460 of them accepted (corrected from 469 by the Task 3 source data checks, `docs/data/alibaba_gpu_2020_source_data_checks.md`) |
 | Groups spanning more than one user | 0 |
 | Number of groups | 316,458. Median size 1, 99th percentile 61, maximum 22,641. |
 | Groups with ≥ 2 jobs (all statuses) | 43,060, covering 74.0% of jobs |
@@ -367,7 +367,7 @@ Newer traces were not preferred merely for being newer. None of the 2026 traces 
 > **Deferred from the current implementation phase.** Azure is not a current integration target. This section preserves the analysis for a possible later phase.
 
 **Files read:**
-- On PR #70: `src/adapters/azure_vm.py`, `base.py`, `validation.py`, `src/canonical/schema.py`, `config/dataset_capabilities.json`, `tests/test_azure_vm_adapter.py`, `scripts/build_external_canonical_samples.py`, `docs/data/dataset_semantics_study_FINAL.md` and the capability matrix CSV.
+- On PR #70: `src/adapters/azure_vm.py`, `base.py`, `validation.py`, `src/canonical/schema.py`, `config/dataset_capabilities.json`, `tests/test_azure_vm_adapter.py`, `scripts/build_external_canonical_samples.py`, `docs/data/old_dataset_semantics_alibaba2018_azure.md` and the capability matrix CSV.
 - On `main`: `src/evaluation/metrics.py`, `evaluator.py`, and the Resource Central notebook, documentation and metadata.
 
 **[HEAD] downloads** (session scratchpad only):
@@ -635,7 +635,7 @@ This lowers semantic risk, but the Google occurrence code must not be reused as-
 | Field mapping | `plan_*` → `requested_*`; `max_mem` → `peak_memory`; `cpu_usage` → `observed_cpu_avg` (never `peak_cpu`) | `plan_*` → `requested_*`; `cpu_max` / `mem_max` → `peak_*` |
 | Timestamp normalization | Seconds × 10⁶; submission as occurrence time; UTC+8 note | Seconds × 10⁶; null `end == 0` and `end < start` |
 | Unit tagging | `pct_vcpu`, `gb` (identical for request and actual) | `pct_core`, `normalized` |
-| Recurrence interpretation | Preserve `group` (`recurrence_key_origin = official`); null for the 469 jobs without one | None |
+| Recurrence interpretation | Preserve `group` (`recurrence_key_origin = official`); null for the 1,530 jobs without one (1,460 accepted) | None |
 | Occurrence construction | Job within group; role rows `group‖job_name‖task_name` | None |
 | Resource aggregation | Maximum across eligible workers per role; job totals descriptive only | None (instance level) |
 | Status rules | Eligibility and exclusion reasons as in section 5.7 | Terminated only; value-consistency checks |
@@ -713,7 +713,7 @@ Throughout:
   - `config/dataset_capabilities.json`
   - `tests/test_azure_vm_adapter.py`
   - `scripts/build_external_canonical_samples.py`
-  - `docs/data/{canonical_workload_schema,adapter_framework,dataset_semantics_study_FINAL}.md`
+  - `docs/design/{canonical_workload_schema,adapter_framework}.md`, `docs/data/old_dataset_semantics_alibaba2018_azure.md`
   - `docs/data/traceadvisor_external_dataset_capability_matrix.csv`
 - Related reports:
   - `docs/data/dataset_inspection_and_integration_design.md`

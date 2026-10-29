@@ -136,8 +136,8 @@ A full cell-level analysis of the Google pipeline is in the **Google Subset Pipe
 | PR #70: `src/adapters/azure_vm.py` | `AzureVMAdapter` (VM-table and CPU-interval views) |
 | PR #70: `tests/test_external_adapter_integration.py`, `tests/test_adapter_contract.py`, `tests/test_azure_vm_adapter.py` | Adapter tests |
 | PR #70: `scripts/build_external_canonical_samples.py` | Builds canonical sample artifacts; loads whole headerless CSVs into memory |
-| PR #70: `docs/data/dataset_semantics_study_FINAL.md`, `traceadvisor_external_dataset_capability_matrix.csv` | Semantics study and capability matrix for Alibaba 2018 and Azure only, based on samples |
-| PR #70: `docs/data/canonical_workload_schema.md`, `docs/data/adapter_framework.md` | Existing drafts of the schema and adapter framework documents (section 10) |
+| PR #70: `docs/data/old_dataset_semantics_alibaba2018_azure.md`, `traceadvisor_external_dataset_capability_matrix.csv` | Semantics study and capability matrix for Alibaba 2018 and Azure only, based on samples |
+| PR #70: `docs/design/canonical_workload_schema.md`, `docs/design/adapter_framework.md` | Existing drafts of the schema and adapter framework documents (section 10) |
 | `notebooks/resource-central/resource_central.ipynb` (`main`) | Existing Azure VM notebook (out of current scope) |
 | `docs/data/alibaba_dataset_selection_feasibility.md` (uncommitted) | Dataset-selection analysis |
 | **Alibaba GPU v2020** | **Nothing exists in the repository**: no adapter, loader, notebook or capability entry |
@@ -183,8 +183,8 @@ A full cell-level analysis of the Google pipeline is in the **Google Subset Pipe
 |---|---|
 | Google | [REPO] `docs/data/google_clusterdata_2019_analysis.md`, `docs/data/subsetSetup.md`; the Google Subset Pipeline Analysis report; `data/processed/google_subset_v1/metadata.json` |
 | Alibaba GPU v2020 | [DOC] `cluster-trace-gpu-v2020/README.md` and `cluster-trace-gpu-v2020/data/README.md`; upstream issues #114 (recurrence via `group`) and #151 (`inst_num` vs worker mismatches; CPU and memory overuse). Nothing in the repository. |
-| Alibaba v2018 | [DOC] `cluster-trace-v2018/trace_2018.md`, `cluster-trace-v2018/schema.txt`; [REPO] PR #70 `dataset_semantics_study_FINAL.md` |
-| Canonical schema and adapters | [REPO] PR #70 `src/canonical/schema.py`, `src/adapters/*.py`, `config/dataset_capabilities.json`, `docs/data/canonical_workload_schema.md`, `docs/data/adapter_framework.md` |
+| Alibaba v2018 | [DOC] `cluster-trace-v2018/trace_2018.md`, `cluster-trace-v2018/schema.txt`; [REPO] PR #70 `old_dataset_semantics_alibaba2018_azure.md` |
+| Canonical schema and adapters | [REPO] PR #70 `src/canonical/schema.py`, `src/adapters/*.py`, `config/dataset_capabilities.json`, `docs/design/canonical_workload_schema.md`, `docs/design/adapter_framework.md` |
 | Azure (out of scope) | [DOC] `github.com/Azure/AzurePublicDataset` README; [REPO] PR #70 `src/adapters/azure_vm.py` (inventory only) |
 
 ---
@@ -338,8 +338,8 @@ Worker-level data therefore cannot automatically be treated as job-level data.
 | Identifiers | `job_name`, `inst_id` (= job), `user`, `task_name`, `inst_name`, `worker_name`, `machine`, **`group`**, `workload` | [DOC] |
 | Official meaning of `group` | "Instances with the same group tag are considered as repeated instances." It is a semantic tag derived from entry scripts, command-line parameters and data sources/sinks. Upstream issue #114 adds that jobs with the same group are "treated as recurring ones". | [DOC]; upstream issue #114 |
 | Official or inferred | **Officially defined by the source** | [DOC] |
-| Coverage | **99.86%** of jobs have a `group` row (1,055,032 group rows vs 1,055,501 jobs) | [DL] |
-| Missing group keys | **469 jobs (0.04%)** | [DL] |
+| Coverage | **99.86%** of jobs have a `group` row (1,530 of 1,055,501 jobs have no group-tag row; 1,061 group-tag rows match no job) | [DL] |
+| Missing group keys | **1,530 jobs (0.14%)**; 1,460 of them accepted (corrected from 469 by the Task 3 source data checks, `docs/data/alibaba_gpu_2020_source_data_checks.md`) | [DL] |
 | User consistency | 0 groups span more than one `user`; 0 user mismatches between the job and group tables | [DL] |
 | Group sizes | 316,458 groups. Median 1, 90th percentile 3, 99th percentile 61, **maximum 22,641**. | [DL] |
 | Repetition, all statuses | Groups with ≥ 2 jobs: 43,060 (780,573 jobs, 74.0%). ≥ 5: 21,971 (68.6%). ≥ 10: 12,891 (63.1%). | [DL] |
@@ -457,7 +457,7 @@ Worker-level data therefore cannot automatically be treated as job-level data.
 - **Job, task and instance identifiers:** `job_name`, `task_name`, `instance_name`, `machine_id` and `task_type` [DOC].
 - **No user identity:** there is no user field [DOC].
 - **No official recurrence key** [DOC]. Records without a key: 100%.
-- **Template evidence only:** the PR #70 study found shared task-name/DAG signatures in sampled jobs (89.2%, and 64.0% for a richer signature). That is evidence of templates, not identity [REPO PR #70 `dataset_semantics_study_FINAL.md`].
+- **Template evidence only:** the PR #70 study found shared task-name/DAG signatures in sampled jobs (89.2%, and 64.0% for a richer signature). That is evidence of templates, not identity [REPO PR #70 `old_dataset_semantics_alibaba2018_azure.md`].
 - **Next-occurrence targets are not currently defensible**, because any recurrence rule would be invented.
 
 ### Time semantics
@@ -640,7 +640,7 @@ PR #70's `DatasetCapabilities` has 10 boolean flags. The inspection shows the ca
 | Timestamp normalization | µs, unchanged | s × 10⁶; keep the time-of-day note | s × 10⁶; null `end == 0` and `end < start` |
 | Resource-unit tagging | Tag NCU / normalized; no conversion | Tag pct_vcpu and GB. Any CPU conversion to vCPU (÷100) must apply **identically** to requests and actuals. | Tag pct_core and normalized; no cross-dataset conversion |
 | Status mapping and flags | Flag FAIL, LOST, EVICT, KILL (policy is a design question; currently none excluded) | Flag non-Terminated jobs; Interrupted, Ready and Waiting instances; workers without sensors; `max_mem > cap_mem` (5,322 rows); duplicate `worker_name` rows | Flag non-Terminated rows; `mem_max < mem_avg`; `cpu_max < cpu_avg`; invalid ends |
-| Recurrence construction or preservation | Construct `user‖collection_logical_name`, provenance `constructed` | **Preserve** `group`, provenance `official`; null for the 469 jobs without one | Leave null |
+| Recurrence construction or preservation | Construct `user‖collection_logical_name`, provenance `constructed` | **Preserve** `group`, provenance `official`; null for the 1,530 jobs without one (1,460 accepted) | Leave null |
 | Occurrence construction | `recurrence_key‖execution_start_time_us` | One per job, ordered by job `start_time` within `group` | None |
 | Resource aggregation | Aligned-window sum across executions, then maximum (existing notebook 03 logic) | Worker → job or role aggregation (**design question**). A plain sum of per-worker maxima is only an upper bound. | None at instance level |
 | Missing-value preservation | Keep nulls (774 requests, 60 memory peaks) | Keep `peak_cpu` null for every row; keep `max_mem` null where there is no sensor | Keep nulls (10.5% `mem_max` in head) |
@@ -749,8 +749,8 @@ The inspection identifies:
 **This inspection document does not implement the schema or the adapter framework.**
 
 **Next documentation steps**
-1. **Canonical workload schema.** The schema is documented in the existing `docs/data/canonical_workload_schema.md` (PR #70, schema v0.1.0), which should be revised rather than duplicated. Three design questions change the shape of the schema and need explicit decisions first:
+1. **Canonical workload schema.** The schema is documented in the existing `docs/design/canonical_workload_schema.md` (PR #70, schema v0.1.0), which should be revised rather than duplicated. Three design questions change the shape of the schema and need explicit decisions first:
    - the evaluation unit for Alibaba GPU v2020 (question 6);
    - the worker → job aggregation method and its labeling (question 7);
    - whether to extend or replace PR #70's capability model (question 15).
-2. **Adapter framework.** The adapter framework should be documented **after** the canonical workload schema, in the existing `docs/data/adapter_framework.md`, because its interface depends on the canonical contract. It also depends on whether `BaseDatasetAdapter` gains a multi-table preparation step and chunked loading, which the Alibaba GPU v2020 and Alibaba v2018 table sizes in section 3.5 require.
+2. **Adapter framework.** The adapter framework should be documented **after** the canonical workload schema, in the existing `docs/design/adapter_framework.md`, because its interface depends on the canonical contract. It also depends on whether `BaseDatasetAdapter` gains a multi-table preparation step and chunked loading, which the Alibaba GPU v2020 and Alibaba v2018 table sizes in section 3.5 require.
