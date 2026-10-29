@@ -31,12 +31,15 @@ def test_all_candidate_models_fit_and_predict():
 
     models = build_candidate_models()
 
-    assert set(models) == {
+    assert {
         "dummy_mean",
         "decision_tree",
         "random_forest",
         "hist_gradient_boosting",
-    }
+    } <= set(models)
+    # XGBoost is included when the library is importable (issue #89 optional).
+    from src.models.alibaba_gpu_2020_candidates import HAS_XGBOOST
+    assert ("xgboost" in models) == HAS_XGBOOST
 
     for model in models.values():
         model.fit(X, y)

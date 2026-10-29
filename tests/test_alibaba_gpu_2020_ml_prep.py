@@ -42,14 +42,14 @@ def test_validate_features_rejects_alibaba_leaky_column():
 def test_missing_history_and_zero_are_distinguishable():
     df = pd.DataFrame(
         {
-            "cpu_history_mean": [np.nan, 0.0],
-            "cpu_history_p90": [1.0, 1.0],
-            "cpu_history_p95": [1.0, 1.0],
-            "cpu_history_p99": [1.0, 1.0],
-            "memory_history_mean": [1.0, 1.0],
-            "memory_history_p90": [1.0, 1.0],
-            "memory_history_p95": [1.0, 1.0],
-            "memory_history_p99": [1.0, 1.0],
+            "hist_cpu_mean": [np.nan, 0.0],
+            "hist_cpu_p90": [1.0, 1.0],
+            "hist_cpu_p95": [1.0, 1.0],
+            "hist_cpu_p99": [1.0, 1.0],
+            "hist_memory_mean": [1.0, 1.0],
+            "hist_memory_p90": [1.0, 1.0],
+            "hist_memory_p95": [1.0, 1.0],
+            "hist_memory_p99": [1.0, 1.0],
         }
     )
 
@@ -57,12 +57,12 @@ def test_missing_history_and_zero_are_distinguishable():
 
     assert result.loc[
         0,
-        "cpu_history_mean_missing",
+        "hist_cpu_mean_missing",
     ] == 1
 
     assert result.loc[
         1,
-        "cpu_history_mean_missing",
+        "hist_cpu_mean_missing",
     ] == 0
 
 
