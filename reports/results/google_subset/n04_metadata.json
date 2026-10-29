@@ -1,0 +1,119 @@
+{
+  "dataset": "google_subset_v1",
+  "source_artifacts": {
+    "execution_features": "job_metrics_v0.parquet",
+    "occurrence_profiles": "job_profiles_google_subset_history_v1.parquet",
+    "execution_features_path": "data/processed/google_subset_v1/job_metrics_v0.parquet",
+    "occurrence_profiles_path": "data/processed/google_subset_v1/job_profiles_google_subset_history_v1.parquet"
+  },
+  "canonical_modeling_unit": "recurrence_occurrence",
+  "occurrence_key_definition": "occurrence_key = recurrence_key || execution_start_time_us",
+  "occurrence_key_field": "occurrence_key",
+  "occurrence_id_field": "occurrence_id",
+  "occurrence_id_note": "occurrence_id is a compatibility alias equal to occurrence_key; occurrence_key is canonical.",
+  "execution_id_field": "execution_id",
+  "recurrence_key_field": "recurrence_key",
+  "timestamp_field": "execution_start_time_us",
+  "occurrence_resource_source": "job_profiles_google_subset_history_v1.parquet",
+  "full_workload_resource_fields": {
+    "cpu_peak": "occurrence_peak_cpu_ncu",
+    "memory_peak": "occurrence_peak_memory_normalized"
+  },
+  "occurrence_resource_definition": "CPU and memory peaks are authoritative full-workload occurrence values produced by Notebook 03 after aligned-window aggregation across parallel executions. N04 does not recompute them as max individual execution peaks.",
+  "split": {
+    "type": "chronological_timestamp_group_preserving",
+    "requested_train_fraction": 0.7,
+    "requested_validation_fraction": 0.15,
+    "requested_test_fraction": 0.15,
+    "occurrence_boundary_rule": "The split is performed after occurrence-profile integration. Identical start-time groups are preserved and no occurrence_key crosses a partition boundary.",
+    "actual_train_execution_fraction": 0.7053177435573871,
+    "actual_validation_execution_fraction": 0.144736478892679,
+    "actual_test_execution_fraction": 0.14994577754993393
+  },
+  "split_boundaries": {
+    "split_type": "chronological_timestamp_group_preserving",
+    "time_col": "execution_start_time_us",
+    "id_col": "execution_id",
+    "requested_train_fraction": 0.7,
+    "requested_val_fraction": 0.15,
+    "requested_test_fraction": 0.15000000000000005,
+    "total_rows": 253585,
+    "train_rows": 178858,
+    "val_rows": 36703,
+    "test_rows": 38024,
+    "actual_train_fraction": 0.7053177435573871,
+    "actual_val_fraction": 0.144736478892679,
+    "actual_test_fraction": 0.14994577754993393,
+    "train_start": 300000000,
+    "train_end": 1812600000000,
+    "val_start": 1813200000000,
+    "val_end": 2261100000000,
+    "test_start": 2262600000000,
+    "test_end": 2678400000000,
+    "unique_timestamps": 4182
+  },
+  "history_source": "job_profiles_google_subset_history_v1.parquet",
+  "history_rule": "Notebook 03 provides point-in-time occurrence history using only earlier occurrences of the same recurrence_key whose occurrence end time is <= the current occurrence start. N04 carries those history statistics forward without recomputing them from execution-row peaks.",
+  "min_runs_candidates": [
+    1,
+    3,
+    5,
+    10
+  ],
+  "min_runs_count_basis": "Resource-specific valid completed-occurrence counts from Notebook 03: hist_peak_cpu_count and hist_peak_memory_count. Execution rows do not count as separate runs.",
+  "selected_min_runs": 1,
+  "selected_baseline_policy": "P99",
+  "baseline_selection_scope": "validation_only",
+  "baseline_selection_objective": "Lexicographic violation-focused ranking: any-resource violation %, worst single-resource violation %, CPU+memory violation sum, CPU waste, memory waste, then lower min_runs. Request is included as a selectable policy candidate.",
+  "target_policy_version": "next_distinct_full_workload_occurrence_v3",
+  "target_definition": "Targets are created once on the complete occurrence table before splitting. For each recurrence_key, target CPU/memory are the authoritative Notebook 03 full-workload peaks of the next distinct occurrence. The final occurrence has no next-occurrence target.",
+  "prediction_time_convention": "Features/history are those available at the start of the current occurrence; the target is the next occurrence. Request baseline carries forward the current occurrence request.",
+  "target_cpu_field": "target_cpu_next_occurrence_peak_ncu",
+  "target_memory_field": "target_memory_next_occurrence_peak_normalized",
+  "target_timestamp_field": "target_next_occurrence_start_time_us",
+  "evaluation_actual_cpu_field": "target_cpu_next_occurrence_peak_ncu",
+  "evaluation_actual_memory_field": "target_memory_next_occurrence_peak_normalized",
+  "target_split_isolation": "Targets are constructed once before chronological splitting. Labels may cross split boundaries but always point to a strictly later occurrence.",
+  "common_validation_population": {
+    "required_fields": [
+      "target_cpu_next_occurrence_peak_ncu",
+      "target_memory_next_occurrence_peak_normalized"
+    ],
+    "occurrences": 329,
+    "rule": "All Request/Mean/P90/P95/P99 metrics and every min_runs candidate use the same occurrence IDs."
+  },
+  "test_policy": "Test targets are materialized before splitting, while deterministic recommendation columns may be materialized after N04 validation selection for downstream handoff. N04 does not score test policies or use test performance for any decision. Final test policy scoring is deferred until baseline, ML, Hybrid, thresholds, fallback, and all other decisions are locked.",
+  "canonical_occurrence_artifacts": {
+    "train": "train_occurrences.parquet",
+    "validation": "val_occurrences.parquet",
+    "test": "test_occurrences.parquet"
+  },
+  "compatibility_execution_artifacts": {
+    "train": "train_features.parquet",
+    "validation": "val_features.parquet",
+    "test": "test_features.parquet"
+  },
+  "validation_comparison_artifact": "baseline_validation_comparison.csv",
+  "selected_validation_metrics": {
+    "min_runs": 1,
+    "policy": "P99",
+    "n_common_evaluation_occurrences": 329,
+    "row_count": 329,
+    "valid_cpu_violation_count": 328,
+    "valid_memory_violation_count": 328,
+    "valid_any_resource_violation_count": 328,
+    "valid_cpu_utilization_count": 324,
+    "valid_memory_utilization_count": 328,
+    "cpu_violation_pct": 16.76829268292683,
+    "memory_violation_pct": 17.073170731707318,
+    "any_resource_violation_pct": 21.951219512195124,
+    "average_cpu_utilization": 0.2979081649161294,
+    "average_memory_utilization": 0.3370652391413027,
+    "average_cpu_waste": 19.041132760047915,
+    "average_memory_waste": 3.3458750387808163,
+    "average_cpu_shortfall": 0.9721683848194961,
+    "average_memory_shortfall": 0.08618199345542164,
+    "max_resource_violation_pct": 17.073170731707318,
+    "sum_resource_violation_pct": 33.84146341463415
+  }
+}

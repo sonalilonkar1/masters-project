@@ -1,0 +1,23 @@
+{
+  "run_at_utc": "2026-10-29T20:03:35+00:00",
+  "decision_manifest_sha256": "0669ca5c3cdec70a1013c886fbce4c0efc3746b936b7b0748f106523d40fa775",
+  "code_state": {
+    "commit": "e59349e04a8fb87f8097780462cb2464a9e5d337",
+    "uncommitted_changes": false
+  },
+  "test_occurrences": 731,
+  "evaluated_occurrences": 259,
+  "policies": [
+    "Request",
+    "Mean",
+    "P90",
+    "P95",
+    "P99",
+    "ML",
+    "Hybrid"
+  ],
+  "outputs": {
+    "policy_comparison": "final_test_policy_comparison.csv",
+    "row_level": "final_test_row_level.parquet"
+  }
+}

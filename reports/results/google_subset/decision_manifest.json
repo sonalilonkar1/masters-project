@@ -1,0 +1,79 @@
+{
+  "status": "final",
+  "status_reason": "Frozen for the one-time final-test evaluation.",
+  "dataset": "google_subset_v1",
+  "created_at_utc": "2026-10-29T20:03:25+00:00",
+  "notebook": "06_finalPolicyComparison.ipynb",
+  "code_state": {
+    "commit": "e59349e04a8fb87f8097780462cb2464a9e5d337",
+    "uncommitted_changes": false
+  },
+  "notebook_code_sha256": "ee6633b829aad27055f137374ba5aaa55811eaa1b2f5dfd9e8f1be766f41ddcd",
+  "decisions": {
+    "target_cpu_field": "target_cpu_next_occurrence_peak_ncu",
+    "target_memory_field": "target_memory_next_occurrence_peak_normalized",
+    "baseline_min_runs": 1,
+    "selected_baseline_policy": "P99",
+    "baseline_selection_source": "Notebook 04 metadata.json (validation only)",
+    "ml_selected_models": {
+      "cpu": "random_forest",
+      "memory": "random_forest"
+    },
+    "ml_locked_params": {
+      "cpu": {
+        "random_state": 42,
+        "n_jobs": 1,
+        "max_depth": 10,
+        "max_features": "sqrt",
+        "min_samples_leaf": 10,
+        "n_estimators": 300
+      },
+      "memory": {
+        "random_state": 42,
+        "n_jobs": 1,
+        "max_depth": 6,
+        "max_features": "sqrt",
+        "min_samples_leaf": 10,
+        "n_estimators": 300
+      }
+    },
+    "ml_feature_manifest": "ml_feature_manifest.json",
+    "hybrid_rule": "hybrid = max(ML prediction, P95 baseline) per resource",
+    "hybrid_fallback": "ML prediction where the P95 baseline is unavailable",
+    "hybrid_rule_rationale": "Backlog starting rule (New Issue 6 / Issue 07); fixed in advance, not tuned on validation",
+    "supplementary_policies": {
+      "Hybrid_P99": "max(ML prediction, P99 baseline); reported, not a decision"
+    },
+    "core_policies": [
+      "Request",
+      "Mean",
+      "P90",
+      "P95",
+      "P99",
+      "ML",
+      "Hybrid"
+    ],
+    "evaluation_population": "occurrences with both next-occurrence CPU and memory targets (N04 rule)",
+    "evaluator": "src/evaluation/evaluator.py RecommendationEvaluator"
+  },
+  "input_sha256": {
+    "data/processed/google_subset_v1/val_occurrences.parquet": "44470ffbcdbcb0abc3982a6916cf6d7372675a50ebd972c4f53b039d86378fe6",
+    "data/processed/google_subset_v1/test_occurrences.parquet": "1a3c7a07893dbf3c35e1141157c27fd75dc28305e51861d85a5fbf0c946d5e53",
+    "data/processed/google_subset_v1/metadata.json": "71961278053bcaa6ab1f47e8af7e789bb0bc58faf3b7dc37bb1e0ce011afbb5b",
+    "data/processed/google_subset_v1/baseline_validation_comparison.csv": "4ccf18e06303cb23659e66446884d0ceed594b09d4f23e9d7f3c826a2bf1336a",
+    "data/processed/google_subset_v1/ml_metadata.json": "1705328652d3a6df7e81cd5c61314dd464d10b0821d6d0975f654622b2314159",
+    "data/processed/google_subset_v1/ml_feature_manifest.json": "b0b8a1356fe1a5412d8a9e32ed0d7c6992a614596ce882fced2402bf35153e5e",
+    "data/processed/google_subset_v1/val_ml_predictions.parquet": "9a378b2db786add3cd7ffd31b50f4e820421dfbe01ff4cb2cc668a28e1ce4596",
+    "data/processed/google_subset_v1/test_ml_predictions.parquet": "1e0f3684387f6a2e3677e31972f5c6e1d785f9cc5a7aa01feb6f7c6db7b33192",
+    "data/processed/google_subset_v1/n05_locked_models/cpu_random_forest.joblib": "c285067d526b35c1e717cdfbaaac5ec92eae7c058fe29934051fd2b3995840f9",
+    "data/processed/google_subset_v1/n05_locked_models/memory_random_forest.joblib": "6b3ce250488fe9e5dcfd7dbb51f8cb66b502fec1070e97e28d27597b516fbd6d",
+    "src/evaluation/evaluator.py": "cdbdffeeb2ba1e8a6336be6d3ac0f5cf5ebcb15e71e0d1c4e5023108294a0c56",
+    "src/evaluation/metrics.py": "8992acfc6b6308e40d849b2e4c9d28337cae775d7d19c7be81bb0a7fbd4563ee",
+    "src/policies/hybrid.py": "6752800ad9881b515d5a74a5a22744854adf2e42d75dee7d6044b90658594ce8"
+  },
+  "versions": {
+    "python": "3.12.9",
+    "pandas": "2.3.3",
+    "numpy": "2.5.4"
+  }
+}
