@@ -69,15 +69,15 @@ The trace was selected after twelve Alibaba traces were examined. It is the only
 
 ### 3.3.3 Earlier Baseline Traces: Azure Resource Central, Splitwise and ModServe
 
-Before the TraceAdvisor design was fixed, three public Microsoft Azure traces were used for baseline sizing experiments. They are reported here because they motivated the design, but they were not processed through the TraceAdvisor adapter and evaluation pipeline.
+Before the TraceAdvisor design was fixed, three public Microsoft Azure traces were used for baseline sizing experiments. They motivated the design, but they were not processed through the TraceAdvisor adapter and evaluation pipeline; their results are summarized in Section 7.1.
 
-**Resource Central** is a trace of virtual machines on Azure (the 2017 release). Comparing each virtual machine's mean CPU utilization with its 95th percentile showed that the percentile was on average 7 percentage points higher, and that a mean-based estimate placed most virtual machines in the right utilization bucket but missed most of those with high demand.
+**Resource Central** is a trace of virtual machines on Azure (the 2017 release). It was used to compare each virtual machine's mean CPU utilization with its 95th percentile.
 
-**Splitwise** is a trace of large language model inference requests on Azure, for code and conversation services. Fixed capacities set at the mean, median and upper percentiles of token demand in a training period were tested on later windows. For code requests, the mean was violated in a third of test windows, while the 95th and 99th percentiles were violated in 4% and 0% of windows at much lower utilization.
+**Splitwise** is a trace of large language model inference requests on Azure, for code and conversation services. Fixed capacities set at the mean, median and upper percentiles of token demand in a training period were tested on later windows.
 
-**ModServe** is a trace of multimodal inference on Azure over one week in October 2024. Fixed and reactive provisioning policies for image and text serving were compared. The fixed policy was safe in 95% of test windows but provisioned more than three times the average demand, while the reactive policy matched average demand but was safe in only 72% of windows.
+**ModServe** is a trace of multimodal inference on Azure over one week in October 2024. Fixed and reactive provisioning policies for image and text serving were compared.
 
-All three experiments showed the trade-off that TraceAdvisor addresses: sizing at the mean is efficient but frequently short, and sizing at a high percentile is safe but wasteful. None of the traces, however, describes recurring jobs with a per-job resource request and per-job CPU and memory usage. Resource Central has no memory usage and no per-job request, and Splitwise and ModServe describe service-level demand per time window rather than individual jobs, so there is no job to make a pre-execution recommendation for. TraceAdvisor's evaluation is therefore based on Google ClusterData 2019 and Alibaba GPU 2020.
+All three experiments showed the trade-off that TraceAdvisor addresses. None of the traces, however, describes recurring jobs with a per-job resource request and per-job CPU and memory usage. Resource Central has no memory usage and no per-job request, and Splitwise and ModServe describe service-level demand per time window rather than individual jobs, so there is no job to make a pre-execution recommendation for. TraceAdvisor's evaluation is therefore based on Google ClusterData 2019 and Alibaba GPU 2020.
 
 ## 3.4 Dataset Adapters and Unit Normalization
 
