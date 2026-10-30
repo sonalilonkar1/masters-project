@@ -49,6 +49,9 @@ MODEL_SELECTION_ORDER: tuple[str, ...] = (
     "model",
 )
 
+# Candidates scored and recorded in candidate_models.csv but never selected.
+NON_SELECTABLE_MODELS: frozenset[str] = frozenset({"dummy_mean"})
+
 _EVAL_ID_COLUMNS = ("role_key", "occurrence_id", "recurrence_key")
 
 
@@ -127,6 +130,9 @@ def compare_and_select(
 ):
     """Train every candidate on TRAIN only, score on validation, select per resource.
 
+    Every candidate is scored and recorded; NON_SELECTABLE_MODELS are excluded
+    from the selection sort.
+
     Returns (candidate_table, selection_by_resource, train_only_fitted_models).
     """
     evaluator = RecommendationEvaluator(capabilities=profile)
@@ -161,7 +167,10 @@ def compare_and_select(
             records.append(record)
             resource_records.append(record)
 
-        best = sorted(resource_records, key=lambda r: tuple(r[k] for k in MODEL_SELECTION_ORDER))[0]
+        selectable = [r for r in resource_records if r["model"] not in NON_SELECTABLE_MODELS]
+        if not selectable:
+            raise ValueError(f"No selectable {resource} candidate; {sorted(NON_SELECTABLE_MODELS)} is a floor only")
+        best = sorted(selectable, key=lambda r: tuple(r[k] for k in MODEL_SELECTION_ORDER))[0]
         selections[resource] = ModelSelection(
             resource=resource,
             selected_model=best["model"],
