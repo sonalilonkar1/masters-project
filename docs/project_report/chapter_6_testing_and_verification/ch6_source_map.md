@@ -7,7 +7,25 @@ Review basis: repository at `a85ddf80659419cf72ac751951842d57937f9cc8`, inspecte
 Evidence conventions:
 
 - Complete means the named implementation exists with relevant verification coverage in source. It does not mean that all tests or the full pipeline were rerun during this review. Partial identifies implementation or verification gaps; Missing identifies an absent component.
-- Test references establish that checks are implemented. The attempted `python3 -m pytest -q -p no:cacheprovider` could not start because the active Python has no `pytest`. The previously recorded locked interpreter was unavailable. No current pass totals are asserted, and the prior source map's uncorroborated suite totals are removed.
+- Test references establish that checks are implemented; the suite result below establishes that they pass.
+
+## Test inventory (run 30 Oct 2026 on `main` at `a85ddf8`, locked environment `~/venvs/traceadvisor-lock`)
+
+`pytest -q -p no:cacheprovider`: **699 passed, 1 skipped** (700 collected, 46 s). The skipped test is `tests/test_alibaba_gpu_2020_loader.py:415`, `test_real_tables_verify_and_load`, which runs only with `TRACEADVISOR_FULL_DATA_TESTS=1` and the official tables downloaded. The first review attempt (system `python3`) could not start because that interpreter has no `pytest`; use the locked environment.
+
+| Stage (Chapter 6 Table 6.1) | Test files | Tests |
+|---|---|---|
+| Canonical schema and adapter framework | `test_canonical_schema.py`, `test_adapter_contract.py`, `test_multiview_adapter_framework.py` | 88 + 30 + 29 = 147 |
+| Google canonical contract | `test_google_canonical_contract.py` | 5 |
+| Alibaba source loading, adapter and canonical build | `test_alibaba_gpu_2020_loader.py`, `test_alibaba_gpu_2020_adapter.py`, `test_build_alibaba_gpu_2020_canonical.py` | 46 + 181 + 32 = 259 (1 skipped) |
+| Splits, histories and targets | `test_split_utils.py`, `test_target_builder.py`, `test_build_alibaba_gpu_2020_targets.py` | 7 + 65 + 14 = 86 |
+| Baselines | `test_alibaba_gpu_2020_baselines.py`, `test_run_alibaba_gpu_2020_baselines.py` | 22 + 6 = 28 |
+| ML preparation, selection and final test | `test_ml_prep.py` (Google); `test_alibaba_gpu_2020_candidates.py`, `test_alibaba_gpu_2020_ml_prep.py`, `test_alibaba_gpu_2020_select.py`, `test_run_alibaba_gpu_2020_ml.py`, `test_alibaba_gpu_2020_final_test.py`, `test_run_alibaba_gpu_2020_final_test.py` | 14 + 3 + 5 + 7 + 5 + 4 + 10 = 48 (34 Task 7) |
+| Hybrid rule | `test_hybrid.py` | 10 |
+| Metrics and evaluator | `test_evaluation.py`, `test_evaluator_contract.py` | 17 + 58 = 75 |
+| Out of scope (other traces) | `test_alibaba_adapter.py` (Alibaba 2018), `test_azure_vm_adapter.py`, `test_external_adapter_integration.py` | 25 + 15 + 2 = 42 |
+
+In scope: 658 collected (657 passed, 1 skipped).
 - Notebook cells below use zero-based positions in the notebook JSON `cells` array, including Markdown cells, not execution counters. Saved outputs establish a recorded execution, not a fresh execution or authentication of every local artifact.
 - Paths are relative to the repository root. Python references use `path:line` and name the function or test. JSON/CSV artifacts are identified by exact path and key/row because line positions depend on formatting.
 
@@ -15,7 +33,7 @@ Evidence conventions:
 
 ### 1. Implementation status: Partial
 
-Canonical validation and both dataset pipelines are implemented, with substantial unit/integration check coverage and saved data-validation evidence. Google canonical mapping exists in contract tests rather than a production thin adapter. Independent end-to-end Alibaba final verification and fresh-environment reproduction are not established as complete.
+Canonical validation and both dataset pipelines are implemented, with substantial unit/integration check coverage and saved data-validation evidence. Google canonical mapping exists in contract tests rather than a production thin adapter. Each Alibaba stage verifies its inputs against the previous stage's `SHA256SUMS`, and the PR1-to-PR2 end-to-end test passes; the separate Task 8 verification script and fresh-environment reproduction were not completed.
 
 ### 2. Verified implementation details
 
@@ -47,7 +65,7 @@ Canonical validation and both dataset pipelines are implemented, with substantia
 - Saved Google Notebook 00 cell 7 records 405,894 raw rows and unique observation keys, with no duplicate observation keys. Notebook 01 cells 3 and 5 record validation and peak-versus-average checks. Notebook 02 cell 22 records 253,585 execution IDs with no missing execution IDs or recurrence keys.
 - Saved Google Notebook 03 cell 26 records independent checks of 4,879 occurrences and 87,822 historical statistic values, including resource-specific counts and missing values. These are notebook output counts, not pytest totals.
 - `reports/results/alibaba_gpu_2020/canonical/count_report.md` and `reports/results/alibaba_gpu_2020/canonical/metadata.json` preserve the build's counts, reconciliation, exclusions, and provenance. `reports/results/alibaba_gpu_2020/targets/metadata.json` preserves split/target counts and explains differences from pre-exclusion reference populations.
-- The official full-data loader check is explicitly conditional: `tests/test_alibaba_gpu_2020_loader.py:415`, `test_real_tables_verify_and_load`, requires `TRACEADVISOR_FULL_DATA_TESTS=1` and downloaded official tables. Its current execution status was not established.
+- The official full-data loader check is explicitly conditional: `tests/test_alibaba_gpu_2020_loader.py:415`, `test_real_tables_verify_and_load`, requires `TRACEADVISOR_FULL_DATA_TESTS=1` and downloaded official tables. It was skipped in the 30 Oct run.
 
 ### 5. Dataset-specific differences
 
@@ -57,7 +75,7 @@ Google uses constructed recurrence identities and reconstructed workload occurre
 
 - A production Google thin adapter is missing in the inspected source. `docs/planning/github_issues/task13_google_subset_thin_adapter.md` describes planned work; it cannot establish completion.
 - `docs/planning/github_issues/task8_alibaba_gpu_2020_final_verification.md` is a plan for an independent verification script/report and fresh-environment reproduction. Its checklist is not execution evidence. Its older statements that checksum tooling does not exist are superseded by the implemented build/runner verification functions.
-- No fresh test results or full-data rebuild were obtained. Google local artifact hash differences are documented in 6.3 below.
+- No full-data rebuild was performed in this review. The suite passes (test inventory above); Google frozen inputs match their manifest hashes (6.3).
 
 ### 7. Recommended content for the final report
 
@@ -111,7 +129,7 @@ Google forbids equal-start histories and allows successor labels across split bo
 
 ### 6. Missing evidence or unresolved issues
 
-The Google validation set contains test-period labels used in validation comparisons and model selection. Describe this as a test-period target leakage/test-isolation limitation, even though training features exclude future outcomes and the final scoring operation is gated. The preliminary 225-row sensitivity reports impact; it is not a replacement selection run, a repaired split, or proof of an uncontaminated final holdout. Training-label cutoffs based on target start also leave label-completion availability unverified. Full artifact authentication is limited by the hash differences in 6.3.
+The Google validation set contains test-period labels used in validation comparisons and model selection. Describe this as a test-period target leakage/test-isolation limitation, even though training features exclude future outcomes and the final scoring operation is gated. The preliminary 225-row sensitivity reports impact; it is not a replacement selection run, a repaired split, or proof of an uncontaminated final holdout. Training-label cutoffs based on target start also leave label-completion availability unverified.
 
 ### 7. Recommended content for the final report
 
@@ -121,7 +139,7 @@ Explain split checks separately from history eligibility, target isolation, mode
 
 ### 1. Implementation status: Partial
 
-Baseline, model, Hybrid, selection, refit, and final-scoring implementations and saved results exist for both datasets. Strict Google test isolation and authentication of the current local artifacts remain incomplete; fresh model/test reproduction was not performed.
+Baseline, model, Hybrid, selection, refit, and final-scoring implementations and saved results exist for both datasets. Strict Google test isolation remains incomplete (6.2). Frozen Google inputs match their manifest hashes (6.3.6); models were not retrained in this review.
 
 ### 2. Verified implementation details
 
@@ -162,29 +180,13 @@ Google and Alibaba use different validation objectives, candidate procedures, ta
 
 ### 6. Missing evidence or unresolved issues
 
-Google artifact reproducibility audit: SHA-256 was recomputed against `reports/results/google_subset/decision_manifest.json` during this review. The manifest itself hashes to `0669ca5c3cdec70a1013c886fbce4c0efc3746b936b7b0748f106523d40fa775`, matching the digest recorded in `reports/results/google_subset/final_test_run_metadata.json`.
+Google artifact authentication: SHA-256 of every input listed in `reports/results/google_subset/decision_manifest.json` (`input_sha256`, 13 entries: the ten `data/processed/google_subset_v1/` files including both locked random forests, plus `src/evaluation/evaluator.py`, `src/evaluation/metrics.py` and `src/policies/hybrid.py`) was recomputed on 30 Oct 2026 on the machine that ran the final test: **all 13 match**. The manifest itself hashes to `0669ca5c…fa775`, the digest recorded in `final_test_run_metadata.json`. A first review on another machine reported 7 mismatches; those came from that machine's locally regenerated `data/processed/google_subset_v1/` (not tracked by Git), not from the frozen inputs, and are not a project limitation. Notebook 06's saved output shows `RUN_FINAL_TEST = False` because the notebook is committed with the flag reset after the run; the run itself is recorded in `final_test_run_metadata.json` (run 29 Oct 2026, 259 of 731 test occurrences evaluated).
 
-| Current local path | Comparison to the committed final-run manifest |
-|---|---|
-| `data/processed/google_subset_v1/val_occurrences.parquet` | Mismatch |
-| `data/processed/google_subset_v1/test_occurrences.parquet` | Mismatch |
-| `data/processed/google_subset_v1/ml_metadata.json` | Mismatch |
-| `data/processed/google_subset_v1/val_ml_predictions.parquet` | Mismatch |
-| `data/processed/google_subset_v1/test_ml_predictions.parquet` | Mismatch |
-| `data/processed/google_subset_v1/n05_locked_models/cpu_random_forest.joblib` | Mismatch |
-| `data/processed/google_subset_v1/n05_locked_models/memory_random_forest.joblib` | Mismatch |
-| `data/processed/google_subset_v1/metadata.json` | Match |
-| `data/processed/google_subset_v1/baseline_validation_comparison.csv` | Match |
-| `data/processed/google_subset_v1/ml_feature_manifest.json` | Match |
-| `src/evaluation/evaluator.py`, `src/evaluation/metrics.py`, `src/policies/hybrid.py` | Each matches |
-
-The mismatches prevent authenticating these current local artifacts as the exact frozen final-run inputs. They do not by themselves prove corruption, numerical disagreement, or an invalid original run. Regeneration, versions, and value-level equivalence need investigation; no such explanation was verified here. The gate in Google Notebook 06 cell 19 would reject mismatching frozen inputs. Do not rerun or retune the final test merely to replace this evidence.
-
-The Google validation target leakage remains a model-selection limitation (6.2). Older notebooks under `notebooks/GoogleCluster2019/` and `notebooks/subset/` are preliminary/historical experiments, not substitutes for current pipeline validation. Alibaba Task 8 remains planned, and no new training, fresh-environment reproduction, or pytest run was completed in this review.
+The Google validation target leakage remains a model-selection limitation (6.2). Older notebooks under `notebooks/GoogleCluster2019/` and `notebooks/subset/` are preliminary/historical experiments, not substitutes for current pipeline validation. Alibaba Task 8 remains planned; no new training or fresh-environment reproduction was performed. The test suite was run (inventory above).
 
 ### 7. Recommended content for the final report
 
-Explain validation-only selection as implemented, distinguish candidate tuning from selected-model refit and final scoring, and disclose the Google test-period selection limitation. Describe the two Hybrid safeguards explicitly. Use saved final tables as recorded outcomes with provenance qualifications; reserve comparative interpretation for Chapter 7. Do not state that current local files reproduce the frozen Google final run or that all verification tasks have passed.
+Explain validation-only selection as implemented, distinguish candidate tuning from selected-model refit and final scoring, and disclose the Google test-period selection limitation. Describe the two Hybrid safeguards explicitly. Use saved final tables as recorded outcomes with provenance qualifications; reserve comparative interpretation for Chapter 7. State that the frozen Google inputs match their manifest hashes; do not state that Task 8 verification was completed.
 
 ## 6.4 Replay Evaluation Metrics
 
@@ -205,7 +207,7 @@ The evaluator compares recorded next-occurrence actual values against policy rec
 
 ### 4. Supporting tests and validation evidence
 
-`tests/test_evaluation.py` implements hand-computed formula/summary cases. `tests/test_evaluator_contract.py` implements profile, units, scopes, resource masking, missing-value, denominator, metadata, and input-preservation checks. Google Notebook 06 cell 10 records exact baseline-summary reproduction from N04. Saved validation/final CSVs in `reports/results/google_subset/tables/` and `reports/results/alibaba_gpu_2020/` demonstrate recorded outputs; individual metric evidence is mapped below. No fresh test execution is claimed.
+`tests/test_evaluation.py` implements hand-computed formula/summary cases. `tests/test_evaluator_contract.py` implements profile, units, scopes, resource masking, missing-value, denominator, metadata, and input-preservation checks. Google Notebook 06 cell 10 records exact baseline-summary reproduction from N04. Saved validation/final CSVs in `reports/results/google_subset/tables/` and `reports/results/alibaba_gpu_2020/` demonstrate recorded outputs; individual metric evidence is mapped below. The cited tests pass (inventory above).
 
 ### 5. Dataset-specific differences
 
@@ -213,7 +215,7 @@ Google uses `RecommendationEvaluator()` without a profile in Notebook 06 and eva
 
 ### 6. Missing evidence or unresolved issues
 
-Shared formulas do not make resource semantics, units, populations, or export fields identical. Profile-only waste/shortfall denominator fields are not universally exported. The Google leakage/hash limitations and uncompleted independent Alibaba verification constrain claims of fully verified evaluation.
+Shared formulas do not make resource semantics, units, populations, or export fields identical. Profile-only waste/shortfall denominator fields are not universally exported. The Google target-period limitation (6.2) and the uncompleted Task 8 verification constrain claims of fully verified evaluation.
 
 ### 7. Recommended content for the final report
 
@@ -248,7 +250,7 @@ Google targets full-workload window-derived CPU/memory peaks, so it reports comb
 
 #### 6. Missing evidence or unresolved issues
 
-No current execution of the cited tests was obtained. Canonical checks must not be assumed for Google's unprofiled evaluator call merely because profile-aware validation exists. Saved final rates are recorded evidence with the provenance limits in 6.2–6.3.
+The cited tests pass (inventory above). Canonical checks must not be assumed for Google's unprofiled evaluator call merely because profile-aware validation exists. Saved final rates are recorded evidence with the provenance limits in 6.2–6.3.
 
 #### 7. Recommended content for the final report
 
@@ -317,8 +319,8 @@ Google's common population requires both next-occurrence targets, but missing re
 
 #### 6. Missing evidence or unresolved issues
 
-The CSVs alone do not expose every waste/shortfall denominator; use the corresponding frozen row-level outputs for a complete independent audit when available and authenticated. Current Google local artifacts cannot yet be treated as authenticated frozen inputs (6.3). No fresh full-data denominator audit or pytest execution was completed. The Table of Contents is compatible with the implementation, provided this subsection explains these differences rather than asserting identical cross-dataset eligibility or export fields.
+The CSVs alone do not expose every waste/shortfall denominator; use the corresponding frozen row-level outputs for a complete independent audit when available and authenticated. No full-data denominator audit was performed; the cited tests pass (inventory above). The Table of Contents is compatible with the implementation, provided this subsection explains these differences rather than asserting identical cross-dataset eligibility or export fields.
 
 #### 7. Recommended content for the final report
 
-Explain why row counts, violation counts, utilization counts, and waste/shortfall counts differ. Use the saved examples with explicit provenance, preserve unknown outcomes, and distinguish unavailable measurements from numerical zero. State which denominators are actually exported and which require authenticated row-level reconstruction. Do not describe missing values as valid non-violations or claim complete independent denominator verification.
+Explain why row counts, violation counts, utilization counts, and waste/shortfall counts differ. Use the saved examples with explicit provenance, preserve unknown outcomes, and distinguish unavailable measurements from numerical zero. State which denominators are actually exported and which require row-level reconstruction. Do not describe missing values as valid non-violations or claim complete independent denominator verification.
