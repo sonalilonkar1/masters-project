@@ -1,0 +1,212 @@
+{
+  "build": {
+    "code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+    "code_dirty": false,
+    "pandas_version": "2.3.3",
+    "pyarrow_version": "23.0.1",
+    "python_version": "3.12.9"
+  },
+  "capabilities": {
+    "allowed_exclusion_reasons": [
+      "no_recurrence_key",
+      "job_failed",
+      "job_incomplete",
+      "task_not_terminated",
+      "missing_or_invalid_request",
+      "instance_failed",
+      "instance_interrupted",
+      "instance_incomplete",
+      "missing_worker_name",
+      "multi_attempt_worker",
+      "missing_sensor",
+      "partial_sensor_coverage",
+      "invalid_memory_exceeds_capacity",
+      "invalid_resource"
+    ],
+    "any_resource_metric_valid": false,
+    "cpu_target_semantics": "next_occurrence_lifetime_average",
+    "cpu_unit": "percent_of_vcpu",
+    "dataset_id": "alibaba_gpu_v2020",
+    "evaluation_mode": "next_occurrence_memory_peak_cpu_average",
+    "evaluation_record_level": "role_occurrence",
+    "has_cpu_average": true,
+    "has_cpu_peak": false,
+    "has_memory_average": true,
+    "has_memory_peak": true,
+    "instance_event_time_semantics": "parent_job_submission",
+    "memory_target_semantics": "next_occurrence_lifetime_peak",
+    "memory_unit": "gb",
+    "notes": "Required second integration. Role-level next-occurrence evaluation; memory peak primary, CPU lifetime average only.",
+    "observed_cpu_semantics": "lifetime_average",
+    "observed_memory_semantics": "lifetime_average",
+    "peak_cpu_semantics": null,
+    "peak_memory_semantics": "lifetime_peak",
+    "recurrence_key_origin": "official_with_role",
+    "supported_record_levels": [
+      "role_occurrence",
+      "instance"
+    ],
+    "supports_allocated_cpu": false,
+    "supports_allocated_memory": false,
+    "supports_cpu": true,
+    "supports_memory": true,
+    "supports_ml": true,
+    "supports_observed_cpu": true,
+    "supports_observed_memory": true,
+    "supports_recurrence": true,
+    "supports_request": true,
+    "supports_targets": true,
+    "target_split_isolation": true,
+    "telemetry_window": "About day 19 to day 68.9",
+    "time_semantics": "job_submission"
+  },
+  "dataset_id": "alibaba_gpu_v2020",
+  "eligible_rows": 461900,
+  "excluded_rows": 792208,
+  "history_policy": "eligible deterministic predecessors; resource non-null and not invalid; end_time_us <= start_time_us; earlier or same split",
+  "input_rows": 1254108,
+  "output_paths": {
+    "metadata": "metadata.json",
+    "test": "test.parquet",
+    "train": "train.parquet",
+    "validation": "validation.parquet"
+  },
+  "per_split": {
+    "test": {
+      "cpu_status_counts": {
+        "available": 44045,
+        "next_occurrence_in_other_split": 0,
+        "next_occurrence_ineligible_resource": 8,
+        "no_next_occurrence": 25232,
+        "unsupported_resource": 0
+      },
+      "in_split_successor_rows": 44053,
+      "memory_status_counts": {
+        "available": 44053,
+        "next_occurrence_in_other_split": 0,
+        "next_occurrence_ineligible_resource": 0,
+        "no_next_occurrence": 25232,
+        "unsupported_resource": 0
+      },
+      "occurrences": 68677,
+      "rows": 69285,
+      "same_second_available_cpu_targets": 251,
+      "same_second_available_memory_targets": 251,
+      "same_second_successor_rows": 251
+    },
+    "train": {
+      "cpu_status_counts": {
+        "available": 220299,
+        "next_occurrence_in_other_split": 8842,
+        "next_occurrence_ineligible_resource": 533,
+        "no_next_occurrence": 93655,
+        "unsupported_resource": 0
+      },
+      "in_split_successor_rows": 220832,
+      "memory_status_counts": {
+        "available": 220832,
+        "next_occurrence_in_other_split": 8842,
+        "next_occurrence_ineligible_resource": 0,
+        "no_next_occurrence": 93655,
+        "unsupported_resource": 0
+      },
+      "occurrences": 319186,
+      "rows": 323329,
+      "same_second_available_cpu_targets": 2006,
+      "same_second_available_memory_targets": 2006,
+      "same_second_successor_rows": 2006
+    },
+    "validation": {
+      "cpu_status_counts": {
+        "available": 41913,
+        "next_occurrence_in_other_split": 7736,
+        "next_occurrence_ineligible_resource": 156,
+        "no_next_occurrence": 19481,
+        "unsupported_resource": 0
+      },
+      "in_split_successor_rows": 42069,
+      "memory_status_counts": {
+        "available": 42069,
+        "next_occurrence_in_other_split": 7736,
+        "next_occurrence_ineligible_resource": 0,
+        "no_next_occurrence": 19481,
+        "unsupported_resource": 0
+      },
+      "occurrences": 68549,
+      "rows": 69286,
+      "same_second_available_cpu_targets": 245,
+      "same_second_available_memory_targets": 245,
+      "same_second_successor_rows": 245
+    }
+  },
+  "predictive_feature_columns": [
+    "cpu_history_count",
+    "memory_history_count"
+  ],
+  "reference_comparison": {
+    "test": {
+      "actual_in_split_successor_rows": 44053,
+      "population_difference": -34,
+      "reference_in_split_successor_rows": 44087,
+      "reference_same_second_rows": 251,
+      "same_second_difference": 0
+    },
+    "validation": {
+      "actual_in_split_successor_rows": 42069,
+      "population_difference": -35,
+      "reference_in_split_successor_rows": 42104,
+      "reference_same_second_rows": 245,
+      "same_second_difference": 0
+    }
+  },
+  "reference_notes": "References predate the final 256-row multi_attempt_worker exclusion. Structural successor counts and available CPU/memory counts are reported separately. The reviewer's reconciliation of the shared Task 3 build found that final counts are lower because 256 roles are excluded by multi_attempt_worker: validation 42,069 versus reference 42,104 (-35), test 44,053 versus 44,087 (-34). Restoring those roles reproduces validation exactly (42,104) and test within one row (44,086 against 44,087); that row lies at the validation/test boundary, which the reference analysis placed one timestamp group differently. Validation cross-split counts are 7,736 final, 7,743 restored, and 7,742 in the reference. Same-second validation/test counts remain 245/251. This is a historical reconciliation, not a recomputation on arbitrary input fixtures.",
+  "resource_fields": {
+    "cpu": "observed_cpu",
+    "memory": "peak_memory"
+  },
+  "results_documentation": "data built from c2ae87f; source code_commit: c2ae87f4aa357384a3cc8bdc72f776f1012c3ab7; Task 4 consumes the verified Task 3 role_occurrence view without rebuilding it.",
+  "same_second_policy": "equal start_time_us // 1000000; immediate eligible successor; independent of resource availability",
+  "schema_version": "0.2.0",
+  "source_artifact": {
+    "checksum_verified": true,
+    "manifest_sha256": "0efa6074b48909b0a3e267bd700b5e3069d8b4f6fcc5108eefc97873452d07c5",
+    "metadata_sha256": "d831a813b974155baeb820f5e67f5232b39c5305a61ebccbd9007bf5347927fc",
+    "path": "role_occurrence.parquet",
+    "sha256": "e1823b92b2851675d567a9b4f55cdce47036b74082e7eb8247c1b77d1c33b107"
+  },
+  "source_provenance": {
+    "build": {
+      "code_commit": "c2ae87f4aa357384a3cc8bdc72f776f1012c3ab7",
+      "code_dirty": false
+    },
+    "dataset_id": "alibaba_gpu_v2020",
+    "primary_view": "role_occurrence"
+  },
+  "split": {
+    "actual_test_fraction": 0.15,
+    "actual_train_fraction": 0.6999978350292271,
+    "actual_validation_fraction": 0.1500021649707729,
+    "id_col": "role_key",
+    "requested_test_fraction": 0.15000000000000005,
+    "requested_train_fraction": 0.7,
+    "requested_validation_fraction": 0.15,
+    "split_type": "chronological_timestamp_group_preserving",
+    "test_end": 6451081000000,
+    "test_rows": 69285,
+    "test_start": 5884564000000,
+    "time_col": "start_time_us",
+    "total_rows": 461900,
+    "train_end": 5308816000000,
+    "train_rows": 323329,
+    "train_start": 1564066000000,
+    "unique_timestamps": 333524,
+    "validation_end": 5884553000000,
+    "validation_rows": 69286,
+    "validation_start": 5308817000000
+  },
+  "target_order": [
+    "start_time_us",
+    "occurrence_id",
+    "role_key"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "build": {
+    "code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+    "code_dirty": false,
+    "pandas_version": "2.3.3",
+    "pyarrow_version": "23.0.1",
+    "python_version": "3.12.9"
+  },
+  "hybrid_safeguard_missing_validation": {
+    "cpu": 0,
+    "memory": 0
+  },
+  "output_files": [
+    "decision_manifest.json",
+    "model_selection.json",
+    "candidate_models.csv",
+    "validation_policy_comparison.csv",
+    "validation_ml_hybrid_predictions.parquet",
+    "feature_order.json",
+    "cpu_model.joblib",
+    "memory_model.joblib",
+    "metadata.json"
+  ],
+  "phase": "pr1_validation_lock",
+  "reads_test": false,
+  "selected_models": {
+    "cpu": "hist_gradient_boosting",
+    "memory": "hist_gradient_boosting"
+  },
+  "split_row_counts": {
+    "train": 323329,
+    "validation": 69286
+  },
+  "task": "task7_alibaba_gpu_2020_ml_hybrid",
+  "validation_population_size": 42069
+}
