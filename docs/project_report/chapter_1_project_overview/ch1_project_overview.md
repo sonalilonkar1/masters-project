@@ -40,9 +40,7 @@ Together, these studies show that historical workload traces can provide useful 
 
 ### 1.3.3 Existing Resource Recommendation Approaches
 
-Existing resource recommendation approaches focus on correcting user resource estimates, optimizing configurations for recurring workloads, and using historical data to improve resource management.
-
-Trace-driven studies show that execution traces can support batch workload optimization offline, even when live deployment is not feasible [14]. However, such studies do not provide CPU and memory recommendations before execution.
+Existing resource recommendation approaches focus on trace-driven workload optimization, optimizing configurations for recurring workloads, and using historical data and percentiles to improve resource management. Trace-driven studies show that execution traces can support batch workload optimization offline, even when live deployment is not feasible [14]. However, such studies do not provide CPU and memory recommendations before execution.
 
 Configuration optimization studies such as Accordia, CherryPick, and Scavenger use search-based optimization to identify suitable cloud configurations [3], [15], [16]. Accordia focuses on recurring batch workloads, while Scavenger extends configuration optimization to machine learning workloads. However, these approaches rely on configuration search or online experimentation, whereas TraceAdvisor uses historical execution data to generate resource recommendations without requiring additional workload executions.
 
