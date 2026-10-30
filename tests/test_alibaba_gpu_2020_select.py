@@ -76,6 +76,34 @@ def test_compare_and_select_independent_and_dummy_not_selected(handoff):
     assert selections["cpu"].selection_order[0] == "rmse"
 
 
+def test_dummy_never_selected_even_with_best_rmse(handoff, monkeypatch):
+    from sklearn.dummy import DummyRegressor
+
+    train, val, stats, _ = handoff
+    m = build_feature_matrices(train, val, stats)
+    # The mean floor beats a far-off constant on every metric, but must not be chosen.
+    monkeypatch.setattr(sel, "build_candidate_models", lambda: {
+        "dummy_mean": DummyRegressor(strategy="mean"),
+        "far_constant": DummyRegressor(strategy="constant", constant=1e6),
+    })
+    table, selections, _ = sel.compare_and_select(m, PROFILE)
+    for resource in ("cpu", "memory"):
+        rows = table[table.resource == resource].set_index("model")
+        assert rows.loc["dummy_mean", "rmse"] < rows.loc["far_constant", "rmse"]
+        assert selections[resource].selected_model == "far_constant"
+        assert not rows.loc["dummy_mean", "selected"]
+
+
+def test_only_non_selectable_candidates_raises(handoff, monkeypatch):
+    from sklearn.dummy import DummyRegressor
+
+    train, val, stats, _ = handoff
+    m = build_feature_matrices(train, val, stats)
+    monkeypatch.setattr(sel, "build_candidate_models", lambda: {"dummy_mean": DummyRegressor()})
+    with pytest.raises(ValueError, match="No selectable"):
+        sel.compare_and_select(m, PROFILE)
+
+
 def test_seven_policies_and_hybrid_reduces_violation(handoff):
     train, val, stats, baselines_val = handoff
     m = build_feature_matrices(train, val, stats)

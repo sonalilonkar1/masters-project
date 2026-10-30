@@ -19,7 +19,8 @@ RANDOM_SEED = 42
 def build_candidate_models() -> Dict[str, object]:
     """Candidate regressors shared by CPU and memory.
 
-    DummyRegressor(mean) is a recorded floor, not a selectable learner. The
+    DummyRegressor(mean) is a recorded floor, not a selectable learner
+    (excluded by alibaba_gpu_2020_select.NON_SELECTABLE_MODELS). The
     tree/boosting models fit heavy-tailed tabular data with mixed categorical
     and numeric features. XGBoost is included when the library is importable
     (issue #89: optional, installation/reproducibility confirmed here).
