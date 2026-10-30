@@ -10,9 +10,13 @@ a run fingerprint.
 Do not run this against the real Alibaba test table until PR1 has been reviewed
 and frozen by the team.
 
-A duplicate run for the same PR1 manifest checksum + code commit is refused.
-A documented defect rerun requires --defect-rerun-reason and preserves the
-previous output directory before writing a new result.
+The locked PR1 manifest must have been built from a clean checkout at the
+current code commit. Every run is appended to RUN_LOG_NAME inside the PR1
+directory before the test table is opened; a second run for the same decision
+manifest is refused, whatever --out-dir is given. A documented defect rerun
+requires --defect-rerun-reason, is logged, and preserves any previous output
+directory before writing a new result. The log is a local file: it stops the
+script from re-evaluating a lock, not manual deletion of files.
 
 Exit codes: 0 success, 1 invalid input, 2 refused, 3 build/write failure.
 """
@@ -21,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -58,6 +63,8 @@ OUTPUT_FILES = (
     "run_record.json",
     "metadata.json",
 )
+
+RUN_LOG_NAME = ml_run.FINAL_TEST_RUN_LOG
 
 EXIT_OK, EXIT_INVALID, EXIT_REFUSED, EXIT_FAILED = 0, 1, 2, 3
 
@@ -173,6 +180,46 @@ def _verify_pr1_lock(
     return manifest, pr1_manifest, baselines_manifest, decision_sha
 
 
+def _check_pr1_build(
+    manifest: dict,
+    commit: str | None,
+    allow_dirty: bool,
+) -> None:
+    """Refuse a PR1 lock built dirty or at a different commit than this run."""
+    build = manifest.get("build") or {}
+    if allow_dirty:
+        return
+    if build.get("code_dirty") is not False:
+        raise InputError(
+            "PR1 decision manifest was not built from a clean checkout"
+        )
+    if build.get("code_commit") != commit:
+        raise InputError(
+            f"PR1 decision manifest was built at {build.get('code_commit')}, "
+            f"current code is {commit}; run PR1 and PR2 at the same commit"
+        )
+
+
+def _logged_runs(run_log: Path, decision_sha: str) -> list[dict]:
+    """Prior final-test runs recorded for this decision manifest."""
+    if not run_log.exists():
+        return []
+    runs = []
+    for line in run_log.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            entry = json.loads(line)
+            if entry.get("decision_manifest_sha256") == decision_sha:
+                runs.append(entry)
+    return runs
+
+
+def _append_run_log(run_log: Path, entry: dict) -> None:
+    with run_log.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(entry, sort_keys=True) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
 def _run_fingerprint(
     decision_manifest_sha256: str,
     code_commit: str | None,
@@ -227,6 +274,9 @@ def run(
         manifest, pr1_checksums, baseline_checksums, decision_sha = (
             _verify_pr1_lock(targets_dir, baselines_dir, ml_dir)
         )
+        _check_pr1_build(manifest, commit, allow_dirty)
+        run_log = ml_dir / RUN_LOG_NAME
+        prior_runs = _logged_runs(run_log, decision_sha)
     except (
         InputError,
         OSError,
@@ -239,6 +289,14 @@ def run(
 
     fingerprint = _run_fingerprint(decision_sha, commit)
     preserved_dir = None
+
+    if prior_runs and not defect_rerun_reason:
+        print(
+            "REFUSED: this locked manifest has already been evaluated "
+            f"({len(prior_runs)} run(s) in {_relpath(run_log)}); "
+            "a documented defect rerun is required"
+        )
+        return EXIT_REFUSED
 
     if out_dir.exists():
         existing = _existing_fingerprint(out_dir)
@@ -265,16 +323,26 @@ def run(
             )
             return EXIT_REFUSED
         shutil.move(str(out_dir), str(preserved_dir))
-    elif defect_rerun_reason:
+    elif defect_rerun_reason and not prior_runs:
         print(
             "REFUSED: --defect-rerun-reason is only valid when "
-            "preserving a prior final-test run"
+            "a prior final-test run exists"
         )
         return EXIT_REFUSED
 
     staging = None
     try:
         # All integrity/duplicate checks above happen before test is opened.
+        # Log the run first, so a run that fails after reading test still counts.
+        _append_run_log(run_log, {
+            "decision_manifest_sha256": decision_sha,
+            "code_commit": commit,
+            "code_dirty": dirty,
+            "out_dir": _relpath(out_dir),
+            "defect_rerun_reason": defect_rerun_reason,
+            "prior_runs": len(prior_runs),
+            "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        })
         test = pd.read_parquet(targets_dir / "test.parquet")
         history_statistics = pd.read_parquet(
             baselines_dir / "history_statistics.parquet"
@@ -347,6 +415,9 @@ def run(
             "code_commit": commit,
             "code_dirty": dirty,
             "defect_rerun_reason": defect_rerun_reason,
+            "run_log": _relpath(run_log),
+            "prior_runs": len(prior_runs),
+            "pr1_build": manifest.get("build"),
             "preserved_previous_output": (
                 _relpath(preserved_dir)
                 if preserved_dir else None

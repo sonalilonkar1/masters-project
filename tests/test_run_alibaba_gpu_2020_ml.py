@@ -170,3 +170,13 @@ def test_pr1_refuses_tampered_task6_checksum(prepared, tmp_path, monkeypatch):
         (baselines / "SHA256SUMS").read_text().replace(good, "0" * 64))
     monkeypatch.setattr(ml_runner.canonical, "git_state", lambda repo: ("b" * 40, False))
     assert ml_runner.run(targets, baselines, tmp_path / "ml") == ml_runner.EXIT_INVALID
+
+
+def test_pr1_refuses_to_replace_a_lock_evaluated_on_test(tmp_path, monkeypatch):
+    targets, baselines, out = tmp_path / "targets", tmp_path / "baselines", tmp_path / "ml"
+    for directory in (targets, baselines, out):
+        directory.mkdir()
+    (out / ml_runner.FINAL_TEST_RUN_LOG).write_text('{"decision_manifest_sha256": "d"}\n')
+    monkeypatch.setattr(ml_runner.canonical, "git_state", lambda repo: ("b" * 40, False))
+    assert ml_runner.run(targets, baselines, out, force=True) == ml_runner.EXIT_REFUSED
+    assert (out / ml_runner.FINAL_TEST_RUN_LOG).exists()
