@@ -29,7 +29,7 @@ Figure 2.1 shows the pipeline with the artifact counts produced at each stage, a
 
 ![Figure 2.1](figures/fig_2_1_pipeline.png)
 
-*Figure 2.1. TraceAdvisor Google pipeline and its status, with artifact counts at each stage. Solid boxes are implemented on `main`, the dashed box is in an open pull request (PR #61), and the dotted box is planned. Counts are read from the saved artifacts by `docs/report/scripts/make_report_artifacts.py`.*
+*Figure 2.1. TraceAdvisor Google pipeline and its status, with artifact counts at each stage. Solid boxes are implemented on `main`, the dashed box is in an open pull request (PR #61), and the dotted box is planned. Counts are read from the saved artifacts by `docs/project_report/scripts/make_report_artifacts.py`.*
 
 *Table 2.1. Implementation status of TraceAdvisor components.*
 
