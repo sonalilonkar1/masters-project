@@ -32,12 +32,12 @@ The results were consistent across both traces. On the Google test period, Hybri
 
 The results are subject to several limitations.
 
-- **Google units are normalized,** so its waste cannot be expressed in cores or gigabytes, and no numeric comparison across datasets is possible.
-- **Alibaba CPU is a lifetime average,** so its CPU results describe average-usage sizing and not protection against CPU peaks.
-- **The Alibaba population is selective.** Only 36.8% of task-role occurrences were eligible, mainly because of missing sensor data and failed jobs, and about 98% of the evaluated occurrences are from single-instance roles.
-- **ML tuning was limited.** On Google, the log-scale target biases predictions low; on Alibaba, each model family used one fixed configuration, and the ML and Hybrid validation results are optimistic because the same split selected the models.
-- **GPU usage was not evaluated** as a target.
-- **The evaluation is offline,** so the results do not establish effects on job failures, scheduling or cost in a running cluster.
+- **Google units are normalized.** The publisher scales Google CPU and memory values rather than reporting cores and gigabytes [Wilkes 2019]. Google waste can therefore be compared between policies but not converted into machines or cost, and Google and Alibaba results can be compared only in direction, not in size.
+- **Alibaba CPU is a lifetime average.** The trace records each instance's average CPU usage, not its peak. A recommendation that covers the next run's average can still be exceeded during short bursts, so the Alibaba CPU results show how well average usage is sized, not whether jobs would be throttled at their peaks. This is why memory, which is recorded as a peak, is the primary Alibaba resource.
+- **The Alibaba population is selective.** Only 36.8% of task-role occurrences were eligible, mainly because of missing sensor data and failed jobs. Excluding failed jobs means that workloads which may have failed for lack of resources are not represented, and about 98% of the evaluated occurrences come from single-instance roles. The results therefore describe completed, fully measured, mostly single-instance workloads; the multi-instance check in Section 7.3.2 shows the same ordering, but on only 595 occurrences.
+- **ML tuning was limited.** On Google, models are trained on a log scale, whose back-transformation biases predictions towards the median and therefore low. On Alibaba, each model family used one fixed configuration. Both choices may understate what a stronger model could achieve alone, although the Hybrid safeguard limits the effect of a low prediction.
+- **GPU usage was not evaluated.** The Alibaba trace records GPU requests and usage, and GPUs are the scarcest resource in an AI cluster, but recommendations were limited to CPU and memory. GPU sizing would need its own target definition and safeguard.
+- **The evaluation is offline.** Replay assumes that each run would have used the same resources under any recommendation. In a live cluster, an under-sized job may be killed and rerun, changing the history that later recommendations use, and saved capacity is only realized if the scheduler can place other work in it. The results therefore show the potential of each policy, not measured effects on job failures, utilization or cost.
 
 These limitations suggest the following directions for further work.
 
