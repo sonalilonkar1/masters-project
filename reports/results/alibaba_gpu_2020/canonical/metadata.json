@@ -1,0 +1,235 @@
+{
+  "schema_version": "0.2.0",
+  "adapter_name": "alibaba_gpu_v2020",
+  "adapter_version": "0.1.0",
+  "dataset_id": "alibaba_gpu_v2020",
+  "capabilities": {
+    "dataset_id": "alibaba_gpu_v2020",
+    "supports_cpu": true,
+    "supports_memory": true,
+    "supports_request": true,
+    "supports_recurrence": true,
+    "supports_targets": true,
+    "supports_ml": true,
+    "supports_observed_cpu": true,
+    "supports_observed_memory": true,
+    "supports_allocated_cpu": false,
+    "supports_allocated_memory": false,
+    "notes": "Required second integration. Role-level next-occurrence evaluation; memory peak primary, CPU lifetime average only.",
+    "has_cpu_average": true,
+    "has_cpu_peak": false,
+    "has_memory_average": true,
+    "has_memory_peak": true,
+    "recurrence_key_origin": "official_with_role",
+    "observed_cpu_semantics": "lifetime_average",
+    "peak_cpu_semantics": null,
+    "observed_memory_semantics": "lifetime_average",
+    "peak_memory_semantics": "lifetime_peak",
+    "cpu_target_semantics": "next_occurrence_lifetime_average",
+    "memory_target_semantics": "next_occurrence_lifetime_peak",
+    "time_semantics": "job_submission",
+    "instance_event_time_semantics": "parent_job_submission",
+    "cpu_unit": "percent_of_vcpu",
+    "memory_unit": "gb",
+    "telemetry_window": "About day 19 to day 68.9",
+    "supported_record_levels": [
+      "role_occurrence",
+      "instance"
+    ],
+    "evaluation_record_level": "role_occurrence",
+    "evaluation_mode": "next_occurrence_memory_peak_cpu_average",
+    "allowed_exclusion_reasons": [
+      "no_recurrence_key",
+      "job_failed",
+      "job_incomplete",
+      "task_not_terminated",
+      "missing_or_invalid_request",
+      "instance_failed",
+      "instance_interrupted",
+      "instance_incomplete",
+      "missing_worker_name",
+      "multi_attempt_worker",
+      "missing_sensor",
+      "partial_sensor_coverage",
+      "invalid_memory_exceeds_capacity",
+      "invalid_resource"
+    ],
+    "any_resource_metric_valid": false,
+    "target_split_isolation": true
+  },
+  "primary_view": "role_occurrence",
+  "source_row_count": 13928714,
+  "canonical_row_count": 1254108,
+  "source_row_counts": {
+    "pai_job_table": 1055501,
+    "pai_task_table": 1261050,
+    "pai_instance_table": 7522002,
+    "pai_sensor_table": 3033232,
+    "pai_group_tag_table": 1055032,
+    "pai_machine_spec": 1897
+  },
+  "canonical_row_counts": {
+    "role_occurrence": 1254108,
+    "instance": 7410783
+  },
+  "validity_counts": {
+    "role_occurrence": {
+      "valid": 677334,
+      "partial": 574793,
+      "invalid": 1981
+    },
+    "instance": {
+      "partial": 4384687,
+      "valid": 3020973,
+      "invalid": 5123
+    }
+  },
+  "cpu_validity_counts": {
+    "role_occurrence": {
+      "valid": 675914,
+      "partial": 578194
+    },
+    "instance": {
+      "partial": 4389291,
+      "valid": 3021492
+    }
+  },
+  "memory_validity_counts": {
+    "role_occurrence": {
+      "valid": 677334,
+      "partial": 574793,
+      "invalid": 1981
+    },
+    "instance": {
+      "partial": 4384687,
+      "valid": 3020973,
+      "invalid": 5123
+    }
+  },
+  "exclusion_reason_counts": {
+    "no_recurrence_key": 1788,
+    "job_failed": 282027,
+    "job_incomplete": 87980,
+    "task_not_terminated": 0,
+    "missing_or_invalid_request": 2,
+    "instance_failed": 33022,
+    "instance_interrupted": 31,
+    "instance_incomplete": 0,
+    "missing_worker_name": 0,
+    "multi_attempt_worker": 2048,
+    "missing_sensor": 287780,
+    "partial_sensor_coverage": 97018,
+    "invalid_memory_exceeds_capacity": 512,
+    "invalid_resource": 0,
+    "<null>": 461900
+  },
+  "rejection_count": 121824,
+  "rejection_counts": {
+    "instance": {
+      "missing_submission_time": 111219
+    },
+    "job": {
+      "missing_submission_time": 3663
+    },
+    "role_occurrence": {
+      "missing_submission_time": 6942
+    }
+  },
+  "provenance": {
+    "source_version": "cluster-trace-gpu-v2020",
+    "source_files": {
+      "pai_job_table": "pai_job_table.csv",
+      "pai_task_table": "pai_task_table.csv",
+      "pai_instance_table": "pai_instance_table.csv",
+      "pai_sensor_table": "pai_sensor_table.csv",
+      "pai_group_tag_table": "pai_group_tag_table.csv",
+      "pai_machine_spec": "pai_machine_spec.csv"
+    },
+    "source_checksums": {
+      "pai_job_table": "379ecb3becaba347f44a53bf7eb53e54b185221b2a0338a3f828828d269ba96c",
+      "pai_task_table": "6954802b457305f8a9e480ef97c40060baee59649fd3adc62c5a1e048aa058de",
+      "pai_instance_table": "b179f7d7e0927a6663d719b728c92640447c5a0fc3c6e4edff31e7207ab9dd17",
+      "pai_sensor_table": "12dd9929b70f3efe18d1279d9873e3a519c64f431613b23b059ed8c46a376dd7",
+      "pai_group_tag_table": "d23fcb56d88b2976fda4a62708d77b2a8c98635c4b443f100ed5553d4cd07fbe",
+      "pai_machine_spec": "251e9e33649155a6a935fdc1dc0e90cd4698206936b60bd8fce60ff2ccd51439"
+    },
+    "telemetry_window": {
+      "description": "About day 19 to day 68.9",
+      "start_day": 19,
+      "end_day": 68.9
+    }
+  },
+  "join_coverage_counts": {
+    "job_group_tag": {
+      "driving_matched": 1053971,
+      "driving_unmatched": 1530,
+      "driving_null_key": 0,
+      "lookup_used": 1053971,
+      "lookup_unused": 1061
+    },
+    "task_job": {
+      "driving_matched": 1261050,
+      "driving_unmatched": 0,
+      "driving_null_key": 0,
+      "lookup_used": 1055501,
+      "lookup_unused": 0
+    },
+    "instance_task": {
+      "driving_matched": 7522002,
+      "driving_unmatched": 0,
+      "driving_null_key": 0,
+      "lookup_used": 1260920,
+      "lookup_unused": 130
+    },
+    "instance_sensor": {
+      "driving_matched": 3027318,
+      "driving_unmatched": 4494684,
+      "driving_null_key": 331057,
+      "lookup_used": 3019349,
+      "lookup_unused": 13883
+    },
+    "instance_machine_spec": {
+      "driving_matched": 7190945,
+      "driving_unmatched": 331057,
+      "driving_null_key": 331057,
+      "lookup_used": 1897,
+      "lookup_unused": 0
+    }
+  },
+  "eligibility_summary": {
+    "accepted_roles": 1254108,
+    "pass_all_but_multi_attempt_worker": 462156,
+    "eligible": 461900,
+    "eligible_missing_cpu": 1224
+  },
+  "build": {
+    "code_commit": "c2ae87f4aa357384a3cc8bdc72f776f1012c3ab7",
+    "code_dirty": false,
+    "python_version": "3.10.0",
+    "pandas_version": "2.3.3",
+    "pyarrow_version": "23.0.1"
+  },
+  "reconciliation": {
+    "job": {
+      "source_table": "pai_job_table",
+      "source": 1055501,
+      "accepted": 1051838,
+      "rejected": 3663,
+      "difference": 0
+    },
+    "role_occurrence": {
+      "source_table": "pai_task_table",
+      "source": 1261050,
+      "accepted": 1254108,
+      "rejected": 6942,
+      "difference": 0
+    },
+    "instance": {
+      "source_table": "pai_instance_table",
+      "source": 7522002,
+      "accepted": 7410783,
+      "rejected": 111219,
+      "difference": 0
+    }
+  }
+}

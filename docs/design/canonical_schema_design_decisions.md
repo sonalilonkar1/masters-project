@@ -244,12 +244,18 @@ The adapter-side contract is in `docs/design/adapter_framework.md`.
 **Decision.**
 - CPU and memory use separate denominators, and missing values are never counted as non-violations.
 - Alibaba GPU 2020 reports no any-resource metric (`any_resource_metric_valid = false`), and baseline selection ranks memory first.
+- **Baseline candidates (Alibaba GPU 2020):** Request is scored and reported as the status-quo reference but cannot be selected. The baseline and `min_runs` are selected from Mean, P90, P95 and P99 only. Selected: P99 at `min_runs = 10`.
+- **ML model selection (Alibaba GPU 2020; Task 7):** CPU and memory models are selected independently on validation, accuracy first: RMSE, then MAE, then violation %, then average shortfall, then model name. Candidates are a decision tree, a random forest, `HistGradientBoostingRegressor` and XGBoost, each with one fixed setting (no hyperparameter grid). A mean `DummyRegressor` is scored and reported as a reference floor but is never selected. XGBoost is required (pinned in `requirements-lock.txt`), so the candidate set is always the same.
+- **Hybrid (Alibaba GPU 2020; Task 7):** `max(ML prediction, selected baseline)` per resource, with negative predictions clipped to zero. Where the baseline has no value, Hybrid uses the ML prediction; the number of such validation rows is recorded. Google uses `max(ML prediction, P95)` (`docs/planning/assumptions.md` P-9).
 - CPU results are never compared numerically across Google and Alibaba GPU 2020 (§12, §13).
 
 **Rationale.**
 - With one resource null, the shared evaluator reports any-resource violation as 100% by construction.
 - Combining an average-based CPU result with a peak-based memory result has no meaning.
 - The second dataset demonstrates adaptation to a different workload and resource contract, not a better or worse score on the same task.
+- **Request is not selectable** because, as the Hybrid baseline, it would stop Hybrid from ever recommending less than the current request, and its identical rows would fix `min_runs` at 1 instead of choosing it on validation. On the validation data Request has a lower memory violation rate than P99 at `min_runs = 10` (4.74% against 5.58%) but 2.5 times the memory waste (22.26 GB against 8.94 GB).
+- **ML selection is accuracy-first** because the ML model's job is to predict usage accurately, and the Hybrid rule is what keeps violations low. Ranking violation first rewards over-prediction and selects the mean `DummyRegressor`, which has no predictive skill. On Alibaba validation the dummy has the lowest violation rate of all candidates (memory 24.79%, CPU 11.97%, against 47.76% and 41.91% for the selected HistGradientBoosting models) and an R² below zero. Selected models: HistGradientBoosting for CPU and memory.
+- **One fixed setting per model** because a grid had not been timed on the full training set, and searching it on the single validation split would make the validation results more optimistic. This is a stated limitation; every candidate is compared with the `DummyRegressor` floor.
 
 ### D-20. GPU fields retained; GPU evaluation deferred
 **Decision.**

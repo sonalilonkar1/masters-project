@@ -1,0 +1,129 @@
+{
+  "any_resource_metric_reported": false,
+  "build": {
+    "code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+    "code_dirty": false,
+    "pandas_version": "2.3.3",
+    "pyarrow_version": "23.0.1",
+    "python_version": "3.12.9"
+  },
+  "counts": {
+    "multi_instance_rows": 889,
+    "same_second_rows": 245,
+    "validation_population": 42069
+  },
+  "cpu_result_semantics": "average_usage",
+  "cpu_usage_label": "average_usage",
+  "dataset_id": "alibaba_gpu_v2020",
+  "min_runs_candidates": [
+    1,
+    3,
+    5,
+    10
+  ],
+  "output_files": [
+    "baseline_selection.json",
+    "validation_comparison.csv",
+    "sensitivity_validation.csv",
+    "history_statistics.parquet",
+    "recommendations_train.parquet",
+    "recommendations_validation.parquet",
+    "recommendations_test.parquet",
+    "metadata.json"
+  ],
+  "percentile_method": "linear",
+  "primary_resource": "memory",
+  "profile": {
+    "allowed_exclusion_reasons": [
+      "no_recurrence_key",
+      "job_failed",
+      "job_incomplete",
+      "task_not_terminated",
+      "missing_or_invalid_request",
+      "instance_failed",
+      "instance_interrupted",
+      "instance_incomplete",
+      "missing_worker_name",
+      "multi_attempt_worker",
+      "missing_sensor",
+      "partial_sensor_coverage",
+      "invalid_memory_exceeds_capacity",
+      "invalid_resource"
+    ],
+    "any_resource_metric_valid": false,
+    "cpu_target_semantics": "next_occurrence_lifetime_average",
+    "cpu_unit": "percent_of_vcpu",
+    "dataset_id": "alibaba_gpu_v2020",
+    "evaluation_mode": "next_occurrence_memory_peak_cpu_average",
+    "evaluation_record_level": "role_occurrence",
+    "has_cpu_average": true,
+    "has_cpu_peak": false,
+    "has_memory_average": true,
+    "has_memory_peak": true,
+    "instance_event_time_semantics": "parent_job_submission",
+    "memory_target_semantics": "next_occurrence_lifetime_peak",
+    "memory_unit": "gb",
+    "notes": "Required second integration. Role-level next-occurrence evaluation; memory peak primary, CPU lifetime average only.",
+    "observed_cpu_semantics": "lifetime_average",
+    "observed_memory_semantics": "lifetime_average",
+    "peak_cpu_semantics": null,
+    "peak_memory_semantics": "lifetime_peak",
+    "recurrence_key_origin": "official_with_role",
+    "supported_record_levels": [
+      "role_occurrence",
+      "instance"
+    ],
+    "supports_allocated_cpu": false,
+    "supports_allocated_memory": false,
+    "supports_cpu": true,
+    "supports_memory": true,
+    "supports_ml": true,
+    "supports_observed_cpu": true,
+    "supports_observed_memory": true,
+    "supports_recurrence": true,
+    "supports_request": true,
+    "supports_targets": true,
+    "target_split_isolation": true,
+    "telemetry_window": "About day 19 to day 68.9",
+    "time_semantics": "job_submission"
+  },
+  "resource_scope": "task_role_per_instance",
+  "selected_min_runs": 10,
+  "selected_policy": "P99",
+  "selection_sort_order": [
+    "memory_violation_pct",
+    "average_memory_waste",
+    "cpu_violation_pct",
+    "average_cpu_waste",
+    "min_runs",
+    "policy"
+  ],
+  "source_artifacts": {
+    "task3_source_commit": "c2ae87f4aa357384a3cc8bdc72f776f1012c3ab7",
+    "task4_code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+    "task4_code_dirty": false,
+    "task4_files": [
+      "metadata.json",
+      "test.parquet",
+      "train.parquet",
+      "validation.parquet"
+    ],
+    "task4_input_dir": "data/processed/alibaba_gpu_v2020_targets",
+    "task4_manifest": {
+      "metadata.json": "f3fe9c656e2b905a394f741dfe0d1d20b76b84d4662eaac7448518f883b2631c",
+      "test.parquet": "960796ce7a87f3f09216c7aac7fdde78fa7bc87577216470b6c104584e6842f3",
+      "train.parquet": "e08ad6b288fb5aaeaf87f4efe9908a1f70d01a12ae87e8bc867c5812149d7a8a",
+      "validation.parquet": "f84ccde879417204c2c93ee2b5dd7b7070c672a7eaa18e09ecc9534354c134e6"
+    }
+  },
+  "split_row_counts": {
+    "test": 69285,
+    "train": 323329,
+    "validation": 69286
+  },
+  "task": "task6_alibaba_gpu_2020_baselines",
+  "units": {
+    "cpu": "percent_of_vcpu",
+    "memory": "gb"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "cpu": {
+    "hyperparameters": {
+      "categorical_features": "from_dtype",
+      "early_stopping": "auto",
+      "interaction_cst": null,
+      "l2_regularization": 0.0,
+      "learning_rate": 0.1,
+      "loss": "squared_error",
+      "max_bins": 255,
+      "max_depth": null,
+      "max_features": 1.0,
+      "max_iter": 100,
+      "max_leaf_nodes": 31,
+      "min_samples_leaf": 20,
+      "monotonic_cst": null,
+      "n_iter_no_change": 10,
+      "quantile": null,
+      "random_state": 42,
+      "scoring": "loss",
+      "tol": 1e-07,
+      "validation_fraction": 0.1,
+      "verbose": 0,
+      "warm_start": false
+    },
+    "n_clipped_validation": 151,
+    "selected_model": "hist_gradient_boosting",
+    "selection_order": [
+      "rmse",
+      "mae",
+      "violation_pct",
+      "average_shortfall",
+      "model"
+    ],
+    "validation_metrics": {
+      "average_shortfall": 49.22630642714444,
+      "mae": 135.72350139258234,
+      "r2": 0.7576678680119647,
+      "rmse": 412.9408690312588,
+      "violation_pct": 41.90823849402334
+    }
+  },
+  "memory": {
+    "hyperparameters": {
+      "categorical_features": "from_dtype",
+      "early_stopping": "auto",
+      "interaction_cst": null,
+      "l2_regularization": 0.0,
+      "learning_rate": 0.1,
+      "loss": "squared_error",
+      "max_bins": 255,
+      "max_depth": null,
+      "max_features": 1.0,
+      "max_iter": 100,
+      "max_leaf_nodes": 31,
+      "min_samples_leaf": 20,
+      "monotonic_cst": null,
+      "n_iter_no_change": 10,
+      "quantile": null,
+      "random_state": 42,
+      "scoring": "loss",
+      "tol": 1e-07,
+      "validation_fraction": 0.1,
+      "verbose": 0,
+      "warm_start": false
+    },
+    "n_clipped_validation": 376,
+    "selected_model": "hist_gradient_boosting",
+    "selection_order": [
+      "rmse",
+      "mae",
+      "violation_pct",
+      "average_shortfall",
+      "model"
+    ],
+    "validation_metrics": {
+      "average_shortfall": 1.2390592817380237,
+      "mae": 3.142378983364259,
+      "r2": 0.5286009587329652,
+      "rmse": 8.982768682084096,
+      "violation_pct": 47.75963298390739
+    }
+  }
+}
