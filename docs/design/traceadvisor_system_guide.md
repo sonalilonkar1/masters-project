@@ -107,7 +107,7 @@ Everything under `data/` is local only and never committed.
 | `docs/data/` | Dataset studies, source setup and data checks |
 | `docs/baseline_experiments/` | Write-ups of the earlier experiments |
 | `docs/planning/` | Scope, assumptions, task plan and task issue texts |
-| `docs/report/` | Final report draft, figures and traceability |
+| `docs/project_report/` | Final report draft, figures and traceability |
 
 ---
 
@@ -419,7 +419,7 @@ flowchart TD
 | 02 Reconstruct executions | Builds execution episodes from window observations | `google_subset_executions_v1.parquet` |
 | 03 Profiles and metrics | Builds occurrences (`recurrence_key + execution_start_time_us`); sums usage across parallel executions per window and takes the maximum; point-in-time history from completed earlier occurrences | `job_profiles_google_subset_history_v1.parquet`, `job_metrics_v0.parquet` |
 | 04 Splits and baselines | Chronological split keeping equal start times together; next-occurrence targets; Request, Mean, P90, P95, P99 at `min_runs` 1, 3, 5, 10; validation-only selection | `{train,val,test}_occurrences.parquet`, `baseline_validation_comparison.csv`, `metadata.json` |
-| 05 ML | Feature manifest, label-purged tuning, validation selection, refit on train plus validation, test predictions without scoring | `ml_*.csv`, `ml_metadata.json`, `n05_locked_models/`, `{val,test}_ml_predictions.parquet` |
+| 05 ML | Feature manifest, label-purged `TimeSeriesSplit` tuning, validation selection, refit on train plus validation, test predictions without scoring. `GroupKFold` by `recurrence_key` is reported as a robustness check (generalization to unseen workloads) and is not used for any decision | `ml_*.csv`, `ml_metadata.json`, `n05_locked_models/`, `{val,test}_ml_predictions.parquet` |
 | 06 Final comparison | Hybrid; seven-policy validation comparison; decision manifest; one-time final test | `validation_policy_comparison.csv`, `decision_manifest.json`, `final_test_*` |
 
 Scale: 253,585 execution rows; 3,473 / 675 / 731 train / validation / test occurrences.
@@ -513,6 +513,7 @@ The evaluator only scores. Selection and ranking happen in the pipelines.
 | Scope | Full workload | Per instance of a task role |
 | Baselines | Notebook 04 code | `src/baselines/alibaba_gpu_2020.py` |
 | Hybrid safeguard | P95 (`max(ML, P95)`) | Selected Task 6 baseline (`max(ML, P99@10)`) |
+| Missing safeguard | Hybrid falls back to the ML prediction and the row is flagged (`hybrid_recommendation` returns a `safeguard_missing` flag) | Same |
 | Same code | Metric formulas, evaluator, `hybrid_recommendation`, `chronological_split` | Same |
 
 The same formulas and evaluator score both datasets; what changes is the profile, which decides what each number means and what may be reported.
