@@ -26,6 +26,7 @@
 | Alipourfard 2017 | O. Alipourfard *et al.*, "CherryPick: Adaptively unearthing the best cloud configurations for big data analytics," in *Proc. USENIX NSDI*, 2017. | [16] | [14] |
 | Tyagi 2023 | S. Tyagi and P. Sharma, "Scavenger: A cloud service for optimizing cost and performance of ML training," arXiv:2303.06659, 2023. | [17] | [15] |
 | Alibaba 2020 | Alibaba Group, "Alibaba Cluster Trace Program," https://github.com/alibaba/clusterdata (cluster-trace-gpu-v2020). | — | [8] |
+| Weng 2022 | Q. Weng *et al.*, "MLaaS in the wild: Workload analysis and scheduling in large-scale heterogeneous GPU clusters," in *Proc. USENIX NSDI*, 2022, pp. 945–960. Official Alibaba GPU 2020 trace paper (formerly B1); cited in Chapter 1. | — | — |
 
 **Notes for the rewritten literature review** (from the Workbook 2 version):
 1. **[4] is used for two different works.** It is the QoS-based pricing paper (Sandholm 2015), but the text also cites [4] for "backfilling with system-generated predictions" in HPC, which is a different paper not in the list.
@@ -41,7 +42,7 @@ Chapter 4 marks each place that needs one of these with **[CITATION NEEDED: …]
 
 | # | Candidate | Claim it would support (Chapter 4 location) |
 |---|---|---|
-| B1 | Q. Weng *et al.*, "MLaaS in the wild: Workload analysis and scheduling in large-scale heterogeneous GPU clusters," USENIX NSDI 2022 | Official Alibaba GPU 2020 trace paper; role heterogeneity (4.1) |
+| B1 | *Moved to section A as Weng 2022 (cited in Chapter 1).* | Role heterogeneity (4.1) |
 | B2 | M. Tirmazi *et al.*, "Borg: The next generation," EuroSys 2020; A. Verma *et al.*, "Large-scale cluster management at Google with Borg," EuroSys 2015 | Official ClusterData 2019 paper; Borg job and task model (4.1) |
 | B3 | K. Rzadca *et al.*, "Autopilot: Workload autoscaling at Google," EuroSys 2020; Kubernetes Vertical Pod Autoscaler documentation | Production autoscalers size from usage percentiles (4.2.1) |
 | B4 | S. Kaufman *et al.*, "Leakage in data mining: Formulation, detection, and avoidance," ACM TKDD 2012 | Leakage (4.1, 4.2.2) |
