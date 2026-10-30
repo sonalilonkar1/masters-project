@@ -99,7 +99,47 @@ def test_pr1_end_to_end_locks_manifest_and_never_reads_test(prepared, tmp_path, 
     assert "dummy_mean" not in manifest["selected_models"].values()
     # Task 6 selects a history policy (never Request); exact policy depends on data.
     assert manifest["task6_selection"]["selected_policy"] in ("Mean", "P90", "P95", "P99")
-    assert manifest["task4_inputs"]["task3_source_commit"].startswith("c2ae87f")
+
+    task4_metadata = json.loads((targets / "metadata.json").read_text())
+    assert manifest["task4_inputs"]["task3_source_commit"] == (
+        task4_metadata["source_provenance"]["build"]["code_commit"]
+    )
+    assert manifest["task4_inputs"]["task4_code_commit"] == (
+        task4_metadata["build"]["code_commit"]
+    )
+
+    predictions_path = out / "validation_ml_hybrid_predictions.parquet"
+    assert predictions_path.exists()
+    predictions = pd.read_parquet(predictions_path)
+    validation = pd.read_parquet(targets / "validation.parquet")
+
+    expected_prediction_columns = {
+        "role_key",
+        "occurrence_id",
+        "recurrence_key",
+        "cpu_target_status",
+        "actual_cpu",
+        "memory_target_status",
+        "actual_memory",
+        "ml_recommended_cpu",
+        "ml_recommended_memory",
+        "hybrid_recommended_cpu",
+        "hybrid_recommended_memory",
+        "recommended_cpu_unit",
+        "recommended_memory_unit",
+        "recommended_resource_scope",
+    }
+    assert expected_prediction_columns.issubset(predictions.columns)
+    assert len(predictions) == len(validation)
+    assert set(predictions["recommended_cpu_unit"].dropna()) == {"percent_of_vcpu"}
+    assert set(predictions["recommended_memory_unit"].dropna()) == {"gb"}
+    assert set(predictions["recommended_resource_scope"].dropna()) == {
+        "task_role_per_instance"
+    }
+    assert (
+        "validation_ml_hybrid_predictions.parquet"
+        in (out / "SHA256SUMS").read_text()
+    )
 
     for resource in ("cpu", "memory"):
         model = joblib.load(out / ml_runner.MODEL_FILES[resource])

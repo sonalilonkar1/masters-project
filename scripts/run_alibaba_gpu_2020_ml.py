@@ -60,6 +60,7 @@ OUTPUT_FILES = (
     "model_selection.json",
     "candidate_models.csv",
     "validation_policy_comparison.csv",
+    "validation_ml_hybrid_predictions.parquet",
     "feature_order.json",
     "cpu_model.joblib",
     "memory_model.joblib",
@@ -151,7 +152,8 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
         history_statistics = pd.read_parquet(baselines_dir / "history_statistics.parquet")
         baselines_validation = pd.read_parquet(baselines_dir / "recommendations_validation.parquet")
         task6_selection = json.loads((baselines_dir / "baseline_selection.json").read_text())
-
+        task4_metadata = json.loads((targets_dir / "metadata.json").read_text())
+    
         # ---- Features, candidate comparison, selection -----------------------
         matrices = build_feature_matrices(train, validation, history_statistics)
         candidate_table, selections, fitted_by_resource = sel.compare_and_select(matrices, PROFILE)
@@ -182,6 +184,47 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
         (staged / "feature_order.json").write_text(
             json.dumps({"feature_order": matrices.feature_order}, indent=2) + "\n", encoding="utf-8")
 
+        validation_predictions = matrices.val_rows[
+            [
+                "role_key",
+                "occurrence_id",
+                "recurrence_key",
+                fc.CPU_TARGET_STATUS,
+                fc.TARGET_CPU,
+                fc.MEMORY_TARGET_STATUS,
+                fc.TARGET_MEMORY,
+            ]
+        ].copy()
+
+        validation_predictions["ml_recommended_cpu"] = (
+            validation_hybrid.ml_predictions["cpu"]
+        )
+        validation_predictions["ml_recommended_memory"] = (
+            validation_hybrid.ml_predictions["memory"]
+        )
+
+        validation_predictions["hybrid_recommended_cpu"] = (
+            validation_hybrid.hybrid_recommendations["cpu"]
+        )
+        validation_predictions["hybrid_recommended_memory"] = (
+            validation_hybrid.hybrid_recommendations["memory"]
+        )
+
+        validation_predictions["recommended_cpu_unit"] = (
+            fc.RESOURCE_UNIT["cpu"]
+        )
+        validation_predictions["recommended_memory_unit"] = (
+            fc.RESOURCE_UNIT["memory"]
+        )
+        validation_predictions["recommended_resource_scope"] = (
+            fc.RESOURCE_SCOPE
+        )
+
+        validation_predictions.to_parquet(
+            staged / "validation_ml_hybrid_predictions.parquet",
+            index=False,
+        )
+        
         selection_payload = {
             resource: {
                 "selected_model": s.selected_model,
@@ -210,8 +253,8 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
             "task4_inputs": {
                 "targets_dir": _relpath(targets_dir),
                 "targets_manifest": targets_manifest,
-                "task3_source_commit": task6_selection.get("source_artifacts", {}).get("task3_source_commit"),
-                "task4_code_commit": task6_selection.get("source_artifacts", {}).get("task4_code_commit"),
+                "task3_source_commit": (task4_metadata["source_provenance"]["build"]["code_commit"]),
+                "task4_code_commit": (task4_metadata["build"]["code_commit"]),
             },
             "selected_models": {r: selections[r].selected_model for r in sel.RESOURCES},
             "model_hyperparameters": {r: selections[r].hyperparameters for r in sel.RESOURCES},
