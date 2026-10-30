@@ -20,7 +20,7 @@
 | Options and refusals | `--force`, `--allow-dirty`, `--out-dir`, `--keep-failed-output`, `--verify`, `--defect-rerun-reason`; refusal on a dirty tree or an existing output; final test refuses a lock built at another commit and a second run (run log); ML script refuses to replace a tested lock (Chapter 5 §5.6) |
 | Shared data handoff | Task 3 build `c2ae87f` shared on Drive and checked with `--verify` (system guide §2.3) |
 | Run times | 30 Oct 2026 run: targets 56 s, baselines 110 s, ML 2 min 53 s, final test 7 s (`alibaba_gpu_2020_results_and_analysis.md` §0); peak memory for targets and baselines about 5 GB and 1.9 GB (`alibaba_gpu_2020_results_tasks1_6.md` §7) |
-| Design reference | Chapter 4 §4.4, Figure 4.3 |
+| Design reference | Chapter 4 §4.4, Figure 4.4 |
 
 ## 8.2 Reproducibility and Repository Layout
 
