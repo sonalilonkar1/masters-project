@@ -1,0 +1,219 @@
+\documentclass{IEEEtran}
+% Converted from the uploaded report draft to the uploaded IEEEtran paper layout.
+% This intentionally follows the supplied two-column IEEE paper template,
+% rather than the original chapter-based master's report formatting.
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{cite}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\title{TraceAdvisor: Pre-Execution Resource Recommendations for Recurring Cluster Workloads}
+\author{Shivani Jariwala, Meghana Koti, Sonali Lonkar, and Sofia Silva\\
+Computer Engineering Department\\
+San Jos\'{e} State University (SJSU)\\
+San Jos\'{e}, CA, USA}
+\begin{document}
+\maketitle
+\begin{abstract}
+Cloud and AI clusters often experience inefficient resource utilization because users must estimate CPU and memory requirements before execution. To avoid under-provisioning, which can lead to out-of-memory events, evictions, or job failures, users tend to request more resources than their workloads actually need. This results in over-provisioning and unused resource capacity in shared clusters. Although existing resource management approaches aim to improve resource efficiency, many operate at runtime, require scheduler modifications, or depend on online experimentation rather than providing recommendations before job submission.
+This project presents TraceAdvisor, an offline, trace-driven system that generates pre-execution CPU and memory recommendations for recurring cluster workloads. The framework uses historical execution data to identify recurring workloads, reconstruct execution histories, and analyze resource usage patterns. TraceAdvisor compares original resource requests with historical statistical baselines, machine learning predictions, and Hybrid recommendation policies. Historical statistics, including mean usage and high-percentile estimates such as P90, P95, and P99, help account for variations in resource demand. Hybrid policies combine machine learning predictions with historical safeguards to balance resource efficiency and workload reliability.
+TraceAdvisor uses Google ClusterData2019 as its primary dataset and Alibaba GPU 2020 as a second production dataset covering recurring machine learning workloads. The framework applies dataset-specific processing and evaluation methods to account for differences in workload structure and available CPU and memory measurements. Recommendations are evaluated through chronological trace replay using metrics such as violation rate, coverage, slack, and waste to examine the trade-off between over-provisioning and under-provisioning. By using historical workload behavior without requiring changes to existing schedulers, TraceAdvisor provides a practical approach to supporting resource allocation decisions before execution.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Cluster workloads, CPU and memory recommendations,
+resource allocation, production traces, machine learning
+\end{IEEEkeywords}
+
+% Table of Contents
+\tableofcontents
+
+\section{Project Overview}
+
+\subsection{Introduction}
+
+Modern cloud and AI clusters often experience inefficient resource utilization because users must estimate CPU and memory requirements before execution. To avoid under-provisioning, which can lead to out-of-memory (OOM) events, eviction, or job failure, users tend to request more resources than their workloads actually need. This results in over-provisioning and unused resource capacity in shared clusters \cite{ref01}.
+
+Production workload traces provide historical resource usage information that can help improve future allocation decisions. Studies such as Resource Central demonstrate that workload behavior can remain consistent across executions, making historical data useful for resource prediction \cite{ref02}. Similarly, Accordia shows that recurring workloads can be optimized using information from previous executions \cite{ref03}. These findings support the use of historical workload data to guide resource allocation decisions.
+
+TraceAdvisor addresses resource allocation inefficiencies by providing CPU and memory recommendations before job submission. The framework uses historical execution data to identify recurring workloads, analyze resource usage patterns, and generate recommendations that account for higher resource demands. By providing guidance before execution rather than relying on runtime adjustments, TraceAdvisor aims to reduce unnecessary resource allocation while maintaining workload reliability.
+
+
+\subsection{Problem Statement}
+
+Existing resource management approaches attempt to address inefficient resource allocation through runtime optimization, provider-side scheduling, and configuration recommendations. For example, Flex proposes a runtime resource manager that uses oversubscription to improve resource utilization \cite{ref01}. However, this approach operates after job submission and does not provide users with resource recommendations before execution. Similarly, QoS-Based Pricing and Scheduling focuses on provider-side pricing and scheduling rather than resource estimation before job submission \cite{ref04}.
+
+Configuration recommendation systems also use historical workload behavior to improve resource allocation. Accordia, for example, optimizes cloud configurations for recurring batch workloads using Gaussian Process Upper Confidence Bound (GP-UCB) \cite{ref03}. However, this approach relies on configuration search and online experimentation rather than directly providing resource recommendations from historical execution data. Although existing studies demonstrate that historical workload data can support resource prediction and optimization, many approaches operate at runtime, require scheduler integration, or depend on online experimentation. As a result, there remains a need for a lightweight, offline system that uses historical data from recurring workloads to provide CPU and memory recommendations before job submission without requiring scheduler modifications or online profiling.
+
+
+\subsection{Literature Review}
+
+
+\subsubsection{Over-Provisioning and Resource Allocation}
+
+Multiple trace studies show that users frequently request more resources than their workloads actually consume, leading to inefficient resource utilization. For example, Flex analyzes Google cluster traces and identifies significant differences between requested and actual resource usage \cite{ref01}. The study proposes a runtime resource manager that uses oversubscription to improve utilization. However, this approach operates after job submission and does not provide users with resource recommendations before execution.
+
+Similarly, Google Cluster Deep Dive analyzes ClusterData2019 and identifies relationships between job failures, user behavior, and inefficient resource management \cite{ref05}. The Azure Waste Case Study also examines production workloads and identifies widespread resource underutilization across Azure infrastructure \cite{ref06}. Together, these studies show that resource inefficiencies can be identified and measured using historical workload traces.
+
+The QoS-Based Pricing and Scheduling study further explains how uncertainty in resource requirements encourages users to over-provision to avoid job failures or performance issues \cite{ref04}. Although the study focuses on provider-side pricing and scheduling, it highlights how resource decisions made before job submission contribute to inefficiency. These findings support TraceAdvisor's approach of providing pre-execution CPU and memory recommendations to reduce unnecessary resource allocation while maintaining workload reliability.
+
+
+\subsubsection{Datasets and Trace Foundations}
+
+Production workload traces provide historical resource usage data that can be used to understand workload behavior and support future resource allocation decisions. Resource Central, a large-scale Microsoft study of Azure production VM workloads, demonstrates that historical workload behavior can support resource prediction and management \cite{ref02}. This supports TraceAdvisor's use of historical execution data to generate resource recommendations before job submission.
+
+The primary dataset used in TraceAdvisor is Google ClusterData2019 \cite{ref07}, which contains job and task lifecycle events, resource requests, and observed resource usage from production clusters. A subset of this dataset is used for processing and experimentation \cite{ref08}. These records allow TraceAdvisor to reconstruct workload executions, identify recurring jobs, and analyze CPU and memory usage patterns to support resource recommendations.
+
+Alibaba GPU 2020 serves as a second production dataset, extending the evaluation to recurring machine learning workloads. Weng et al. \cite{ref09} examined Alibaba's Platform for Artificial Intelligence (PAI) workload traces and highlighted resource management challenges, such as low GPU utilization, varying workload demands, and CPU bottlenecks. TraceAdvisor uses Alibaba's recurring workload information and available CPU and memory measurements to evaluate resource recommendations in a different production environment.
+
+Other production trace studies provide further evidence of resource allocation inefficiencies. Azure VM traces provide additional production workload data \cite{ref10}, while the Azure Waste Case Study identifies widespread resource underutilization \cite{ref06}. The Philly GPU Cluster study also identifies GPU underutilization and scheduling challenges in deep learning workloads \cite{ref11}. Splitwise and ModServe also demonstrate that AI workloads have different resource demands across processing stages \cite{ref12,ref13}. These studies highlight the importance of understanding workload behavior when making resource allocation decisions.
+
+Together, these studies show that historical workload traces can provide useful information for identifying recurring patterns, measuring resource usage, and improving resource allocation decisions. By using Google ClusterData2019 and Alibaba GPU 2020, TraceAdvisor applies historical workload profiling and pre-execution resource recommendation methods to two different production workload environments.
+
+
+\subsubsection{Existing Resource Recommendation Approaches}
+
+Existing resource recommendation approaches focus on correcting user resource estimates, optimizing configurations for recurring workloads, and using historical data to improve resource management. Although these approaches demonstrate the value of historical workload information, many operate at runtime, require scheduler integration, or rely on online experimentation. TraceAdvisor builds on these findings by providing offline CPU and memory recommendations before job submission.
+
+Early research on runtime prediction shows that user-provided estimates are often inaccurate and that historical predictions can improve scheduling performance \cite{ref04,ref14}. However, these approaches primarily focus on runtime estimation within existing schedulers rather than CPU and memory recommendations before execution.
+
+Configuration optimization studies such as Accordia, CherryPick, and Scavenger use historical workload behavior and optimization techniques to identify suitable cloud configurations \cite{ref03,ref15,ref16}. Accordia focuses on recurring batch workloads, while Scavenger extends configuration optimization to machine learning workloads. However, these approaches rely on configuration search or online experimentation, whereas TraceAdvisor uses historical execution data to generate resource recommendations without requiring additional workload executions.
+
+Other studies demonstrate the value of historical resource usage and percentile-based methods. Resource Central uses historical Azure VM workload data to support resource management decisions \cite{ref02}, while Flex identifies persistent differences between requested and actual resource usage in Google production clusters \cite{ref01}. Azure downsizing research also uses percentile-based CPU estimates to guide resource allocation decisions \cite{ref17}. Similarly, TailGuard demonstrates the importance of high-percentile objectives, such as P95 and P99, for managing rare performance events \cite{ref18}. These findings support TraceAdvisor's use of historical resource profiles and percentile-based safeguards.
+
+Together, these studies show that historical workload data can support resource prediction and improve resource allocation. However, existing approaches often focus on runtime scheduling, configuration optimization, or provider-side resource management. TraceAdvisor differs by combining historical profiling, statistical baselines, and machine learning predictions into an offline framework that provides CPU and memory recommendations before job submission.
+
+
+\subsubsection{Research Gap}
+
+The literature establishes three consistent findings: (1) over-provisioning and slack are widespread across major cloud platforms such as Google and Azure; (2) production traces contain historical resource usage data, and recurring workloads often show predictable patterns across executions; and (3) offline trace-driven evaluation provides a practical way to study resource allocation at scale. These findings demonstrate that historical workload behavior can support resource allocation decisions and help identify inefficiencies in production environments.
+
+However, a gap remains in existing resource management approaches. Many systems operate at runtime, require modifications to existing schedulers, depend on online experimentation, or focus primarily on configuration optimization. Although these approaches demonstrate that historical data and percentile-based methods can improve resource management, they do not directly address the need for lightweight, offline resource recommendations before job submission. In particular, the reviewed literature does not establish an approach that combines historical profiling of recurring workloads, CPU and memory recommendations, and percentile-based safeguards without requiring scheduler modifications or online profiling.
+
+TraceAdvisor addresses this gap by using historical workload traces to identify recurring jobs, analyze resource usage patterns, and generate risk-aware CPU and memory recommendations before execution. The framework uses historical percentiles to account for higher resource demands while aiming to reduce unnecessary resource allocation. By operating independently of existing schedulers, TraceAdvisor provides a way to evaluate pre-execution resource recommendations across different production workload environments without requiring changes to the scheduling system.
+
+
+\subsection{Project Objectives and Scope}
+
+The primary objective of TraceAdvisor is to develop an offline, trace-driven decision support system that generates pre-execution CPU and memory resource recommendations for recurring cluster workloads. The system uses historical execution traces to identify recurring jobs, analyze resource usage patterns, and generate risk-aware recommendations. The goal is to reduce over-provisioning and improve resource efficiency while maintaining a low risk of under-provisioning to ensure workload reliability.
+
+TraceAdvisor processes historical workload records into structured datasets containing resource requests, observed resource usage, execution duration, and recurring workload identifiers. Historical statistics, including mean usage, variability, and percentile-based estimates (P90, P95, P99), are used to generate resource recommendations. The project also aims to evaluate the effectiveness of these resource recommendations through chronological trace replay. Performance is measured using violation rate, coverage, slack, waste, and utilization metrics to assess the balance between resource efficiency and workload reliability. The project uses Google ClusterData2019 as the primary reference dataset and Alibaba GPU 2020 as a second production workload dataset. Google ClusterData2019 supports historical profiling and peak CPU and memory resource recommendations for recurring workloads. Alibaba GPU 2020 extends the framework to recurring machine learning workloads, using available CPU and memory measurements to evaluate resource recommendations in a different cluster environment. Since the datasets differ in workload structure and resource measurements, the framework uses dataset-specific processing and evaluation methods. TraceAdvisor operates as a non-intrusive advisory system using offline historical data and does not require modifications to existing schedulers.
+
+
+\subsection{Project Contributions}
+
+TraceAdvisor contributes a trace-driven framework that provides pre-execution CPU and memory resource recommendations for recurring cluster workloads. By using historical workload behavior, the framework aims to reduce unnecessary resource allocation while accounting for the risk of under-provisioning. The project combines resource recommendation methods within a reproducible offline evaluation workflow to balance resource efficiency and workload reliability.
+
+A primary contribution is the development of a workload processing and profiling pipeline using Google ClusterData2019. Raw trace records are transformed into structured execution-level summaries containing resource requests, observed CPU and memory usage, execution duration, and recurring workload identifiers. Historical statistics, including mean usage, variability, and high-percentile resource demand (P90, P95, P99), are computed to characterize workload behavior. These profiles support the comparison of original user-requested resources (As-is), historical baselines, machine learning predictions, and Hybrid recommendation policies that combine learned predictions with historical safeguards.
+
+TraceAdvisor also extends the original Google ClusterData2019 pipeline by incorporating the Alibaba GPU 2020 production workload trace. A dataset-specific adapter was developed to transform Alibaba's job, task, instance, and resource monitoring records into a standardized format while preserving differences in resource measurements. The integration includes workload eligibility filtering, handling of missing data, validation of source and output records, and reproducible dataset generation. The adapter was validated using the full Alibaba dataset, providing a foundation for applying historical profiling and resource recommendation methods to a second production workload environment.
+
+Finally, TraceAdvisor includes a time-aware evaluation framework that compares resource recommendations against observed workload demand. Chronological training, validation, and test splits are used to preserve temporal consistency and prevent data leakage. Recommendation performance is measured using violation rate, coverage, slack, waste, and utilization to evaluate the trade-off between resource efficiency and workload reliability. The evaluation also accounts for differences in CPU and memory measurements across datasets, allowing each workload environment to be evaluated using its available resource information. Together, these contributions establish a reproducible framework for generating and evaluating pre-execution resource recommendations across different production workloads.
+
+\clearpage
+% Chapters 2--9 are headings only in the uploaded first draft.
+\section{Project Architecture}
+\subsection{Introduction and System Overview}
+\subsection{Architecture Subsystems}
+\subsubsection{Data Ingestion and Dataset Adapters}
+\subsubsection{Execution Reconstruction and Occurrence Modeling}
+\subsubsection{Historical Features and Time-Ordered Data}
+\subsubsection{Recommendation Engine}
+\subsubsection{Shared Metrics and Evaluation Framework}
+\subsubsection{Artifact Repository and Presentation Layer}
+\section{Technology Descriptions}
+\subsection{Data Processing and Analysis Stack}
+\subsection{Machine Learning Libraries and Models}
+\subsection{Dataset and Trace Sources}
+\subsubsection{Primary Dataset: Google ClusterData 2019}
+\subsubsection{Validation Datasets: Azure Resource Central, Alibaba, ModServe, and Splitwise}
+\subsection{Dataset Adapters and Unit Normalization}
+\subsection{Artifact Storage, Reproducibility, and Presentation Technologies}
+\section{Project Design}
+\subsection{Data Pipeline Design}
+\subsection{Recommendation Model Design}
+\subsubsection{Historical Percentile Baselines}
+\subsubsection{Machine Learning Forecasting}
+\subsubsection{Hybrid Risk-Aware Layer}
+\subsection{Replay and Evaluation Framework Design}
+\subsection{Artifact and Presentation Layer Design}
+\section{Project Implementation}
+\subsection{Data Pipeline}
+\subsubsection{Ingestion, Unit Normalization, and Dataset Adapters}
+\subsubsection{Execution Reconstruction and Dataset-Specific Temporal Features}
+\subsubsection{Peak Usage and Resource Metrics}
+\subsection{Baseline Recommenders}
+\subsubsection{Request-As-Is}
+\subsubsection{Mean and Percentile Recommendations}
+\subsubsection{Cold-Start Handling and Fallbacks}
+\subsection{Machine Learning Recommender}
+\subsubsection{Feature and Target Preparation}
+\subsubsection{Model Training and Selection}
+\subsubsection{Validation-Based Model Comparison}
+\subsection{Hybrid Risk-Aware Recommender}
+\subsection{Shared Metrics and Evaluation Framework}
+\subsection{Artifact Storage and Developer-Facing Outputs}
+\section{Testing and Verification}
+\subsection{Data and Pipeline Correctness Checks}
+\subsection{Temporal Leakage and Split Integrity}
+\subsection{Model and Baseline Validation}
+\subsection{Replay Evaluation Metrics}
+\subsubsection{Violation and Utilization}
+\subsubsection{Resource Waste}
+\subsubsection{Valid-Row Denominators and Missing-Value Handling}
+\section{Performance, Results, and Discussion}
+\subsection{Google ClusterData 2019 Results}
+\subsubsection{Baseline Recommendation Results}
+\subsubsection{ML and Hybrid Recommendation Results}
+\subsubsection{Feature Importance and Explainability}
+\subsection{Cross-Platform Validation Results}
+\subsection{Discussion of Findings}
+\section{Operations, Reproducibility, and Future Deployment}
+\subsection{Oﬄine Artifact Workflow}
+\subsection{Reproducibility and Repository Layout}
+\subsection{Interactive Developer Dashboard (Planned)}
+\section{Summary, Conclusions, and Recommendations}
+\subsection{Summary}
+\subsection{Conclusions}
+\subsection{Limitations and Recommendations for Further Research}
+
+\begin{thebibliography}{18}
+
+
+\bibitem{ref01} T. N. Le and Z. Liu, ``Flex: Closing the gaps between usage and allocation,'' arXiv preprint, arXiv:2006.01354, Jun. 2020. doi: 10.48550/arXiv.2006.01354.
+
+\bibitem{ref02} E. Cortez, A. Bonde, A. Muzio, M. Russinovich, M. Fontoura, and R. Bianchini, ``Resource Central: Understanding and predicting workloads for improved resource management in large cloud platforms,'' in Proceedings of the 26th Symposium on Operating Systems Principles, Shanghai, China: ACM, 2017, pp. 153--167. doi: 10.1145/3132747.3132772.
+
+\bibitem{ref03} Y. Liu, H. Xu, and W. C. Lau, ``Cloud configuration optimization for recurring batch-processing applications,'' IEEE Transactions on Parallel and Distributed Systems, vol. 34, no. 5, pp. 1495--1507, May 2023. doi: 10.1109/TPDS.2023.3246086.
+
+\bibitem{ref04} T. Sandholm, J. Ward, F. Balestrieri, and B. A. Huberman, ``QoS-based pricing and scheduling of batch jobs in OpenStack clouds,'' arXiv preprint, arXiv:1504.07283, 2015. doi: 10.48550/arXiv.1504.07283.
+
+\bibitem{ref05} F. H. Bappy, T. Islam, T. S. Zaman, R. Hasan, and C. Caicedo, ``A deep dive into the Google cluster workload traces: Analyzing the application failure characteristics and user behaviors,'' in Proc. 10th International Conference on Future Internet of Things and Cloud (FiCloud), 2023, pp. 103--108. doi: 10.1109/FiCloud58648.2023.00023.
+
+\bibitem{ref06} B. Everman, M. Gao, and Z. Zong, ``Evaluating and reducing cloud waste and cost---A data-driven case study from Azure workloads,'' Sustainable Computing: Informatics and Systems, vol. 35, p. 100708, 2022. doi: 10.1016/j.suscom.2022.100708.
+
+\bibitem{ref07} J. Wilkes et al., ``Google Borg cluster traces (ClusterData2019),'' 2019. [Online]. Available: \url{https://github.com/google/cluster-data}. Accessed: Feb. 2026.
+
+\bibitem{ref08} D. Mwiti, ``Google 2019 Cluster Sample,'' Kaggle dataset. [Online]. Available: \url{https://www.kaggle.com/datasets/derrickmwiti/google-2019-cluster-sample}. Accessed: Apr. 2026.
+
+\bibitem{ref09} Q. Weng, W. Xiao, Y. Yu, W. Wang, C. Wang, J. He, Y. Li, L. Zhang, W. Lin, and Y. Ding, ``MLaaS in the wild: Workload analysis and scheduling in large-scale heterogeneous GPU clusters,'' in Proc. 19th USENIX Symposium on Networked Systems Design and Implementation (NSDI), 2022, pp. 945--960. [Online]. Available: \url{https://www.usenix.org/conference/nsdi22/presentation/weng}.
+
+\bibitem{ref10} Microsoft, ``Microsoft Azure Traces,'' GitHub repository. [Online]. Available: \url{https://github.com/Azure/AzurePublicDataset}. Accessed: Apr. 2026.
+
+\bibitem{ref11} M. Jeon, S. Venkataraman, A. Phanishayee, J. Qian, W. Xiao, and F. Yang, ``Analysis of large-scale multi-tenant GPU clusters for DNN training workloads,'' in Proc. USENIX Annual Technical Conference (ATC), 2019. [Online]. Available: \url{https://www.usenix.org/system/files/atc19-jeon.pdf}.
+
+\bibitem{ref12} P. Patel et al., ``Splitwise: Efficient generative LLM inference using phase splitting,'' arXiv preprint, arXiv:2311.18677, May 2024. doi: 10.48550/arXiv.2311.18677.
+
+\bibitem{ref13} H. Qiu et al., ``ModServe: Modality- and stage-aware resource disaggregation for scalable multimodal model serving,'' arXiv preprint, arXiv:2502.00937, Oct. 2025. doi: 10.48550/arXiv.2502.00937.
+
+\bibitem{ref14} D. Scheinert, A. Alamgiralem, J. Bader, J. Will, T. Wittkopp, and L. Thamsen, ``On the potential of execution traces for batch processing workload optimization in public clouds,'' in 2021 IEEE International Conference on Big Data (Big Data), 2021, pp. 3113--3118. doi: 10.1109/BigData52589.2021.9671275.
+
+\bibitem{ref15} O. Alipourfard and M. Yu, ``CherryPick: Adaptively unearthing the best cloud configurations for big data analytics,'' in Proc. USENIX Symposium on Networked Systems Design and Implementation (NSDI), 2017. [Online]. Available: \url{https://www.usenix.org/system/files/conference/nsdi17/nsdi17-alipourfard.pdf}.
+
+\bibitem{ref16} S. Tyagi and P. Sharma, ``Scavenger: A cloud service for optimizing cost and performance of ML training,'' in 2023 IEEE/ACM 23rd International Symposium on Cluster, Cloud and Internet Computing (CCGrid), May 2023, pp. 403--413. doi: 10.1109/CCGrid57682.2023.00045.
+
+\bibitem{ref17} N. Huang, A. Li, S. Zhang, and Z. Zong, ``Reducing cloud expenditures and carbon emissions via virtual machine migration and downsizing,'' in 2023 IEEE International Performance, Computing, and Communications Conference (IPCCC), Nov. 2023, pp. 74--81. doi: 10.1109/IPCCC59175.2023.10253871.
+
+\bibitem{ref18} Z. Wang, H. Li, L. Sun, S. Rosenkrantz, H. Che, and H. Jiang, ``A tail latency SLO guaranteed task scheduling scheme for user-facing services,'' IEEE Transactions on Parallel and Distributed Systems, vol. 36, no. 4, pp. 759--774, Apr. 2025. doi: 10.1109/TPDS.2025.3542638.
+\end{thebibliography}
+\end{document}
