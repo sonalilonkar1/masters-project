@@ -67,6 +67,9 @@ OUTPUT_FILES = (
     "memory_model.joblib",
     "metadata.json",
 )
+# Written inside the output directory by the PR2 final test; its presence means
+# this lock has been evaluated on test and must not be replaced.
+FINAL_TEST_RUN_LOG = "final_test_runs.jsonl"
 EXIT_OK, EXIT_INVALID, EXIT_REFUSED, EXIT_FAILED = 0, 1, 2, 3
 
 
@@ -129,6 +132,9 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
         return EXIT_REFUSED
     if out_dir.exists() and (not out_dir.is_dir() or not force):
         print(f"REFUSED: {out_dir} exists; choose another directory or use --force")
+        return EXIT_REFUSED
+    if (out_dir / FINAL_TEST_RUN_LOG).exists():
+        print(f"REFUSED: {out_dir} has been evaluated on test ({FINAL_TEST_RUN_LOG}); it cannot be replaced")
         return EXIT_REFUSED
     commit, dirty = canonical.git_state(repo)
     if (commit is None or dirty) and not allow_dirty:
