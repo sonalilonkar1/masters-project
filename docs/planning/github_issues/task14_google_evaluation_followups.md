@@ -27,7 +27,7 @@ Track three open points about the evaluation that are not reported as limitation
 ## What This Task Builds
 
 - **Cross-split targets:** carry out Task 10 (targets built after split assignment, rerun of baseline and ML selection) and a before/after comparison. The published Google final test has already been run once against its decision manifest; a corrected run is a new experiment with a new manifest and must be reported as such, not as a replacement.
-- **Sample size:** bootstrap confidence intervals over occurrences for the Google and Alibaba test tables (from the committed row-level outputs; no new scoring decisions), and optionally a rerun of the Google pipeline on a larger sample of ClusterData 2019.
+- **Sample size:** bootstrap confidence intervals over occurrences for the Google and Alibaba test tables (from the local row-level outputs under `data/processed/`, which are not committed; no new scoring decisions), and optionally a rerun of the Google pipeline on a larger sample of ClusterData 2019.
 - **Feature importance:** permutation importance (and impurity importance for the Google random forests) computed from the locked models on **training-period rows only**, saved under `reports/results/<dataset>/tables/`. This uses no test data and changes no decision. The Alibaba model binaries are not in the report copies, so they must be taken from the local `data/processed/` lock.
 
 ## What This Task Does Not Build
