@@ -22,7 +22,7 @@ Track three open points about the evaluation that are not reported as limitation
 
 **2. Small Google populations.** The Kaggle sample gives 329 validation and 259 test occurrences, so one occurrence moves a rate by about 0.3–0.4 percentage points. No confidence intervals or repeated runs exist for either dataset.
 
-**3. Feature importance.** No notebook or script in the current pipeline computes it; the v0 figures in `reports/eval/subset/figures_ml/` are from the superseded pipeline and are not valid sources. Chapter 7 §7.2.3 was removed for this reason.
+**3. Feature importance.** No notebook or script in the current pipeline computes it; the v0 feature-importance figures referenced in older documents came from the superseded pipeline and are no longer in the repository. Chapter 7 §7.2.3 was removed for this reason.
 
 ## What This Task Builds
 
