@@ -4,7 +4,7 @@
 
 **Short answer:** 461,900 of 1,254,108 role occurrences are eligible, and they split 70/15/15 into 323,329 / 69,286 / 69,285 rows. 42,069 validation rows have a next-occurrence target. On validation, **P99 history sizing at `min_runs = 10` is the best history baseline**: 5.58% memory violations with 8.94 GB average memory waste. **Request** (the current allocation) has the lowest memory violation rate, 4.74%, but wastes 2.5× as much memory (22.26 GB), has twice the memory shortfall and more than twice the CPU violation rate. With the PR #97 review's D1 fix applied, Task 6 selects among the history policies only (Request is reported as the status-quo reference but is not a selection candidate), which gives **P99 at `min_runs = 10`**.
 
-**Status:** **validation results only.** Test outcomes have not been read or scored; Task 7 performs the only final-test evaluation. PR #97 (Task 6) is still open; the review's D1 fix (history-only selection) is applied (`docs/github_reviews/task6_pr97_review.md`, D1). All numbers here may change if Tasks 3–6 change.
+**Status:** **validation results, final.** PR #97 (Task 6) is merged with the review's D1 fix (history-only selection; `docs/github_reviews/task6_pr97_review.md`, D1). The 30 Oct 2026 rerun from `main` at `fe38ea0` reproduced every number in §5 exactly. Task 7 (ML, Hybrid and the one-time final test) is complete; its results, and the final-test results of these baselines, are in `alibaba_gpu_2020_results_and_analysis.md`. This report is kept as the detailed record of Tasks 1–6.
 
 **Scope:** Analysis only. No source files, notebooks, schemas or configurations were modified. This report is the only file created in the repository.
 
@@ -33,8 +33,8 @@ Units: memory in **GB** (per instance of a task role); CPU in **`percent_of_vcpu
 | 3. Adapter and canonical artifacts | `role_occurrence`, `instance`, `rejected` views | Merged (PRs #94, #95; build from `c2ae87f`) |
 | 4. Splits, history and next-occurrence targets | Train, validation and test tables; `iter_resource_history` | Merged (PR #96) |
 | 5. Dataset-aware evaluator | Separate CPU and memory denominators; any-resource suppressed; CPU average-usage label | Merged |
-| 6. Baselines and `min_runs` selection | Request, Mean, P90, P95, P99; validation comparison; locked selection | **PR #97 open, under review** |
-| 7. ML, Hybrid and final test | — | Not started |
+| 6. Baselines and `min_runs` selection | Request, Mean, P90, P95, P99; validation comparison; locked selection | Merged (PR #97) |
+| 7. ML, Hybrid and final test | Model selection, Hybrid validation, decision lock, one-time final test | Merged (PRs #98, #102); run 30 Oct 2026 (`alibaba_gpu_2020_results_and_analysis.md`) |
 
 ---
 
@@ -176,8 +176,8 @@ With the D1 fix the selected `min_runs` is 10, so the PR #97 output files hold t
 
 ## 6. Limitations and open points
 
-- **Validation only.** Test results come from Task 7, once, after the selection, models and Hybrid rule are locked.
-- **Selection rule.** The D1 fix is applied: only the history policies are selectable, giving **P99 at `min_runs = 10`**. PR #97 is still open for review.
+- **Validation only.** Test results come from Task 7, run once after the selection, models and Hybrid rule were locked (`alibaba_gpu_2020_results_and_analysis.md` §5).
+- **Selection rule.** The D1 fix is applied: only the history policies are selectable, giving **P99 at `min_runs = 10`**.
 - **CPU is average usage.** CPU violation rates do not measure peak safety; short CPU spikes above any recommendation are invisible in this trace.
 - **Selection bias.** Only 36.8% of role occurrences are eligible: completed, fully observed workloads.
 - **Mostly single-instance roles.** Only 889 of 42,069 validation rows (2%) are multi-instance, and they behave differently (§5.5).
@@ -189,5 +189,5 @@ With the D1 fix the selected `min_runs` is 10, so the PR #97 output files hold t
 
 1. Download the shared Task 3 copy (`alibaba_gpu_v2020_c2ae87f`) into `data/processed/alibaba_gpu_v2020/` and check it with `python3 scripts/build_alibaba_gpu_2020_canonical.py --verify data/processed/alibaba_gpu_v2020`.
 2. Build the Task 4 tables: `python3 scripts/build_alibaba_gpu_2020_targets.py` (about 1 minute, 5 GB peak memory).
-3. On the PR #97 branch: `python3 scripts/run_alibaba_gpu_2020_baselines.py` (about 2 minutes, 1.9 GB peak memory). Outputs: `validation_comparison.csv`, `sensitivity_validation.csv`, `baseline_selection.json`, `history_statistics.parquet`, `recommendations_{train,validation,test}.parquet`, `metadata.json` in `data/processed/alibaba_gpu_v2020_baselines/`.
+3. On `main`: `python3 scripts/run_alibaba_gpu_2020_baselines.py` (about 2 minutes, 1.9 GB peak memory). Outputs: `validation_comparison.csv`, `sensitivity_validation.csv`, `baseline_selection.json`, `history_statistics.parquet`, `recommendations_{train,validation,test}.parquet`, `metadata.json` in `data/processed/alibaba_gpu_v2020_baselines/`.
 4. With the D1 fix applied the run selects P99 at `min_runs = 10`, so `sensitivity_validation.csv` (§5.5) is produced directly at that setting.
