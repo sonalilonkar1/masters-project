@@ -46,9 +46,9 @@ Version 0.2.0 **extends** 0.1.0: no existing field, flag, record level, unit or 
 |---|---|
 | `src/canonical/schema.py`, `src/adapters/validation.py`, `config/dataset_capabilities.json`, `examples/canonical_records.jsonl` | At 0.2.0: `role_occurrence`, `role_key`, new capability fields, units, GPU fields, validity, exclusion and target-status vocabularies, `peak_cpu` gated by `has_cpu_peak`. The registry and JSON are kept identical by `test_capability_json_matches_python_registry` |
 | Rejected output on the adapter result | Implemented ([`adapter_framework.md`](adapter_framework.md)) |
-| Alibaba GPU 2020 adapter | Task 3 (#79); contract in `alibaba_gpu_2020_output_contract.md` |
-| Shared target builder | Not yet implemented ([section 11](#11-splits-history-and-targets)) |
-| Alibaba 2018 and Azure adapters | Unchanged at 0.1.0 behaviour |
+| Alibaba GPU 2020 adapter | Implemented (Task 3, #79); contract in `alibaba_gpu_2020_output_contract.md` |
+| Shared target builder | Implemented in `src/features/target_builder.py` (Task 4); rules in [section 11](#11-splits-history-and-targets) |
+| Alibaba 2018 and Azure adapters | Out of current scope. Alibaba 2018 adapter updated to 0.2.0 (PR #92), may be added if time permits; Azure adapter retained at 0.1.0, dropped from integration (`adapter_framework.md` scope update) |
 
 ---
 
@@ -58,8 +58,8 @@ Version 0.2.0 **extends** 0.1.0: no existing field, flag, record level, unit or 
 |---|---|---|---|---|---|---|
 | Google Cluster Data 2019, Kaggle subset | `google_clusterdata2019` | Kaggle subset; artifacts in `data/processed/google_subset_v1` | `occurrence` | Constructed by TraceAdvisor | No occurrence-level average CPU; normalized units | Reference pipeline |
 | Alibaba GPU 2020 | `alibaba_gpu_v2020` | `cluster-trace-gpu-v2020`, full official tables | `role_occurrence` (plus `instance` audit rows) | Official `group`, extended with the task role | **No CPU peak**; CPU is lifetime-average only; telemetry about day 19 to day 68.9 | Required second full integration |
-| Alibaba Cluster Trace 2018 | `alibaba_clustertrace2018` | `cluster-trace-v2018` (`batch_task`, `batch_instance`) | `instance` | None | No recurrence, so no targets | Optional demonstration |
-| Azure public VM | `azure_public_vm_v2` (identifier retained) | The sample matches the **V1 (2017)** release, not V2 | — | None | No observed memory; allocation buckets only; no request | Deferred |
+| Alibaba Cluster Trace 2018 | `alibaba_clustertrace2018` | `cluster-trace-v2018` (`batch_task`, `batch_instance`) | `instance` | None | No recurrence, so no targets | Out of current scope; may be added if time permits |
+| Azure public VM | `azure_public_vm_v2` (identifier retained) | The sample matches the **V1 (2017)** release, not V2 | — | None | No observed memory; allocation buckets only; no request | Dropped from integration (no recurring jobs with per-job requests and usage) |
 
 **Google.** Full-workload occurrence evaluation (requests and peaks summed across executions). Recurrence is `user||collection_logical_name`. The artifacts are unchanged by this schema and checked by `tests/test_google_canonical_contract.py`. Known pipeline properties are tracked in the Google Subset Pipeline Analysis report.
 
