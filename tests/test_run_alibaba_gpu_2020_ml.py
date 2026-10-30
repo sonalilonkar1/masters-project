@@ -180,7 +180,8 @@ def test_pr1_records_candidates_and_hybrid_fallback_counts(prepared, tmp_path, m
 
     manifest = json.loads((out / "decision_manifest.json").read_text())
     assert manifest["candidate_models"] == sorted(ml_runner.candidates.build_candidate_models())
-    assert manifest["skipped_candidates"] == {}
+    assert "xgboost" in manifest["candidate_models"]
+    assert "xgboost" in manifest["library_versions"]
     assert manifest["non_selectable_models"] == ["dummy_mean"]
 
     metadata = json.loads((out / "metadata.json").read_text())
@@ -193,10 +194,3 @@ def test_pr1_records_candidates_and_hybrid_fallback_counts(prepared, tmp_path, m
         fallback = predictions.loc[flags]
         assert np.allclose(fallback[f"hybrid_recommended_{resource}"], fallback[f"ml_recommended_{resource}"])
 
-
-def test_pr1_refuses_locked_run_without_xgboost(prepared, tmp_path, monkeypatch):
-    targets, baselines = prepared
-    monkeypatch.setattr(ml_runner.canonical, "git_state", lambda repo: ("b" * 40, False))
-    monkeypatch.setattr(ml_runner.candidates, "HAS_XGBOOST", False)
-    assert ml_runner.run(targets, baselines, tmp_path / "ml") == ml_runner.EXIT_REFUSED
-    assert not (tmp_path / "ml").exists()

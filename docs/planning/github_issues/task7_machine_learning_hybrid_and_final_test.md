@@ -353,7 +353,7 @@ The best model is not known in advance. No model family is preselected; the fina
 
 | ID | Decision | Recommendation |
 |---|---|---|
-| D-1 | Whether XGBoost is a candidate | Decided: included. `requirements-lock.txt` pins `xgboost==3.4.1`; the version is recorded in the manifest. A locked (clean) PR1 run refuses if XGBoost cannot be imported; a local `--allow-dirty` run records the skip in `skipped_candidates` |
+| D-1 | Whether XGBoost is a candidate | Decided: required. XGBoost is always a candidate and is imported unconditionally, so a run without it fails; `requirements-lock.txt` pins `xgboost==3.4.1` and the version is recorded in the manifest |
 | D-2 | Validation selection order per resource | Decided: accuracy first. RMSE, then MAE, then `{resource}_violation_pct`, then `average_{resource}_shortfall`, then model name (`MODEL_SELECTION_ORDER`, recorded in the manifest). The mean `DummyRegressor` is never selected. Reason: the ML model's job is to predict next-occurrence usage accurately, and the Hybrid rule is what limits under-provisioning; ranking violation first rewards over-prediction and selects the mean `DummyRegressor`, which has no predictive skill. Memory results are interpreted first |
 | D-3 | Missing feature handling | Decided: zero fill plus a missing indicator per history statistic |
 | D-4 | Hybrid rule | Decided: one fixed rule, `max(ML prediction, selected Task 6 baseline recommendation)` per resource. Variants require a separate issue |
