@@ -230,3 +230,11 @@ These were applied before Task 7 finished, from PR #99 as it stood on 29 Oct. Th
 | C14, C15 | Ch5 §5.6 | Table 5.7 (artifacts); Alibaba decision manifest paragraph |
 | C16 | Ch2 §2.1, §2.2.6; Ch3 §3.5; Ch4 §4.4 | Integrity wording: per-stage checksums on Alibaba, input hashes in the decision manifest on Google |
 | C18 | Ch2 §2.2.4 | Baselines are computed from point-in-time history, not fitted on the training set |
+
+**Applied 30 Oct 2026, from the final Task 7 PR1 code (PR #98, D4 = no grid):**
+
+| Row | Chapter and section | Change |
+|---|---|---|
+| C8 | Ch3 §3.2 | "Small grid" limited to Google; Alibaba uses one fixed configuration per model family, fitted on train and scored on validation |
+| C9 | Ch4 §4.2.2 | Same change; the reproducibility sentence about explicit grids now applies to Google only. The Chapter 9 limitation (no Alibaba tuning) is still to be written |
+| C10 | Ch5 §5.3.2 | Candidates and settings checked against `build_candidate_models()`: unchanged (XGBoost is now required, not optional) |
