@@ -39,6 +39,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import sklearn
+import xgboost
 
 from scripts import build_alibaba_gpu_2020_canonical as canonical
 from scripts import build_alibaba_gpu_2020_targets as targets_build
@@ -101,10 +102,8 @@ def _library_versions() -> dict[str, str]:
         "pandas": pd.__version__,
         "scikit_learn": sklearn.__version__,
         "joblib": joblib.__version__,
+        "xgboost": xgboost.__version__,
     }
-    if candidates.HAS_XGBOOST:
-        import xgboost
-        versions["xgboost"] = xgboost.__version__
     return versions
 
 
@@ -140,10 +139,6 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
     commit, dirty = canonical.git_state(repo)
     if (commit is None or dirty) and not allow_dirty:
         print("REFUSED: code must be in a clean Git checkout; use --allow-dirty for local review")
-        return EXIT_REFUSED
-    if not candidates.HAS_XGBOOST and not allow_dirty:
-        print("REFUSED: xgboost is not importable; install requirements-lock.txt "
-              "(a locked run must compare the full candidate set)")
         return EXIT_REFUSED
 
     started = time.monotonic()
@@ -290,7 +285,6 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
             "negative_prediction_rule": sel.NEGATIVE_PREDICTION_RULE,
             "model_selection_order": list(sel.MODEL_SELECTION_ORDER),
             "candidate_models": sorted(candidates.build_candidate_models()),
-            "skipped_candidates": {} if candidates.HAS_XGBOOST else {"xgboost": "not importable"},
             "non_selectable_models": sorted(sel.NON_SELECTABLE_MODELS),
             "random_seed": candidates.RANDOM_SEED,
             "library_versions": _library_versions(),
