@@ -166,13 +166,15 @@ The Phase 4 results are the only source of final Alibaba GPU 2020 numbers.
 
 The best model is not known in advance. No model family is preselected; the final model per resource is chosen by validation performance, not by name.
 
-| Candidate | Role | Starting hyperparameter grid (recorded in the manifest) |
+| Candidate | Role | Implemented setting (one fixed setting per model; recorded in the manifest) |
 |---|---|---|
-| `DummyRegressor` | Sanity baseline; every selected model must be compared with it | `strategy` [`mean`, `median`] |
-| `DecisionTreeRegressor` | Candidate | `max_depth` [6, 8, 12], `min_samples_leaf` [5, 10] |
-| `RandomForestRegressor` | Candidate | `n_estimators` [100, 200], `max_depth` [10, 16], `min_samples_leaf` [5] (subset-06 grid) |
-| `HistGradientBoostingRegressor` (or `GradientBoostingRegressor`) | Candidate | `max_iter` [100, 200], `learning_rate` [0.05, 0.1], `max_leaf_nodes` [31] |
-| `XGBRegressor` | Optional candidate, only if Decision D-1 conditions are met | `n_estimators` [200, 400], `max_depth` [4, 6], `learning_rate` [0.05, 0.1] |
+| `DummyRegressor` | Reference floor, scored and reported but never selected (`NON_SELECTABLE_MODELS`) | `strategy = "mean"` |
+| `DecisionTreeRegressor` | Candidate | scikit-learn defaults |
+| `RandomForestRegressor` | Candidate | `n_estimators = 100`, otherwise defaults |
+| `HistGradientBoostingRegressor` | Candidate | scikit-learn defaults |
+| `XGBRegressor` | Candidate (Decision D-1) | `n_estimators = 300`, `max_depth = 6`, `learning_rate = 0.05`, `subsample = 0.8`, `colsample_bytree = 0.8` |
+
+- [x] **No hyperparameter grid.** The starting grid planned here was replaced by one fixed setting per model: a grid had not been timed on the full training set, and searching it on the single validation split would make the validation results more optimistic. This is reported as a limitation.
 
 - [ ] Use one fixed random seed for every candidate that accepts one.
 - [ ] **Naive Bayes is excluded.** It is a classification algorithm; using it would require binning continuous CPU and memory targets and would change the prediction problem from regression to classification.
@@ -180,10 +182,9 @@ The best model is not known in advance. No model family is preselected; the fina
 
 #### Validation-Only Selection
 
-- [ ] For each resource independently, fit every candidate configuration (family × hyperparameters) on train only and score it on validation only.
-- [ ] Select the model family and hyperparameters per resource using validation only. No cross-validation search on train is used for selection; `TimeSeriesSplit` or `GroupKFold` on train may be reported as diagnostics only.
-- [ ] Primary consideration: under-provisioning behavior, measured with the Task 5 evaluator on the ML-only recommendation (Decision D-2 gives the full order).
-- [ ] Supporting metrics: RMSE and MAE.
+- [ ] For each resource independently, fit every candidate on train only and score it on validation only.
+- [ ] Select the model per resource using validation only. No cross-validation search on train is used for selection; `TimeSeriesSplit` or `GroupKFold` on train may be reported as diagnostics only.
+- [ ] Primary consideration: accuracy (RMSE, then MAE); under-provisioning (violation %, average shortfall from the Task 5 evaluator) breaks ties (Decision D-2 gives the full order and the reason).
 - [ ] Interpret and report memory first, because memory is the primary Alibaba GPU 2020 resource.
 - [ ] Report every candidate's validation results, including `DummyRegressor`.
 - [ ] Record the selected model family, hyperparameters, feature list, feature order, training row count, random seed and library versions per resource.
@@ -352,20 +353,20 @@ The best model is not known in advance. No model family is preselected; the fina
 
 | ID | Decision | Recommendation |
 |---|---|---|
-| D-1 | Whether XGBoost is a candidate | Optional. Include it only if it is reproducibly installable. `requirements.txt` already lists `xgboost>=2.0.0`; record the installed version in the manifest, and test installation, reload and reproducibility. Negative predictions use the fixed clipping rule. If it cannot be supported within the project timeline, exclude it and document the exclusion as a limitation |
-| D-2 | Validation selection order per resource | Primary: under-provisioning on the ML-only recommendation (`{resource}_violation_pct`, then `average_{resource}_shortfall`, from the Task 5 evaluator). Supporting: RMSE, then MAE. Final tie-break: model family name, then hyperparameters. Memory results are interpreted first |
+| D-1 | Whether XGBoost is a candidate | Decided: included. `requirements-lock.txt` pins `xgboost==3.4.1`; the version is recorded in the manifest. A locked (clean) PR1 run refuses if XGBoost cannot be imported; a local `--allow-dirty` run records the skip in `skipped_candidates` |
+| D-2 | Validation selection order per resource | Decided: accuracy first. RMSE, then MAE, then `{resource}_violation_pct`, then `average_{resource}_shortfall`, then model name (`MODEL_SELECTION_ORDER`, recorded in the manifest). The mean `DummyRegressor` is never selected. Reason: the ML model's job is to predict next-occurrence usage accurately, and the Hybrid rule is what limits under-provisioning; ranking violation first rewards over-prediction and selects the mean `DummyRegressor`, which has no predictive skill. Memory results are interpreted first |
 | D-3 | Missing feature handling | Decided: zero fill plus a missing indicator per history statistic |
 | D-4 | Hybrid rule | Decided: one fixed rule, `max(ML prediction, selected Task 6 baseline recommendation)` per resource. Variants require a separate issue |
 | D-5 | Model artifact format and location | `joblib` (installed with scikit-learn); location to confirm |
-| D-6 | Rerun procedure after a real defect | A second run with the same manifest checksum and code commit is refused. A documented defect rerun requires a new corrective code commit; the manifest and locked decisions stay unchanged. The run record is keyed by manifest checksum and code commit; the rerun gets a new run ID; original outputs are preserved; the defect, the fix and both result sets are recorded |
+| D-6 | Rerun procedure after a real defect | Decided: the final test refuses a PR1 manifest built dirty or at a different commit. Every run is appended to `final_test_runs.jsonl` in the PR1 folder before the test table is opened, and a second run for the same decision manifest is refused whatever output folder is given. A documented defect rerun (`--defect-rerun-reason`) is allowed after a logged run, is itself logged, and preserves the previous output. PR1 `--force` refuses to replace a lock that has been tested |
 | D-7 | Gradient-boosting family | `HistGradientBoostingRegressor` by default; `GradientBoostingRegressor` only if the histogram-based model cannot be used |
 | D-8 | Negative-prediction rule | Clip negative predictions to 0 before evaluator use, for every candidate; record the count |
 
 ## Risks
 
 - Short histories may limit ML gains over the Task 6 baselines; the `DummyRegressor` comparison shows whether any model learns a useful signal.
-- Violation-first selection can favor models that over-predict; shortfall, RMSE, MAE and waste must be reported alongside.
-- The candidate grid multiplies training time across two resources; grids are kept small.
+- Accuracy-first selection does not target under-provisioning directly; violation, shortfall and waste are reported for every candidate, and the Hybrid rule bounds under-provisioning.
+- One fixed setting per model may under-fit or over-fit (for example, an unlimited-depth decision tree); every candidate is reported against the `DummyRegressor` floor.
 - XGBoost is a native dependency listed in `requirements.txt` but not yet installed in the current local environments; it may be excluded if installation or reproducibility cannot be confirmed.
 - The interpreter currently used for `pytest` has no scikit-learn, and `pytest` is not in `requirements.txt`; Task 7 tests fail until the test environment is built from `requirements.txt` plus `pytest`.
 - Reusing `ml_prep.py` helpers that take the test frame would leak test targets; only `prepare_xy` and `validate_features` are used before Phase 4.
