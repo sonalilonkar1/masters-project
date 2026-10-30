@@ -3,7 +3,7 @@
 **Purpose:** for each Chapter 9 section, what to summarize and where it comes from. Chapter 9 introduces **no new results**: it summarizes Chapters 4–7, states the conclusions they support, and lists limitations and future work. Every claim must point to a section of an earlier chapter.
 
 **Scope rules**
-- Write after Chapter 7. Alibaba conclusions depend on **[Task 7]**: write the structure, leave Alibaba numbers and conclusions as *pending*, and add every such sentence to `pending_checks_after_task7.md`.
+- Write after Chapter 7. Both datasets are final; Alibaba numbers come from `reports/results/alibaba_gpu_2020/alibaba_gpu_2020_results_and_analysis.md`.
 - Style: formal prose, no tables unless necessary; citations only for the two datasets.
 
 ---
@@ -17,18 +17,18 @@
 | Policies | Chapter 4 §4.2 (Request, Mean, P90/P95/P99 with `min_runs`, ML, Hybrid = max(ML, safeguard)) |
 | Evaluation | Chapter 4 §4.3 (replay, separate CPU and memory metrics, fixed populations, lock and one-time test) |
 | Google results | Chapter 7 §7.1 (test: Hybrid 12.36% any-resource violation, P99 14.67%, Request 54.47%; Hybrid waste ≈ P95) |
-| Alibaba results | Chapter 7 §7.2: Task 6 validation (P99@10: 5.58% memory violation, 8.94 GB waste vs Request 4.74%, 22.26 GB); **[Task 7]** ML, Hybrid and final test *pending* |
+| Alibaba results | Chapter 7 §7.2: final test Hybrid 3.15% memory / 3.77% CPU violation vs P99@10 3.44% / 6.45% at 8.71 vs 8.67 GB memory waste; Request 3.16% memory at 22.31 GB; ML 44.77% memory at 1.33 GB |
 
 ## 9.2 Conclusions
 
 | Conclusion to evaluate | Evidence |
 |---|---|
 | History-based percentiles reduce violations relative to requests where requests are too low (Google), and reduce waste where requests are generous (Alibaba memory) | Chapter 7 §7.1.1, §7.2 |
-| An accurate ML model alone is efficient but under-provisions often | Google test: ML 32.82% any-resource violation at the lowest waste; **[Task 7]** Alibaba |
-| The Hybrid safeguard combines the two: never more violations than its safeguard, at close to the safeguard's waste | Google test: 12.36 vs P95 17.37, waste 7.637 vs 7.616 CPU; **[Task 7]** Alibaba |
+| An accurate ML model alone is efficient but under-provisions often | Google test: ML 32.82% any-resource violation at the lowest waste; Alibaba test: ML 44.77% memory / 47.37% CPU at the lowest waste, despite R² 0.53 / 0.76 on validation |
+| The Hybrid safeguard combines the two: never more violations than its safeguard, at close to the safeguard's waste | Google test: 12.36 vs P95 17.37, waste 7.637 vs 7.616 CPU; Alibaba test: memory 3.15 vs P99 3.44 (8.71 vs 8.67 GB), CPU 3.77 vs 6.45 |
 | Canonical model and capability profiles allow one evaluation across structurally different traces without pretending they measure the same thing | Chapter 4 §4.1–4.3, Table 4.1 |
 | Strict temporal controls are necessary and observable | Chapter 6 §6.2 (checks; Google cross-split finding and its sensitivity) |
-| **[Task 7]** Whether the Google findings hold on Alibaba | Chapter 7 §7.2 |
+| The Google findings hold on Alibaba; what differs is the role of the request (low on Google, generous on Alibaba), which decides whether a larger `min_runs` adds or removes safety | Chapter 7 §7.2–7.3; `alibaba_gpu_2020_results_and_analysis.md` §8 |
 
 ## 9.3 Limitations and Recommendations for Further Research
 
@@ -40,7 +40,7 @@
 | Alibaba CPU is a lifetime average, not peak safety | Chapter 4 §4.1.1, §4.3 |
 | Alibaba selection bias: 36.8% of roles eligible; 98% of evaluated roles single-instance; telemetry about day 19 to 68.9 | Chapter 4 §4.1.6; `alibaba_gpu_2020_results_tasks1_6.md` §2, §6 |
 | Back-transformation bias of the log target (Google) | Chapter 4 §4.2.2 |
-| **[Task 7]** Alibaba ML tuning: one fixed configuration per model if no grid is added (checklist D4) | Chapter 4 §4.2.2 |
+| Alibaba ML tuning: one fixed configuration per model, no search; ML and Hybrid validation results optimistic because the same split selected the models | Chapter 4 §4.2.2; D-19 |
 | GPU fields not evaluated | Chapter 5 §5.1.1 |
 
 | Recommendation | Source |
@@ -58,5 +58,5 @@
 | # | Item | Finding | Effect on Chapter 9 |
 |---|---|---|---|
 | 1 | No new results | Every number must already appear in Chapters 5–7 | Cross-check when writing |
-| 2 | **[Task 7]** | Alibaba summary, conclusions and the tuning limitation | *pending*; add to the checklist |
+| 2 | Task 7 | Alibaba summary, conclusions and the tuning limitation | Filled above (30 Oct 2026) |
 | 3 | Chapter 1 | Related-work comparisons depend on the rewritten literature review | Refer to Chapter 1 without citing until it is final |

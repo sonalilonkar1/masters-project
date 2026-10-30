@@ -5,7 +5,7 @@
 **Scope rules**
 - Datasets: Google ClusterData 2019 (Kaggle subset) and Alibaba GPU Cluster Trace 2020. Alibaba 2018 and Azure VM code exists in `src/adapters/` but is out of scope.
 - No old report draft, no traceability file, no full-trace Google analysis doc, no dropped Alibaba evidence doc.
-- Task 13, Alibaba Task 7 and the REST API and frontend are written as implemented; statements that depend on Alibaba Task 7 go in `pending_checks_after_task7.md`; Task 13 and the API are written as implemented and are not tracked there.
+- Task 13 and the REST API and frontend are written as implemented. Alibaba Task 7 is merged and run; its statements were checked through `pending_checks_after_task7.md` (30 Oct 2026).
 - Every number is checked against code, committed config or real outputs.
 - Measured outputs moved from Chapters 2 and 4 are now in the Chapter 5 text; their sources are listed in the rows below.
 - Style: formal, paper-style prose; citations only for the two datasets.
@@ -92,7 +92,7 @@
 | Google | `03_buildProfilesAndMetrics.ipynb` "Validate Cold Starts and Missing Values"; `06_finalPolicyComparison.ipynb` cell 8 ("Validation rows where Hybrid falls back to ML") |
 | Google counts (measured 29 Oct 2026, locked environment, `{train,val,test}_occurrences.parquet`) | Rows with no prior completed occurrence: 1,801 / 239 / 240 of 3,473 / 675 / 731. On the evaluation population (both targets: 1,983 / 329 / 259), P99@1 uses history for CPU 1,372 / 303 / 250 and memory 1,368 / 301 / 250; the rest fall back to Request (CPU 611 / 26 / 9, memory 615 / 28 / 9). Request is itself missing on 23 / 3 / 2 of these rows, so P95 and P99 are missing on 7 / 1 / 0 (CPU) and 9 / 1 / 0 (memory). Validation rows where Hybrid falls back to ML: CPU 1, memory 1 (matches Notebook 06 cell 8 output) |
 | How Table 5.3 is computed | Not saved in any output file; recompute with the locked environment (`~/venvs/traceadvisor-lock`) from `data/processed/google_subset_v1/{train,val,test}_occurrences.parquet`. Evaluated population = rows with both `target_cpu_next_occurrence_peak_ncu` and `target_memory_next_occurrence_peak_normalized` present. "From history" = `uses_history_{cpu,memory}_p99` true; "Request fallback" = false; "No value" = `rec_{cpu,memory}_p99` missing. Cold starts = `prior_completed_occurrence_count == 0` on all rows. Snippet below this table |
-| Alibaba counts | After Task 7, from the artifacts (`pending_checks_after_task7.md` Step 4) |
+| Alibaba counts | Table 5.4 from `alibaba_gpu_v2020_targets/` and `alibaba_gpu_v2020_baselines/` with the snippet in `pending_checks_after_task7.md` Step 4 (run 30 Oct 2026, after the final test); Hybrid fallback 0 from `ml/metadata.json` and `final_test/run_record.json` |
 
 **Table 5.3 snippet** (Google, selected baseline P99 at `min_runs = 1`):
 
@@ -120,7 +120,7 @@ Expected output (29 Oct 2026): train 3473 / 1801 / 1983 / 1372 1368 / 611 615 / 
 | Kind | Source |
 |---|---|
 | Google | `src/features/feature_config.py` — `OCCURRENCE_FEATURE_COLS` (L147); `src/features/ml_prep.py` — `audit_occurrence_feature_manifest` (L239), `build_occurrence_feature_matrix` (L312), `select_label_period_rows` (L331); `data/processed/google_subset_v1/ml_feature_manifest.json` (committed copy: `reports/results/google_subset/ml_feature_manifest.json`) |
-| Alibaba | `ml_prep.prepare_xy` (L27), `validate_features` (L113); Alibaba feature configuration *(Task 7)* |
+| Alibaba | `ml_prep.prepare_xy` (L27), `validate_features` (L113); `src/features/alibaba_gpu_2020_feature_config.py`, `alibaba_gpu_2020_ml_prep.py`; `reports/results/alibaba_gpu_2020/ml/feature_order.json` (43 columns) |
 | Design reference | Chapter 4, §4.2.2 |
 
 ### 5.3.2 Model Training and Selection
@@ -131,7 +131,7 @@ Expected output (29 Oct 2026): train 3473 / 1801 / 1983 / 1372 1368 / 611 615 / 
 |---|---|
 | Google | `05_evaluateRecommendations.ipynb` cells 16–20 (`GridSearchCV` with `purged_time_series_folds`, `GroupKFold` robustness); `reports/results/google_subset/n05_ml_metadata.json` (`tuning.param_grids`, `selection_rule`, `selected_models`, `refit`); `decision_manifest.json` (`ml_locked_params`: Random Forest for CPU and memory, `n_estimators = 300`, `max_features = "sqrt"`, `min_samples_leaf = 10`, `max_depth` 10 (CPU) / 6 (memory), `random_state = 42`) |
 | Google tuning record | `reports/results/google_subset/tables/ml_tuning_results.csv` (150 rows: 75 configurations per resource) |
-| Alibaba | `scripts/run_alibaba_gpu_2020_ml.py` *(Task 7)*; Task 7 issue candidate grids |
+| Alibaba | `scripts/run_alibaba_gpu_2020_ml.py`; `src/models/alibaba_gpu_2020_candidates.py`, `alibaba_gpu_2020_select.py`; `reports/results/alibaba_gpu_2020/ml/model_selection.json` |
 | Design reference | Chapter 4, §4.2.2 |
 
 ### 5.3.3 Validation-Based Model Comparison
@@ -141,7 +141,7 @@ Expected output (29 Oct 2026): train 3473 / 1801 / 1983 / 1372 1368 / 611 615 / 
 | Kind | Source |
 |---|---|
 | Google | `reports/results/google_subset/tables/ml_validation_model_comparison.csv`; `reports/results/google_subset/tables/ml_cv_summary.csv` (time-ordered and `GroupKFold` mean and spread: RF CPU 0.839 ± 0.054 vs 0.781 ± 0.285); Notebook 05 cell 26 summary |
-| Alibaba | Task 7 candidate-experiment table *(pending)* |
+| Alibaba | `reports/results/alibaba_gpu_2020/ml/candidate_models.csv` (Table 5.6) |
 
 ## 5.4 Hybrid Safeguard Recommender *(retitle from "Hybrid Risk-Aware Recommender")*
 
@@ -151,7 +151,7 @@ Expected output (29 Oct 2026): train 3473 / 1801 / 1983 / 1372 1368 / 611 615 / 
 |---|---|
 | Code | `src/policies/hybrid.py` — `hybrid_recommendation` (L22: input checks, `np.fmax`, `safeguard_missing`) |
 | Google | `06_finalPolicyComparison.ipynb` cell 8 (`hybrid`, `hybrid_p99`); `decision_manifest.json` (`hybrid_rule`, `hybrid_fallback`, `supplementary_policies`) |
-| Alibaba | Task 7 Phase 2 *(pending)* |
+| Alibaba | `reports/results/alibaba_gpu_2020/ml/validation_policy_comparison.csv`, `ml/metadata.json` |
 | Tests | `tests/test_hybrid.py` (6 tests) |
 | Design reference | Chapter 4, §4.2.3 |
 
@@ -174,9 +174,9 @@ Expected output (29 Oct 2026): train 3473 / 1801 / 1983 / 1372 1368 / 611 615 / 
 
 | Kind | Source |
 |---|---|
-| Layout | `data/processed/alibaba_gpu_v2020/`, `alibaba_gpu_v2020_targets/`, `alibaba_gpu_v2020_baselines/`, `alibaba_gpu_v2020_ml/` *(Task 7)*; `data/processed/google_subset_v1/`; file lists below |
+| Layout | `data/processed/alibaba_gpu_v2020/`, `alibaba_gpu_v2020_targets/`, `alibaba_gpu_v2020_baselines/`, `alibaba_gpu_v2020_ml/`, `alibaba_gpu_v2020_final_test/`; `data/processed/google_subset_v1/`; file lists below |
 | Google files (`google_subset_v1/`) | `google_subset_observations_v1.parquet`, `google_subset_executions_v1.parquet`, `job_profiles_google_subset_history_v1.parquet`, `{train,val,test}_occurrences.parquet`, `metadata.json`, `baseline_validation_comparison.csv`, `ml_feature_manifest.json`, `ml_tuning_results.csv`, `ml_cv_summary.csv`, `ml_validation_model_comparison.csv`, `n05_locked_models/`, `{val,test}_ml_predictions.parquet`, `validation_policy_comparison.csv`, `decision_manifest.json`, `final_test_policy_comparison.csv`, `final_test_row_level.parquet`, `final_test_run_metadata.json` |
-| Alibaba files | Canonical: `role_occurrence.parquet`, `instance.parquet`, `rejected.parquet`, `metadata.json`, `count_report.md`, `SHA256SUMS`. Targets: `{train,validation,test}.parquet`, `metadata.json`, `SHA256SUMS`. Baselines: `history_statistics.parquet`, `validation_comparison.csv`, `baseline_selection.json`, `recommendations_{train,validation,test}.parquet`, `sensitivity_validation.csv`, `metadata.json`, `SHA256SUMS`. ML (PR #99): `decision_manifest.json`, `model_selection.json`, `candidate_models.csv`, `validation_policy_comparison.csv`, `feature_order.json`, `cpu_model.joblib`, `memory_model.joblib`, `metadata.json`, `SHA256SUMS` |
+| Alibaba files | Canonical: `role_occurrence.parquet`, `instance.parquet`, `rejected.parquet`, `metadata.json`, `count_report.md`, `SHA256SUMS`. Targets: `{train,validation,test}.parquet`, `metadata.json`, `SHA256SUMS`. Baselines: `history_statistics.parquet`, `validation_comparison.csv`, `baseline_selection.json`, `recommendations_{train,validation,test}.parquet`, `sensitivity_validation.csv`, `metadata.json`, `SHA256SUMS`. ML: `decision_manifest.json`, `model_selection.json`, `candidate_models.csv`, `validation_policy_comparison.csv`, `feature_order.json`, `cpu_model.joblib`, `memory_model.joblib`, `validation_ml_hybrid_predictions.parquet`, `metadata.json`, `SHA256SUMS`, `final_test_runs.jsonl` (written by the final test). Final test: `final_test_policy_comparison.csv`, `final_test_sensitivity.csv`, `final_test_predictions.parquet`, `run_record.json`, `metadata.json`, `SHA256SUMS` |
 | Integrity | `scripts/build_alibaba_gpu_2020_canonical.py` — `verify_output` (L327), `publish` (L397), `build_info` (L163); `SHA256SUMS` in every Alibaba output folder |
 | Google lock | `06_finalPolicyComparison.ipynb` cells 17 and 19 (manifest from a clean committed tree, input SHA-256, notebook code hash, refusal checks); `reports/results/google_subset/decision_manifest.json`, `final_test_run_metadata.json` |
 | Committed results | `reports/results/google_subset/` (report, manifest, run metadata, five tables); `reports/results/alibaba_gpu_2020/` |
@@ -192,9 +192,9 @@ Expected output (29 Oct 2026): train 3473 / 1801 / 1983 / 1372 1368 / 611 615 / 
 |---|---|---|---|
 | 1 | Section title 5.4 | Table of contents says "Hybrid Risk-Aware Recommender" | Retitle to "Hybrid Safeguard Recommender", matching §4.2.3 |
 | 2 | Google peak computation | Sum within each aligned window only when every component is present, then maximum over windows; requests summed only when complete (Notebook 03 cells 6 and 10) | State precisely in 5.1.3 |
-| 3 | Cold-start and fallback counts | Google computed (see 5.2.3). Fallback to Request and lack of usable history are the same rows, so they are counted once. Alibaba artifacts not on this machine | Google counts in 5.2.3; Alibaba after Task 7 |
+| 3 | Cold-start and fallback counts | Google computed (see 5.2.3). Fallback to Request and lack of usable history are the same rows, so they are counted once. Alibaba recomputed 30 Oct 2026 | Google counts in 5.2.3; Alibaba in Table 5.4 |
 | 4 | Google `DummyRegressor` | `strategy="median"` | Use in 5.3.2 |
 | 5 | Tests | 19 test files, 665 passing and 1 skipped (last run 29 Oct 2026). Alibaba 2018 and Azure tests exist for out-of-scope adapters | One coverage sentence in 5.5; file and test counts go to Chapter 6 |
-| 6 | Alibaba ML, Hybrid, final test | Not on main (Task 7) | Written as implemented with numbers and settings left as pending table cells; verified from artifacts after Task 7 (`pending_checks_after_task7.md` Step 4) |
+| 6 | Alibaba ML, Hybrid, final test | Merged and run 30 Oct 2026 | Numbers and settings filled from the artifacts (`pending_checks_after_task7.md` Step 4) |
 | 8 | Google locked decisions | Checked in `decision_manifest.json` `decisions`: P99, `baseline_min_runs = 1`, Random Forest for both resources with the settings above, Hybrid = max(ML, P95) with fallback to ML, `Hybrid_P99` supplementary | Take values from the manifest |
 | 7 | Overlap with Chapter 4 | Chapter 4 explains why; Chapter 5 must say how and how much | Refer back to Chapter 4 sections instead of repeating rationale |

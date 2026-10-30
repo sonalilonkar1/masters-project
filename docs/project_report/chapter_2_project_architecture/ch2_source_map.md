@@ -6,7 +6,7 @@
 - Datasets: Google ClusterData 2019 (Kaggle subset) and Alibaba GPU 2020. Alibaba 2018 is not in the report.
 - The old report draft and `REPORT_TRACEABILITY.md` are not sources.
 - Line numbers are from `docs/issue-17-final-report` at `6b6d0b0`.
-- Task 13 (Google thin adapter) and Task 7 (Alibaba ML, Hybrid, final test) are written as complete. Their sources are the issue texts and system guide until the code merges; only the results tables are filled in later. Paths marked *(planned)* come from those issues.
+- Task 13 (Google thin adapter) is written as complete from its issue text and the system guide; paths marked *(planned)* come from that issue. Task 7 (Alibaba ML, Hybrid, final test) is merged (PRs #98, #102) and run (30 Oct 2026); its sources are the code and `reports/results/alibaba_gpu_2020/`.
 
 ---
 
@@ -84,7 +84,7 @@
 | Writing source | System guide §1 (policy table), §8.1, §9 (selection) |
 | Code: Google | `04_splitAndBaselines.ipynb` (baselines), `05_evaluateRecommendations.ipynb` (ML: DT, RF, XGBoost), `06_finalPolicyComparison.ipynb` (Hybrid, decision manifest) |
 | Code: Alibaba | `src/baselines/alibaba_gpu_2020.py` — `add_baseline_recommendations` (L247), `select_baseline` (L469), `build_locked_recommendations` (L530); `scripts/run_alibaba_gpu_2020_baselines.py` |
-| Code: Alibaba ML and Hybrid | `scripts/run_alibaba_gpu_2020_ml.py` *(planned)*, output `data/processed/alibaba_gpu_v2020_ml/`; features via `src/features/ml_prep.py`, `src/features/feature_config.py` |
+| Code: Alibaba ML and Hybrid | `scripts/run_alibaba_gpu_2020_ml.py`, output `data/processed/alibaba_gpu_v2020_ml/`; `scripts/run_alibaba_gpu_2020_final_test.py`, output `data/processed/alibaba_gpu_v2020_final_test/`; features via `src/features/alibaba_gpu_2020_feature_config.py`, `src/features/alibaba_gpu_2020_ml_prep.py`; models in `src/models/alibaba_gpu_2020_{candidates,select,final_test}.py` |
 | Code: shared | `src/policies/hybrid.py` — `hybrid_recommendation` (L22) |
 | Design docs | `docs/planning/github_issues/task6_baselines_and_min_runs.md`, `docs/planning/github_issues/task7_machine_learning_hybrid_and_final_test.md`; D-19 in `canonical_schema_design_decisions.md` |
 | Tests | `tests/test_hybrid.py`, `tests/test_alibaba_gpu_2020_baselines.py`, `tests/test_run_alibaba_gpu_2020_baselines.py` |
@@ -121,7 +121,7 @@ What I confirmed while building this map, and what to watch for when writing.
 | # | Item | Finding | Effect on Chapter 2 |
 |---|---|---|---|
 | 1 | `GoogleSubsetAdapter` (Task 13) | Not on main yet | Written as complete: both datasets enter through a validated `AdapterResult`. Check the text against the merged code |
-| 2 | Alibaba Task 7 (ML, Hybrid, final test) | Not on main yet | Written as complete: seven policies on both datasets, one-time final test on both. Results tables filled in after the run |
+| 2 | Alibaba Task 7 (ML, Hybrid, final test) | Merged (PRs #98, #102) and run 30 Oct 2026 | Seven policies on both datasets, one-time final test on both; checked against the merged code |
 | 3 | Schema version | `schema.py` is `0.2.0`, but `adapter_framework.md` line 4 still says the Python implementation is `0.1.0` | Use 0.2.0; the framework doc is stale on this line |
 | 4 | Metric docs | `docs/evaluation/evaluation_metrics_v0.md` and `evaluation_output_format.md` date from April 2026 and describe the v0 evaluator | Cite `src/evaluation/` and system guide §8, not the v0 docs |
 | 5 | Legacy code | `src/eval/evaluator_v0.py` and `src/baselines/baseline1_percentile_margin.py` were unused by the 295B pipeline and have been removed (still in git history at `0b07fed`) | Leave out of the report |
