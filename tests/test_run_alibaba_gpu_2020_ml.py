@@ -180,3 +180,33 @@ def test_pr1_refuses_to_replace_a_lock_evaluated_on_test(tmp_path, monkeypatch):
     monkeypatch.setattr(ml_runner.canonical, "git_state", lambda repo: ("b" * 40, False))
     assert ml_runner.run(targets, baselines, out, force=True) == ml_runner.EXIT_REFUSED
     assert (out / ml_runner.FINAL_TEST_RUN_LOG).exists()
+
+
+def test_pr1_records_candidates_and_hybrid_fallback_counts(prepared, tmp_path, monkeypatch):
+    targets, baselines = prepared
+    out = tmp_path / "ml"
+    monkeypatch.setattr(ml_runner.canonical, "git_state", lambda repo: ("b" * 40, False))
+    assert ml_runner.run(targets, baselines, out) == ml_runner.EXIT_OK
+
+    manifest = json.loads((out / "decision_manifest.json").read_text())
+    assert manifest["candidate_models"] == sorted(ml_runner.candidates.build_candidate_models())
+    assert manifest["skipped_candidates"] == {}
+    assert manifest["non_selectable_models"] == ["dummy_mean"]
+
+    metadata = json.loads((out / "metadata.json").read_text())
+    counts = metadata["hybrid_safeguard_missing_validation"]
+    predictions = pd.read_parquet(out / "validation_ml_hybrid_predictions.parquet")
+    for resource in ("cpu", "memory"):
+        flags = predictions[f"hybrid_{resource}_safeguard_missing"]
+        assert 0 <= counts[resource] <= int(flags.sum())
+        # Where the safeguard is missing, Hybrid equals the ML prediction.
+        fallback = predictions.loc[flags]
+        assert np.allclose(fallback[f"hybrid_recommended_{resource}"], fallback[f"ml_recommended_{resource}"])
+
+
+def test_pr1_refuses_locked_run_without_xgboost(prepared, tmp_path, monkeypatch):
+    targets, baselines = prepared
+    monkeypatch.setattr(ml_runner.canonical, "git_state", lambda repo: ("b" * 40, False))
+    monkeypatch.setattr(ml_runner.candidates, "HAS_XGBOOST", False)
+    assert ml_runner.run(targets, baselines, tmp_path / "ml") == ml_runner.EXIT_REFUSED
+    assert not (tmp_path / "ml").exists()

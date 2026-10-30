@@ -141,6 +141,10 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
     if (commit is None or dirty) and not allow_dirty:
         print("REFUSED: code must be in a clean Git checkout; use --allow-dirty for local review")
         return EXIT_REFUSED
+    if not candidates.HAS_XGBOOST and not allow_dirty:
+        print("REFUSED: xgboost is not importable; install requirements-lock.txt "
+              "(a locked run must compare the full candidate set)")
+        return EXIT_REFUSED
 
     started = time.monotonic()
     try:
@@ -216,6 +220,19 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
             validation_hybrid.hybrid_recommendations["memory"]
         )
 
+        for resource in sel.RESOURCES:
+            validation_predictions[f"hybrid_{resource}_safeguard_missing"] = (
+                np.asarray(validation_hybrid.safeguard_missing[resource], dtype=bool)
+            )
+
+        # Rows of the frozen validation population where Hybrid fell back to ML.
+        in_population = matrices.val_rows["role_key"].isin(set(common["role_key"])).to_numpy()
+        safeguard_missing_validation = {
+            resource: int(np.count_nonzero(
+                np.asarray(validation_hybrid.safeguard_missing[resource], dtype=bool) & in_population))
+            for resource in sel.RESOURCES
+        }
+
         validation_predictions["recommended_cpu_unit"] = (
             fc.RESOURCE_UNIT["cpu"]
         )
@@ -272,6 +289,8 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
             "hybrid_safeguard": "task6_selected_baseline",
             "negative_prediction_rule": sel.NEGATIVE_PREDICTION_RULE,
             "model_selection_order": list(sel.MODEL_SELECTION_ORDER),
+            "candidate_models": sorted(candidates.build_candidate_models()),
+            "skipped_candidates": {} if candidates.HAS_XGBOOST else {"xgboost": "not importable"},
             "non_selectable_models": sorted(sel.NON_SELECTABLE_MODELS),
             "random_seed": candidates.RANDOM_SEED,
             "library_versions": _library_versions(),
@@ -291,6 +310,7 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
             "task": "task7_alibaba_gpu_2020_ml_hybrid",
             "phase": "pr1_validation_lock",
             "reads_test": False,
+            "hybrid_safeguard_missing_validation": safeguard_missing_validation,
             "selected_models": manifest["selected_models"],
             "validation_population_size": int(len(common)),
             "split_row_counts": {"train": int(len(train)), "validation": int(len(validation))},
