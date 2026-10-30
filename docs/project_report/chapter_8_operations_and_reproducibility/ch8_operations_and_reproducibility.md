@@ -62,14 +62,20 @@ The presentation layer is planned as a read-only REST API over the published res
 
 The API will serve the recommendations for each workload, policy and split, together with the evaluation summaries, organized by dataset, workload and policy. Every value will be returned with its unit and dataset label, including the label that Alibaba CPU results describe average usage, so that no client can display a number without the information needed to interpret it. The API will read only published files under `data/processed/` and `reports/results/`. It will not run the pipeline, read raw data or modify any artifact, so developers see exactly the results that were evaluated, and the API can be developed and deployed independently of the pipeline.
 
-The web frontend will let a developer look up a recurring workload, see its recommended CPU and memory under each policy next to its original request (Figure 8.1), and compare the policies' violation rate and waste for each dataset (Figure 8.2).
+The web frontend will let a developer look up a recurring workload and choose how much risk to accept (Figure 8.1). The evaluated policies form a scale from safe and wasteful to efficient and risky, and the right point on it depends on the job: a job that must not fail justifies extra capacity, while a job that can simply be rerun can trade some risk for less waste. The frontend therefore offers three risk levels, each mapped to an evaluated policy:
 
-**[Placeholder: screenshot of the workload lookup view]**
+- **Restrictive** shows the Hybrid recommendation, the safest policy on both datasets and the default;
+- **Balanced** shows the P95 recommendation;
+- **Efficient** shows the P90 recommendation.
 
-**Figure 8.1** Workload lookup: recommended CPU and memory under each policy for one workload
+Next to each recommended CPU and memory value, the frontend shows the workload's original request and the violation rate and average waste that the selected policy had in the test period, so the developer sees what each level costs and how often it was exceeded. On Alibaba, for example, memory recommendations were exceeded by 3.15% of test occurrences under Hybrid, 6.04% under P95 and 9.89% under P90, at average waste of 8.71, 7.89 and 7.44 GB (Table 7.3). Mean and ML alone are not offered, because they were exceeded by more than a third of test occurrences on both datasets; they remain in the policy comparison view (Figure 8.2).
+
+**[Placeholder: screenshot of the risk-level recommendation view]**
+
+**Figure 8.1** Risk-based recommendation: recommended CPU and memory for one workload at the selected risk level, with the policy's test violation rate and waste
 
 **[Placeholder: screenshot of the policy comparison view]**
 
 **Figure 8.2** Policy comparison: violation rate and waste for each policy on one dataset
 
-Because the API depends only on published files, it can be deployed on any host that can read the results directory, without access to the cluster or the raw traces. The same interface could later support a shadow-mode deployment, in which recommendations are returned for new submissions and compared with their observed usage without changing the resources actually allocated (Section 9.3).
+Because the API depends only on published files, it can be deployed on any host that can read the results directory, without access to the cluster or the raw traces. For the same reason, results produced by later corrections or reruns appear in the frontend once they are published, without changes to the API or frontend. The same interface could later support a shadow-mode deployment, in which recommendations are returned for new submissions and compared with their observed usage without changing the resources actually allocated (Section 9.3).
