@@ -204,6 +204,8 @@ Note: BigQuery may shard into multiple files in the destination folder. We read 
 
 ## 7) Run evaluator locally (Issue #11/#12)
 
+> **Note:** `src/eval/evaluator_v0.py` and `src/baselines/baseline1_percentile_margin.py` have been removed from the repository. They are not part of the 295B pipeline. To rerun this 295A experiment, restore them from git history: `git checkout 0b07fed -- src/eval/evaluator_v0.py src/baselines/baseline1_percentile_margin.py`.
+
 ### 7.1 1-day
 
 ```bash

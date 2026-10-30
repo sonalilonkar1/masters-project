@@ -1,0 +1,207 @@
+{
+  "dataset": "google_subset_v1",
+  "notebook": "05_evaluateRecommendations.ipynb",
+  "role": "Tune and select final ML models, refit locked models, generate final ML predictions, and provide ML/P95 inputs for authoritative evaluation in N06.",
+  "test_metrics_computed": false,
+  "test_target_columns_dropped_on_load": true,
+  "hybrid_constructed": false,
+  "input_artifacts": {
+    "train": "train_occurrences.parquet",
+    "validation": "val_occurrences.parquet",
+    "test": "test_occurrences.parquet",
+    "n04_metadata": "metadata.json",
+    "n04_validation_comparison": "baseline_validation_comparison.csv"
+  },
+  "n04_selected_baseline_policy": "P99",
+  "baseline_min_runs": 1,
+  "hybrid_safeguard_input": "p95_* = rec_*_p95 from N04 at baseline_min_runs",
+  "feature_manifest": "ml_feature_manifest.json",
+  "training_rows": {
+    "cpu/train_period_only": 1672,
+    "cpu/all_available": 2010,
+    "memory/train_period_only": 1649,
+    "memory/all_available": 1983
+  },
+  "common_validation_occurrences": 329,
+  "random_state": 42,
+  "tuning": {
+    "candidate_models": [
+      "decision_tree",
+      "random_forest",
+      "xgboost"
+    ],
+    "param_grids": {
+      "decision_tree": {
+        "max_depth": [
+          4,
+          6,
+          8,
+          12
+        ],
+        "min_samples_leaf": [
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "random_forest": {
+        "n_estimators": [
+          300
+        ],
+        "max_depth": [
+          6,
+          10,
+          null
+        ],
+        "min_samples_leaf": [
+          2,
+          5,
+          10
+        ],
+        "max_features": [
+          1.0,
+          0.5,
+          "sqrt"
+        ]
+      },
+      "xgboost": {
+        "n_estimators": [
+          200,
+          500
+        ],
+        "max_depth": [
+          3,
+          5
+        ],
+        "learning_rate": [
+          0.03,
+          0.1
+        ],
+        "subsample": [
+          0.8
+        ],
+        "colsample_bytree": [
+          0.8,
+          1.0
+        ],
+        "min_child_weight": [
+          1,
+          5
+        ]
+      }
+    },
+    "fixed_params": {
+      "decision_tree": {
+        "random_state": 42
+      },
+      "random_forest": {
+        "random_state": 42,
+        "n_jobs": 1
+      },
+      "xgboost": {
+        "objective": "reg:squarederror",
+        "random_state": 42,
+        "n_jobs": 1
+      }
+    },
+    "cv": "purged_time_series_folds (TimeSeriesSplit, n_splits=5, timestamp-group preserving, training labels purged at each fold's validation start)",
+    "scoring": "RMSE on log1p(target)",
+    "robustness_check": "GroupKFold(n_splits=5) by recurrence_key; not used for decisions",
+    "best_params": {
+      "cpu/decision_tree": {
+        "max_depth": 4,
+        "min_samples_leaf": 40
+      },
+      "cpu/random_forest": {
+        "max_depth": 10,
+        "max_features": "sqrt",
+        "min_samples_leaf": 10,
+        "n_estimators": 300
+      },
+      "cpu/xgboost": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 3,
+        "min_child_weight": 1,
+        "n_estimators": 200,
+        "subsample": 0.8
+      },
+      "memory/decision_tree": {
+        "max_depth": 6,
+        "min_samples_leaf": 40
+      },
+      "memory/random_forest": {
+        "max_depth": 6,
+        "max_features": "sqrt",
+        "min_samples_leaf": 10,
+        "n_estimators": 300
+      },
+      "memory/xgboost": {
+        "colsample_bytree": 0.8,
+        "learning_rate": 0.03,
+        "max_depth": 3,
+        "min_child_weight": 1,
+        "n_estimators": 200,
+        "subsample": 0.8
+      }
+    }
+  },
+  "selection_rule": "Per resource, lowest validation RMSE on the log1p scale among tuned candidates trained on train-period labels; tie-breaker lower raw MAE.",
+  "selected_models": {
+    "cpu": "random_forest",
+    "memory": "random_forest"
+  },
+  "locked_params": {
+    "cpu": {
+      "random_state": 42,
+      "n_jobs": 1,
+      "max_depth": 10,
+      "max_features": "sqrt",
+      "min_samples_leaf": 10,
+      "n_estimators": 300
+    },
+    "memory": {
+      "random_state": 42,
+      "n_jobs": 1,
+      "max_depth": 6,
+      "max_features": "sqrt",
+      "min_samples_leaf": 10,
+      "n_estimators": 300
+    }
+  },
+  "refit": {
+    "data": "train + validation occurrences",
+    "label_cutoff": "target_next_occurrence_start_time_us <= val_end",
+    "rows": {
+      "cpu": 2108,
+      "memory": 2082
+    }
+  },
+  "locked_models": {
+    "cpu": "data/processed/google_subset_v1/n05_locked_models/cpu_random_forest.joblib",
+    "memory": "data/processed/google_subset_v1/n05_locked_models/memory_random_forest.joblib"
+  },
+  "prediction_columns": [
+    "ml_pred_cpu",
+    "ml_pred_memory",
+    "p95_cpu",
+    "p95_memory"
+  ],
+  "test_prediction_rows": 731,
+  "outputs": {
+    "feature_manifest": "ml_feature_manifest.json",
+    "tuning_results": "ml_tuning_results.csv",
+    "cv_summary": "ml_cv_summary.csv",
+    "validation_model_comparison": "ml_validation_model_comparison.csv",
+    "validation_predictions": "val_ml_predictions.parquet",
+    "test_predictions": "test_ml_predictions.parquet"
+  },
+  "versions": {
+    "python": "3.12.9",
+    "pandas": "2.3.3",
+    "numpy": "2.5.4",
+    "scikit-learn": "1.9.1",
+    "xgboost": "3.4.1"
+  }
+}

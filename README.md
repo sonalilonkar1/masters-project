@@ -151,8 +151,7 @@ The notebooks below are **(295A, historical)**; their results predate the 295B o
 - [docs/baseline_experiments/splitwise/](docs/baseline_experiments/splitwise/) - Splitwise baseline setup
 
 **Implementation**:
-- [src/baselines/](src/baselines/) - Baseline implementations
-  - `baseline1_percentile_margin.py` - Percentile margin baseline recommender
+- [src/baselines/](src/baselines/) - Baseline implementations (Alibaba GPU 2020 baselines; Google baselines are in Notebook 04)
 
 ---
 
@@ -164,7 +163,7 @@ The notebooks below are **(295A, historical)**; their results predate the 295B o
 
 **Evaluation Code**:
 - [src/evaluation/](src/evaluation/) - Shared evaluator and metrics used by the current 295B pipeline
-- [src/eval/evaluator_v0.py](src/eval/evaluator_v0.py) - Earlier v0 evaluator (295A, historical)
+- The earlier 295A evaluator (`src/eval/evaluator_v0.py`) and its baseline (`src/baselines/baseline1_percentile_margin.py`) were removed; they remain in git history at commit `0b07fed`
 
 **Evaluation Results (295A, historical)**: pre-refactor baseline results kept for background. Final 295B Google results will come only from the one-time final-test evaluation.
 
