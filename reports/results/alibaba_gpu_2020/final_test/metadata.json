@@ -1,0 +1,35 @@
+{
+  "any_resource_metric_reported": false,
+  "build": {
+    "code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+    "code_dirty": false,
+    "pandas_version": "2.3.3",
+    "pyarrow_version": "23.0.1",
+    "python_version": "3.12.9"
+  },
+  "changes_manifest": false,
+  "changes_selection": false,
+  "cpu_result_semantics": "average_usage",
+  "final_policies": [
+    "Request",
+    "Mean",
+    "P90",
+    "P95",
+    "P99",
+    "ML",
+    "Hybrid"
+  ],
+  "final_population_size": 44053,
+  "output_files": [
+    "final_test_policy_comparison.csv",
+    "final_test_sensitivity.csv",
+    "final_test_predictions.parquet",
+    "run_record.json",
+    "metadata.json"
+  ],
+  "phase": "pr2_final_test",
+  "primary_resource": "memory",
+  "reads_test": true,
+  "task": "task7_alibaba_gpu_2020_ml_hybrid",
+  "trains_models": false
+}

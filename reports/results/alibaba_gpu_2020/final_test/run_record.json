@@ -1,0 +1,66 @@
+{
+  "code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+  "code_dirty": false,
+  "decision_manifest_sha256": "dd6819bf7f04348ea5ad150c03249a0b952d2c8c07de971bfc76b92a9a3919ae",
+  "defect_rerun_reason": null,
+  "final_policies": [
+    "Request",
+    "Mean",
+    "P90",
+    "P95",
+    "P99",
+    "ML",
+    "Hybrid"
+  ],
+  "final_population_size": 44053,
+  "hybrid_safeguard_missing": {
+    "cpu": 0,
+    "memory": 0
+  },
+  "n_clipped_test": {
+    "cpu": 44,
+    "memory": 18
+  },
+  "phase": "pr2_final_test",
+  "pr1_build": {
+    "code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+    "code_dirty": false,
+    "pandas_version": "2.3.3",
+    "pyarrow_version": "23.0.1",
+    "python_version": "3.12.9"
+  },
+  "pr1_checksums": {
+    "candidate_models.csv": "98e395f25679ab0ca29ad0e2a1928005b3a9899d37ca1b007f270473773df5a8",
+    "cpu_model.joblib": "acf72de5be7db3ebba9520978544dc3ac2053d88c50038c4950fa7137133d308",
+    "decision_manifest.json": "dd6819bf7f04348ea5ad150c03249a0b952d2c8c07de971bfc76b92a9a3919ae",
+    "feature_order.json": "b9b74433fafbb4401284f76966d2fb134685f9a44e3bdde5c56adb526a34f925",
+    "memory_model.joblib": "421fc28c5522071b4b26a02fb026fe9090d26224bf7d1239ff56576791da2441",
+    "metadata.json": "e87635466ed3c2061df2ccabb4811fe7a218a86b117dcf7a057f2cd94f559557",
+    "model_selection.json": "2adbdc5ee1d6a4ad7da8cf5073e4a5b9d938c1f2089c66f2f8954b644240407e",
+    "validation_ml_hybrid_predictions.parquet": "d0ac0b5369d44d47737483178543aad16b5819c1951dffd21025cf3cd659db7d",
+    "validation_policy_comparison.csv": "d7da8596614920df469f5efdfe8f4e586e28f7c7365d9329ed038ca4ec3f2fef"
+  },
+  "preserved_previous_output": null,
+  "prior_runs": 0,
+  "run_fingerprint": "dd6819bf7f04348ea5ad150c03249a0b952d2c8c07de971bfc76b92a9a3919ae:fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+  "run_log": "data/processed/alibaba_gpu_v2020_ml/final_test_runs.jsonl",
+  "selected_baseline_policy": "P99",
+  "selected_min_runs": 10,
+  "selected_models": {
+    "cpu": "hist_gradient_boosting",
+    "memory": "hist_gradient_boosting"
+  },
+  "task": "task7_alibaba_gpu_2020_ml_hybrid",
+  "task4_test_sha256": "960796ce7a87f3f09216c7aac7fdde78fa7bc87577216470b6c104584e6842f3",
+  "task6_checksums": {
+    "baseline_selection.json": "6017104f487b10c2f5cd627e8b31cff46189d607d399b6e05149382af145ee75",
+    "history_statistics.parquet": "70212fe4285328d7126aefeb3252efddba083ab4ceff69367ed0d75967cc3556",
+    "metadata.json": "15a4b873e8ffdb9b6ead65f0823bc4cb98adff63f7e0a93e9dc5862e6a1fd6f8",
+    "recommendations_test.parquet": "a5a302e99dbfc17d81ba9fbb96aaad233f14457490507a4165026f7f411e64bd",
+    "recommendations_train.parquet": "b295bc6016459851202cadd48a19a93933fedbb4940f75796013b8be17367ab5",
+    "recommendations_validation.parquet": "a0c567300a1f5fb03c5520489b2328f4406c37b51ddafb97beda0d0f72377c13",
+    "sensitivity_validation.csv": "fd01cf2ca082cd60902180a450d9136c90936f21d08dd2884974d243aff7f1c0",
+    "validation_comparison.csv": "3b19cb6b5aff26fec79585064a44bb88d5658387433db255070490368460fb78"
+  },
+  "timestamp_utc": "2026-10-30T17:38:02Z"
+}
