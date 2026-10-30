@@ -2,9 +2,9 @@
 
 **Purpose:** one end-to-end description of TraceAdvisor, from setting up the repository to reading the final results. It explains how the parts fit together and links to the detailed documents rather than repeating them.
 
-**Status (29 Oct 2026):**
+**Status (30 Oct 2026):**
 - **Google subset:** pipeline complete, including its one-time final test.
-- **Alibaba GPU 2020:** Tasks 2–6 merged; Task 7 (ML and Hybrid) in progress.
+- **Alibaba GPU 2020:** Tasks 2–7 merged and run, including the one-time final test (30 Oct 2026, `main` at `fe38ea0`).
 - **Google thin adapter (Task 13):** described here as designed; implementation is scheduled after the report. It maps the existing Google artifacts and changes no Google result (§6.6).
 
 Diagrams use Mermaid, which GitHub renders directly.
@@ -148,7 +148,7 @@ flowchart TD
 | Adapter | Identity, units, eligibility, aggregation, validity, rejected output, provenance | Splits, targets, history, recommendations, metrics | `src/adapters/`; Google Notebooks 02–03 build the occurrences that the Google adapter maps |
 | Canonical schema | Field names, vocabularies, profiles, validation | Dataset-specific logic | `src/canonical/schema.py` |
 | Target builder | `split`, history, `actual_*`, target statuses | Reading raw source columns | `src/features/target_builder.py`; Google Notebook 04 |
-| Policies | Baseline, ML and Hybrid recommendations | Scoring | `src/baselines/`, Task 7, `src/policies/hybrid.py`; Notebooks 04–06 |
+| Policies | Baseline, ML and Hybrid recommendations | Scoring | `src/baselines/`, `src/models/alibaba_gpu_2020_*`, `src/policies/hybrid.py`; Notebooks 04–06 |
 | Evaluator | Metrics on canonical names, profile-driven reporting | Choosing or ranking policies | `src/evaluation/` |
 | Selection and lock | Choosing baseline, `min_runs`, models; freezing decisions | Reading test targets before the lock | Task 6 and 7 scripts; Notebooks 04–06 |
 
@@ -435,7 +435,7 @@ flowchart TD
     T4 --> TT["alibaba_gpu_v2020_targets/<br/>train 323,329, val 69,286, test 69,285"]
     TT --> T6["Task 6 Baselines<br/>20 candidates, memory-first,<br/>selection record before test"]
     T6 --> B["alibaba_gpu_v2020_baselines/<br/>P99 at min_runs = 10, history stats,<br/>locked recommendations"]
-    TT --> T7["Task 7 ML and Hybrid<br/>features, 5 regressors per resource,<br/>Hybrid, manifest, final test"]
+    TT --> T7["Task 7 ML and Hybrid<br/>HistGradientBoosting for CPU and memory,<br/>Hybrid, manifest, one-time final test"]
     B --> T7
     T7 --> RES["reports/results/alibaba_gpu_2020"]
     T5["Task 5 Shared evaluator<br/>Alibaba profile rules"] -.-> T6
@@ -450,7 +450,8 @@ flowchart TD
 | 4 Splits and targets | Chronological 70/15/15 split of eligible roles by job submission; history counts; split-isolated next-occurrence targets | `scripts/build_alibaba_gpu_2020_targets.py` | `alibaba_gpu_v2020_targets/` |
 | 5 Evaluator | Profile-aware evaluator (memory primary, CPU average-usage label, no any-resource metric) | Used by Tasks 6–7 | — |
 | 6 Baselines | Point-in-time Mean, P90, P95, P99; 20-candidate validation comparison; selection; locked recommendations; sensitivity | `scripts/run_alibaba_gpu_2020_baselines.py` | `alibaba_gpu_v2020_baselines/` |
-| 7 ML and Hybrid (in progress) | Features from requests, role descriptors, history counts and Task 6 statistics with missing-value flags; five regressors per resource; Hybrid; refit; decision manifest; then a one-time final test | `scripts/run_alibaba_gpu_2020_ml.py` (PR 1) | `alibaba_gpu_v2020_ml/` |
+| 7 ML and Hybrid | Features from requests, role descriptors, history counts and Task 6 statistics with missing-value flags; five candidates per resource (mean `DummyRegressor` as a non-selectable floor); Hybrid; refit; decision manifest | `scripts/run_alibaba_gpu_2020_ml.py` (PR #98) | `alibaba_gpu_v2020_ml/` |
+| 7 Final test | Verifies the locked manifest (clean build at the current commit) and all checksums, logs the run, then scores the seven policies once on test, with sensitivity cuts | `scripts/run_alibaba_gpu_2020_final_test.py` (PR #102) | `alibaba_gpu_v2020_final_test/` |
 | 8 Final verification | Independent check of Tasks 3–7 outputs and leakage controls | — | — |
 
 Every Alibaba script verifies its inputs' `SHA256SUMS`, builds in a staging folder and publishes only after all checks pass. Each output folder has its own `metadata.json` (input checksums, code commit, library versions) and `SHA256SUMS`.
@@ -529,14 +530,14 @@ All selections use validation only. Recorded in `canonical_schema_design_decisio
 | Baseline candidates | Request, Mean, P90, P95, P99 at `min_runs` 1, 3, 5, 10 | Same, but Request is reported only and cannot be selected |
 | Baseline ranking | Any-resource violation, worst single-resource violation, CPU plus memory violation, CPU waste, memory waste, lower `min_runs` | Memory violation, memory waste, CPU violation, CPU waste, `min_runs`, policy |
 | Selected baseline | P99, `min_runs = 1` | P99, `min_runs = 10` |
-| ML candidates | Decision Tree, Random Forest, XGBoost (tuned) | `DummyRegressor`, Decision Tree, Random Forest, HistGradientBoosting, XGBoost |
+| ML candidates | Decision Tree, Random Forest, XGBoost (tuned); median reference | Decision Tree, Random Forest, HistGradientBoosting, XGBoost (one fixed setting each); mean `DummyRegressor` reference, never selected |
 | ML ranking | Validation RMSE on the `log1p` scale | RMSE, MAE, violation, shortfall, model name |
-| Selected ML | Random Forest for CPU and memory | Task 7 (in progress) |
+| Selected ML | Random Forest for CPU and memory | HistGradientBoosting for CPU and memory |
 | Hybrid | `max(ML, P95)`; `max(ML, P99)` reported as a supplement | `max(ML, selected baseline)` |
 
 **Why Request is not selectable for Alibaba.** As the Hybrid baseline it would stop Hybrid from ever recommending less than the current request, and its identical rows would fix `min_runs` at 1 instead of choosing it on validation. When it was selectable, it won on memory violation (4.74% against 5.58%) with 2.5 times the memory waste.
 
-**Why ML selection is accuracy-first.** The ML model's job is to predict usage accurately; the Hybrid rule is what keeps violations low. Ranking by violation first rewards models that over-predict and selects the mean `DummyRegressor`.
+**Why ML selection is accuracy-first.** The ML model's job is to predict usage accurately; the Hybrid rule is what keeps violations low. Ranking by violation first rewards models that over-predict and selects the mean `DummyRegressor`: on Alibaba validation it has the lowest violation rate of all candidates (24.79% memory, 11.97% CPU) and no skill (R² below zero).
 
 ---
 
@@ -568,8 +569,8 @@ sequenceDiagram
 | Point-in-time history | Only occurrences completed before the current start |
 | Pre-execution features | Only requests, role descriptors, history counts and history statistics; targets, current-run observations, identifiers and split labels are excluded and checked (`validate_features` with a dataset-specific exclusion list) |
 | Validation-only selection | Baselines, `min_runs`, models and Hybrid are chosen without test data |
-| Lock before test | Alibaba Task 6 writes its selection record before opening the test table and reads test with an explicit column list; Google Notebook 06 freezes a decision manifest (decisions, SHA-256 of every input, the code commit and the notebook's code) |
-| One-time final test | Scored once; the notebook and scripts refuse to overwrite a final result |
+| Lock before test | Alibaba Task 6 writes its selection record before opening the test table and reads test with an explicit column list; Alibaba Task 7 writes its decision manifest (decisions, input checksums, model hashes, code commit) without reading test; Google Notebook 06 freezes a decision manifest (decisions, SHA-256 of every input, the code commit and the notebook's code) |
+| One-time final test | Scored once; Google Notebook 06 refuses if a final result exists; the Alibaba final test logs each run in `final_test_runs.jsonl` before reading test and refuses a second run for the same manifest, whatever the output folder, and requires the manifest to be built clean at the current commit |
 | Input integrity | Every stage re-checks its inputs' `SHA256SUMS` |
 | Atomic outputs | Built in a staging folder, published only after all checks pass |
 | Environment | One locked environment for all final runs (§2.1); each run records its library versions and code commit |
@@ -601,11 +602,11 @@ TraceAdvisor's question, how much to request for the next run of a recurring job
 | Dataset | Location | Status |
 |---|---|---|
 | Google subset | `reports/results/google_subset/` (`googlepipeline_finalrun.md`, `tables/`, decision manifest) | Final, including the one-time test |
-| Alibaba GPU 2020 | `reports/results/alibaba_gpu_2020/` (`alibaba_gpu_2020_results_tasks1_6.md`) | Validation results through Task 6; Task 7 pending |
+| Alibaba GPU 2020 | `reports/results/alibaba_gpu_2020/` (`alibaba_gpu_2020_results_and_analysis.md`, `alibaba_gpu_2020_results_tasks1_6.md`, per-stage outputs) | Final, including the one-time test |
 
 **Google final test (259 occurrences):** Hybrid has the lowest any-resource violation rate (12.36%) and memory violation rate (7.72%), at P95's waste. P99 has the lowest CPU violation rate (9.27%). Request violates on 54.47% of occurrences. ML alone wastes the least but violates on 32.82%.
 
-**Alibaba validation (42,069 rows):** P99 at `min_runs = 10` gives 5.58% memory violations with 8.94 GB average memory waste, against Request's 4.74% with 22.26 GB.
+**Alibaba final test (44,053 rows):** Hybrid (`max(ML, P99 at min_runs = 10)`) has the lowest violation rate on both resources: 3.15% memory and 3.77% CPU, against 3.44% and 6.45% for P99, at almost the same memory waste (8.71 GB against 8.67 GB). Request ties on memory violations (3.16%) with 22.31 GB waste. ML alone wastes the least (1.33 GB) but violates on 44.77% of memory targets.
 
 ---
 
@@ -616,5 +617,6 @@ TraceAdvisor's question, how much to request for the next run of a recurring job
 - **Alibaba selection bias:** only 36.8% of role-occurrences are eligible (completed, fully observed); 98% of evaluated roles are single-instance; telemetry covers about day 19 to day 68.9.
 - **Google sample size:** the Kaggle sample covers 31 days; 329 validation and 259 test occurrences.
 - **Units:** Google uses normalized units, so waste is not in cores or GB; datasets are not compared numerically.
+- **Alibaba ML tuning:** one fixed setting per model and no hyperparameter search; ML and Hybrid validation results are optimistic because the same split selected the models.
 - **GPU:** GPU fields are kept but not evaluated.
 - **Azure experiments:** run on samples (one CPU-readings file; short LLM traces) and not on the TraceAdvisor pipeline, so they are context, not results.

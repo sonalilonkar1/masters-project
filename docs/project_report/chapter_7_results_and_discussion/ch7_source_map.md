@@ -3,7 +3,7 @@
 **Purpose:** for each Chapter 7 section, the result files and the numbers to report. Chapter 7 presents **what the evaluation found** and interprets it. Methods are in Chapters 4–6; refer to them.
 
 **Scope rules**
-- Google results are final (one-time test run). Alibaba validation results through Task 6 exist; Alibaba ML, Hybrid and final test are **[Task 7]**: write the structure and the comparison as implemented, leave numbers as *pending*, and add every such sentence to `pending_checks_after_task7.md` when the chapter is written.
+- Both datasets are final (one-time test run each). Primary sources: `reports/results/google_subset/google_subset_results_and_analysis.md` and `reports/results/alibaba_gpu_2020/alibaba_gpu_2020_results_and_analysis.md`, and the CSVs they cite.
 - Report test results as the headline and validation results for comparison; never tune or select on test.
 - Units: Google CPU in normalized compute units and memory normalized; Alibaba CPU in `percent_of_vcpu` (lifetime average, labelled average-usage sizing) and memory in GB. Do not compare numbers across datasets.
 - Small populations: Google 329 validation and 259 test occurrences; one occurrence moves a rate by about 0.3–0.4 points.
@@ -50,9 +50,12 @@
 |---|---|
 | Baseline validation (Task 6) | `reports/results/alibaba_gpu_2020/alibaba_gpu_2020_results_tasks1_6.md` §5: P99 at `min_runs = 10` selected; memory violation 5.58%, memory waste 8.94 GB; Request 4.74% / 22.26 GB; CPU violation P99 6.62% vs Request 15.52% |
 | Sensitivity (Task 6) | Same report §5.5: same-second successors (no change), multi-instance roles (889 rows; P99 beats Request on memory violation, 10.91 vs 13.39), recurrence-weighted |
-| **[Task 7]** ML and Hybrid validation | `alibaba_gpu_v2020_ml/validation_policy_comparison.csv`: seven policies on 42,069 rows: *pending* |
-| **[Task 7]** Final test | PR2 final-test comparison: *pending* |
-| **[Task 7]** Points to make | Whether Hybrid lowers memory violations below P99@10 and at what waste; how ML alone compares; whether the Google pattern (Hybrid best on violations at safeguard-level waste) holds on a second dataset |
+| ML selection | `alibaba_gpu_2020/ml/candidate_models.csv`: HistGradientBoosting for CPU (RMSE 412.94, R² 0.758) and memory (RMSE 8.98 GB, R² 0.529); dummy has the lowest violation rate (CPU 11.97%, memory 24.79%) and is not selectable |
+| ML and Hybrid validation | `alibaba_gpu_2020/ml/validation_policy_comparison.csv`, 42,069 rows: Hybrid CPU / memory violation 4.60 / 5.15% (waste 305.62 / 9.14 GB); ML 41.91 / 47.76% (86.50 / 1.90 GB); P99 6.62 / 5.58%; Request 15.52 / 4.74% (22.26 GB). Optimistic for ML and Hybrid (same split selected the models) |
+| Final test | `alibaba_gpu_2020/final_test/final_test_policy_comparison.csv`, 44,053 rows (CPU 44,045): Hybrid CPU / memory violation 3.77 / 3.15% (waste 326.82 / 8.71 GB; shortfall 20.54 / 0.20); P99 6.45 / 3.44% (306.44 / 8.67); P95 9.10 / 6.04%; P90 12.41 / 9.89%; Mean 41.83 / 37.02%; ML 47.37 / 44.77% (72.01 / 1.33); Request 16.71 / 3.16% (419.97 / 22.31) |
+| Final-test sensitivity | `alibaba_gpu_2020/final_test/final_test_sensitivity.csv`: same-second excluded (43,802) and only (251), multi-instance (595: Hybrid memory 5.71% vs P99 8.07%), group-weighted (Hybrid CPU 4.08% vs P99 11.38%) |
+| Points to make | Hybrid lowers memory violations below P99@10 (3.44 → 3.15%) at 0.04 GB more waste and CPU violations by 42% (6.45 → 3.77%) at 6.7% more CPU waste; Request ties Hybrid on memory (3.16%) at 2.6× the waste; ML alone under-provisions about every second run; the Google pattern holds on a second dataset. On validation, Request beats Hybrid on memory (4.74 vs 5.15%) |
+| Figures | `alibaba_gpu_2020/figures/fig_alibaba_{baseline_candidates,ml_candidates,test_tradeoff,val_vs_test}.png`; `google_subset/figures/fig_google_{baseline_candidates,test_tradeoff,val_vs_test}.png` (regenerate with `reports/results/make_results_figures.py`) |
 | Labels | CPU results are average-usage sizing; no combined CPU-or-memory metric for Alibaba |
 
 ## 7.3 Discussion of Findings
@@ -60,9 +63,9 @@
 | Topic | Source |
 |---|---|
 | Violation-waste trade-off across percentiles | 7.1.1, 7.2 tables |
-| Value of the Hybrid safeguard | Google test: Hybrid vs P95 and P99; **[Task 7]** Alibaba |
+| Value of the Hybrid safeguard | Google test: Hybrid vs P95 and P99; Alibaba test: Hybrid vs P99 and Request |
 | Requests | Google requests often too low (Request violates 54.47%); Alibaba memory requests generous (median request ≈ 7× peak, utilization 0.26) |
-| Cold starts and `min_runs` | Chapter 5 §5.2.3 (Google 26 / 28 validation rows from the request; Alibaba 25.7% at `min_runs = 10`) |
+| Cold starts and `min_runs` | Chapter 5 §5.2.3 (Google 26 / 28 validation rows from the request; Alibaba 25.7% at `min_runs = 10`). Larger `min_runs` raises violations on Google (P99 21.95 → 30.98%, low requests) and lowers them on Alibaba (P99 memory 8.74 → 5.58%, generous requests) |
 | Dataset differences | Table 4.1; different units and semantics, so conclusions are compared qualitatively, not numerically |
 | Limitations to flag (details in Ch9) | Google cross-split targets; small Google populations; Alibaba average CPU and selection bias (36.8% eligible) |
 
@@ -76,5 +79,5 @@
 | 2 | Hybrid ≤ safeguard | Holds on Google test (12.36 ≤ 17.37) | State as an observed property consistent with §4.2.3 |
 | 3 | 7.1.3 | No feature-importance output exists | Team decision before writing |
 | 4 | 7.2 title | "Cross-Platform Validation Results" means the Alibaba GPU 2020 results | Consider retitling to "Alibaba GPU 2020 Results" in the table of contents |
-| 5 | **[Task 7]** | All Alibaba ML, Hybrid and final-test numbers | *pending*; add to the checklist |
-| 6 | Figures | None exist for the new results | Create from the committed tables when writing (for example violation vs waste per policy) |
+| 5 | Task 7 | All Alibaba ML, Hybrid and final-test numbers | Filled above from `reports/results/alibaba_gpu_2020/` (30 Oct 2026) |
+| 6 | Figures | Seven figures in `reports/results/*/figures/`, generated from the committed CSVs | Use them, or regenerate with the script |

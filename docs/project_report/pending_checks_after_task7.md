@@ -4,9 +4,7 @@
 
 **What it covers:** every sentence, table cell and supporting document in `docs/project_report/` that depends on Task 7. Nothing else. The Google thin adapter, the REST API and the web frontend are described in the report as implemented and are **not** part of this list.
 
-**Task 7 status (29 Oct 2026):**
-- **PR1, PR #99** (branch `task7-pr1-continue`, head `d446771`): candidates, selection, Hybrid validation, refit, locked decision manifest. Open, not merged. Never reads the test set.
-- **PR2:** one-time final test. Not started.
+**Status: completed 30 Oct 2026.** Task 7 PR1 (PR #98, which absorbed PR #99) and PR2 (PR #102) were merged; the artifacts were produced from a clean checkout of `main` at `fe38ea0` and their small files committed to `reports/results/alibaba_gpu_2020/` (PR #103). Every row below is marked ✅ (no change needed) or ✏️ (changed), and the Step 6 check returns no output. The file is kept as the record of what was checked.
 
 **Report files referred to below:**
 
@@ -38,14 +36,14 @@ Task 7 is still being developed, and PR #99 may change before it merges. The rep
 
 | # | Question | Where to look in the merged code | Answer (fill in) | Rows in Step 3 that depend on it |
 |---|---|---|---|---|
-| D1 | In what order are ML models ranked on validation? (Accuracy first, violation first, or other) | `MODEL_SELECTION_ORDER` in `src/models/alibaba_gpu_2020_select.py`; `model_selection_order` in `decision_manifest.json` | | C11, C41 |
-| D2 | Which candidate models are used, and which constant predictor (mean, median, both)? | `build_candidate_models()` in `src/models/alibaba_gpu_2020_candidates.py`; `candidate_models.csv` | | C5, C6, C7, C10 |
-| D3 | What is the Hybrid safeguard, and which policy and `min_runs` does it use? | `HYBRID_SAFEGUARD_COL` in `alibaba_gpu_2020_select.py`; `hybrid_rule`, `hybrid_safeguard` in the manifest; `baseline_selection.json` | | C31, C42 |
-| D4 | Is there a hyperparameter grid or search, or one fixed setting per model? | `build_candidate_models()` and any grid or search code; `model_selection.json` → `hyperparameters` | | C8, C9, C10 |
-| D5 | Can the constant predictor be selected, or is it only a reference? | `compare_and_select()` in `alibaba_gpu_2020_select.py` | | C12 |
-| D6 | What is the exact feature list, and how are categorical and missing values handled? | `ALIBABA_GPU_2020_FEATURES` in `src/features/alibaba_gpu_2020_feature_config.py`; `build_feature_matrices()` in `src/features/alibaba_gpu_2020_ml_prep.py`; `feature_list` in the manifest | | C1, C2, C3, C4, C23, C25 |
-| D7 | What does the final test check before reading test targets, and does it refuse a second run? | The PR2 final-test script | | C17, C19, C32, C15 |
-| D8 | Are the rows where Hybrid falls back to ML (missing safeguard) counted in an output file? | `metadata.json` or `validation_policy_comparison.csv` in `alibaba_gpu_v2020_ml/` | | C42, Ch5 Table 5.4 |
+| D1 | In what order are ML models ranked on validation? (Accuracy first, violation first, or other) | `MODEL_SELECTION_ORDER` in `src/models/alibaba_gpu_2020_select.py`; `model_selection_order` in `decision_manifest.json` | Accuracy first: `rmse`, `mae`, `violation_pct`, `average_shortfall`, `model` (manifest `model_selection_order`) | C11, C41 |
+| D2 | Which candidate models are used, and which constant predictor (mean, median, both)? | `build_candidate_models()` in `src/models/alibaba_gpu_2020_candidates.py`; `candidate_models.csv` | Decision tree (defaults), random forest (100 trees), `HistGradientBoostingRegressor` (defaults), XGBoost (300 trees, depth 6, learning rate 0.05, subsampling 0.8; required); constant predictor is the mean `DummyRegressor` only | C5, C6, C7, C10 |
+| D3 | What is the Hybrid safeguard, and which policy and `min_runs` does it use? | `HYBRID_SAFEGUARD_COL` in `alibaba_gpu_2020_select.py`; `hybrid_rule`, `hybrid_safeguard` in the manifest; `baseline_selection.json` | `max(ml_prediction, selected_task6_baseline)` with `rec_*_selected`: P99 at `min_runs = 10` (`baseline_selection.json`) | C31, C42 |
+| D4 | Is there a hyperparameter grid or search, or one fixed setting per model? | `build_candidate_models()` and any grid or search code; `model_selection.json` → `hyperparameters` | No grid; one fixed setting per model | C8, C9, C10 |
+| D5 | Can the constant predictor be selected, or is it only a reference? | `compare_and_select()` in `alibaba_gpu_2020_select.py` | Reference only: `NON_SELECTABLE_MODELS = {dummy_mean}` is excluded from the sort (manifest `non_selectable_models`) | C12 |
+| D6 | What is the exact feature list, and how are categorical and missing values handled? | `ALIBABA_GPU_2020_FEATURES` in `src/features/alibaba_gpu_2020_feature_config.py`; `build_feature_matrices()` in `src/features/alibaba_gpu_2020_ml_prep.py`; `feature_list` in the manifest | 25 features: CPU, memory and GPU requests, `inst_num`, `gpu_type`, `gpu_type_spec`, `workload`, CPU and memory history counts, 8 history statistics, 8 missing indicators; categoricals one-hot with a NaN column; zero fill; 43 columns (`feature_order.json`) | C1, C2, C3, C4, C23, C25 |
+| D7 | What does the final test check before reading test targets, and does it refuse a second run? | The PR2 final-test script | Checksums of ML, baseline and target folders against the manifest (including the test table hash), manifest fields, PR1 built clean at the current commit, run log; logs the run before reading test; a second run for the same manifest is refused whatever `--out-dir`; defect rerun only with `--defect-rerun-reason` | C17, C19, C32, C15 |
+| D8 | Are the rows where Hybrid falls back to ML (missing safeguard) counted in an output file? | `metadata.json` or `validation_policy_comparison.csv` in `alibaba_gpu_v2020_ml/` | Yes: `metadata.json` → `hybrid_safeguard_missing_validation` (0 / 0) and per-row flags in `validation_ml_hybrid_predictions.parquet`; test in `run_record.json` → `hybrid_safeguard_missing` (0 / 0) | C42, Ch5 Table 5.4 |
 
 **Last seen in PR #99 (29 Oct 2026, for reference only; may have changed):**
 - D1: accuracy first (`rmse, mae, violation_pct, average_shortfall, model`).
@@ -91,7 +89,7 @@ python3 scripts/run_alibaba_gpu_2020_ml.py                                      
 
 ## Step 3: Sentences to edit, by chapter
 
-**Chapters 6–9 are not written yet.** Their source maps (`chapter_6_…/ch6_source_map.md` to `chapter_9_…/ch9_source_map.md`) mark every Task 7-dependent item with **[Task 7]**. When a chapter is written, add its Task 7 sentences to this step as a new table, in the same format as below. If Task 7 finishes first, fill the **[Task 7]** items in those source maps from the Step 1 answers and the Step 2 artifacts before the chapter is written.
+**Chapters 6–9 are not written yet.** Their source maps (`chapter_6_…/ch6_source_map.md` to `chapter_9_…/ch9_source_map.md`) marked every Task 7-dependent item with **[Task 7]**; these were filled from the final artifacts on 30 Oct 2026. When a chapter is written, add its Task 7 sentences to this step as a new table, in the same format as below. If Task 7 finishes first, fill the **[Task 7]** items in those source maps from the Step 1 answers and the Step 2 artifacts before the chapter is written.
 
 **"Condition"** says which Step 1 answer decides the edit. Where a row gives two versions ("If no grid … If a grid was added …"), use the one that matches your Step 1 answer; if the answer is something else, write the sentence to describe what the code does. **Confirm** rows were written from PR #99 on 29 Oct; check them against your Step 1 answers and rewrite them if the merged code differs.
 
@@ -99,56 +97,56 @@ python3 scripts/run_alibaba_gpu_2020_ml.py                                      
 
 | # | Section | Find (quoted) | Do | Condition | Done |
 |---|---|---|---|---|---|
-| C17 | 2.1 Goal | "Seven policies are produced and compared: the user's current request; …" | Confirm the final test scores all seven policies on Alibaba | PR2 | |
+| C17 | 2.1 Goal | "Seven policies are produced and compared: the user's current request; …" | Confirm the final test scores all seven policies on Alibaba | PR2 | ✅ |
 | C18 | 2.2.4 Recommendation Engine | "It fits the baselines and models on the training set, selects among them on the validation set only, …" | Replace with: "It computes the baselines from each row's point-in-time history and fits the models on the training set, selects among them on the validation set only, and writes the chosen configuration to a decision manifest that is locked before the test set is read." (Baselines are not fitted; this is a known error, fix it even before Task 7.) | None | ✏️ Applied 29 Oct |
-| C19 | 2.2.5 Shared Metrics and Evaluation Framework | "After the decisions are locked, it scores the test set once." | Confirm PR2 scores the test set once and refuses a second run; otherwise describe what it does | PR2 | |
-| C20 | Figure 2.1 | Flow: model fitting → validation-only selection → locked decision manifest → one-time test replay | Confirm | PR2 | |
+| C19 | 2.2.5 Shared Metrics and Evaluation Framework | "After the decisions are locked, it scores the test set once." | Confirm PR2 scores the test set once and refuses a second run; otherwise describe what it does | PR2 | ✅ |
+| C20 | Figure 2.1 | Flow: model fitting → validation-only selection → locked decision manifest → one-time test replay | Confirm | PR2 | ✅ |
 
 ### Chapter 3
 
 | # | Section | Find (quoted) | Do | Condition | Done |
 |---|---|---|---|---|---|
-| C21 | 3.1 | "The Alibaba pipeline is a set of command-line scripts, one per stage, that verify their inputs, build their outputs and publish them only when all checks pass; …" | Confirm for `run_alibaba_gpu_2020_ml.py` and the PR2 script | PR2 | |
-| C22 | Table 3.1 | Library versions | Confirm `requirements-lock.txt` is unchanged; if PR2 adds or upgrades a package, update the row | PR2 | |
-| C23 | 3.2 | "Tree-based models were chosen because the features are tabular, mix requests, counts and history statistics on very different scales, …" | Replace "mix requests, counts and history statistics on very different scales" with "mix requests, counts, history statistics and, on Alibaba GPU 2020, categorical job descriptors, on very different scales" | D6 | |
-| C5 | 3.2 | "(the median on Google; the mean on Alibaba GPU 2020)" | Confirm (already updated) | D2 | |
-| C8 | 3.2 | "Each model family is tuned over a small grid of hyperparameters, and the tuning method respects time order on both datasets." and "On Alibaba GPU 2020, which has far more rows, every configuration is fitted on the training set and scored directly on the validation set, without a cross-validation search." | **If no grid:** replace the first with "On Google, each model family is tuned over a small grid of hyperparameters, and the tuning respects time order." and the second with "On Alibaba GPU 2020, which has far more rows, each model family is used with one fixed configuration, fitted on the training set and scored on the validation set." **If a grid was added:** confirm | D4 | |
-| C24 | 3.2 | "Fitted models are saved with joblib so that the locked models can be reloaded for the final test without refitting." | Confirm PR2 reloads `cpu_model.joblib` and `memory_model.joblib` | PR2 | |
+| C21 | 3.1 | "The Alibaba pipeline is a set of command-line scripts, one per stage, that verify their inputs, build their outputs and publish them only when all checks pass; …" | Confirm for `run_alibaba_gpu_2020_ml.py` and the PR2 script | PR2 | ✅ |
+| C22 | Table 3.1 | Library versions | Confirm `requirements-lock.txt` is unchanged; if PR2 adds or upgrades a package, update the row | PR2 | ✅ |
+| C23 | 3.2 | "Tree-based models were chosen because the features are tabular, mix requests, counts and history statistics on very different scales, …" | Replace "mix requests, counts and history statistics on very different scales" with "mix requests, counts, history statistics and, on Alibaba GPU 2020, categorical job descriptors, on very different scales" | D6 | ✏️ |
+| C5 | 3.2 | "(the median on Google; the mean on Alibaba GPU 2020)" | Confirm (already updated) | D2 | ✅ |
+| C8 | 3.2 | "Each model family is tuned over a small grid of hyperparameters, and the tuning method respects time order on both datasets." and "On Alibaba GPU 2020, which has far more rows, every configuration is fitted on the training set and scored directly on the validation set, without a cross-validation search." | **If no grid:** replace the first with "On Google, each model family is tuned over a small grid of hyperparameters, and the tuning respects time order." and the second with "On Alibaba GPU 2020, which has far more rows, each model family is used with one fixed configuration, fitted on the training set and scored on the validation set." **If a grid was added:** confirm | D4 | ✏️ |
+| C24 | 3.2 | "Fitted models are saved with joblib so that the locked models can be reloaded for the final test without refitting." | Confirm PR2 reloads `cpu_model.joblib` and `memory_model.joblib` | PR2 | ✅ |
 
 ### Chapter 4
 
 | # | Section | Find (quoted) | Do | Condition | Done |
 |---|---|---|---|---|---|
-| C1 | 4.2.2, second paragraph (features) | "On Alibaba, the features are the CPU, memory and GPU requests, the number of instances, the GPU type and the workload label recorded with the job, …" | Confirm against `ALIBABA_GPU_2020_FEATURES` (already updated) | D6 | |
-| C2 | 4.2.2, second paragraph (features) | "…while the requests, counts and job descriptors add information the baselines ignore." | Confirm (already updated) | D6 | |
-| C25 | 4.2.2, third paragraph (model families) | "The data are tabular, the features mix requests, counts and statistics on very different scales, …" | Replace "the features mix requests, counts and statistics on very different scales" with "the features mix requests, counts, statistics and categorical job descriptors on very different scales" | D6 | |
-| C12 | 4.2.2, third paragraph (model families) | "A constant predictor always predicts one value from the training data. It has no predictive skill and is the floor that a selected model must beat; …" | **If D5 = reference only:** confirm. **If it can be selected:** add after the quoted sentence: "On Alibaba GPU 2020 it is ranked with the other candidates and could be selected." | D5 | |
-| C26 | 4.2.2, fourth paragraph (target transformation) | "Negative predictions are clipped to zero on both datasets." | Confirm | — | |
-| C27 | 4.2.2, fifth paragraph (missing features) | "On Alibaba, a missing-value indicator is added for each history statistic before the statistic is filled with zero, …" | Confirm | — | |
-| C28 | 4.2.2, sixth paragraph (training rows) | "On Alibaba, the CPU model is trained only on rows with an available CPU target and the memory model only on rows with an available memory target, …" | Confirm | — | |
-| C9 | 4.2.2, seventh paragraph (tuning) | "On Alibaba, which has far more rows, every configuration in a small grid is fitted on the training set and scored on the validation set directly, which preserves time order at much lower cost. Small, explicit grids were preferred to adaptive search methods for reproducibility: every evaluated configuration is recorded." | **If no grid:** replace with "On Alibaba, which has far more rows, each model family is used with one fixed configuration, fitted on the training set and scored on the validation set, which preserves time order. On Google, small, explicit grids were preferred to adaptive search methods for reproducibility: every evaluated configuration is recorded." Add the absence of Alibaba tuning to the Chapter 9 limitations. **If a grid was added:** confirm | D4 | |
-| C11 | 4.2.2, eighth paragraph (model selection) | "On Alibaba, the selection order is recorded with the selected models in the pipeline's selection record." | **If D1 is accuracy first:** replace with "On Alibaba, the selected model is the candidate with the lowest validation root mean squared error, followed by mean absolute error, with violation rate and average shortfall used only to break remaining ties." **If violation first:** describe that order and remove the following sentence about rejecting violation-first selection | D1 | |
-| C29 | 4.2.2, last paragraph (final refit) | "After selection, the chosen model for each resource is refitted on the training and validation sets together." and "Hybrid is validated using predictions from the models fitted on training data only, …" | Confirm | — | |
-| C30 | 4.2.3, first paragraph (combination rule) | "If the baseline is unavailable for a row, Hybrid uses the ML prediction and the row is flagged." | Confirm | — | |
-| C31 | 4.2.3, third paragraph (safeguard baseline) | "Alibaba uses the baseline selected on validation in Section 4.2.1, at its selected `min_runs`, …" | Confirm | D3 | |
-| C32 | 4.3, paragraph before Figure 4.2 (lock and final test) | "The final test reads the test targets for the first time, scores all seven policies once and writes a run record; a second run is refused. A rerun is permitted only to correct a documented code defect, …" | Confirm against PR2; if PR2 does not refuse a second run or write a run record, rewrite the sentence to describe what it does | PR2 | |
-| C33 | 4.4 Figure 4.3 | Published artifacts: "Baseline and ML outputs", "Decision manifest", "Evaluation results" | Confirm | PR2 | |
-| C16 | 4.4, paragraph after Figure 4.3 (integrity) | "On Alibaba GPU 2020, every published output folder contains a checksum file …" | Confirm the PR2 output folder has a `SHA256SUMS` file | PR2 | |
+| C1 | 4.2.2, second paragraph (features) | "On Alibaba, the features are the CPU, memory and GPU requests, the number of instances, the GPU type and the workload label recorded with the job, …" | Confirm against `ALIBABA_GPU_2020_FEATURES` (already updated) | D6 | ✏️ |
+| C2 | 4.2.2, second paragraph (features) | "…while the requests, counts and job descriptors add information the baselines ignore." | Confirm (already updated) | D6 | ✅ |
+| C25 | 4.2.2, third paragraph (model families) | "The data are tabular, the features mix requests, counts and statistics on very different scales, …" | Replace "the features mix requests, counts and statistics on very different scales" with "the features mix requests, counts, statistics and categorical job descriptors on very different scales" | D6 | ✏️ |
+| C12 | 4.2.2, third paragraph (model families) | "A constant predictor always predicts one value from the training data. It has no predictive skill and is the floor that a selected model must beat; …" | **If D5 = reference only:** confirm. **If it can be selected:** add after the quoted sentence: "On Alibaba GPU 2020 it is ranked with the other candidates and could be selected." | D5 | ✏️ |
+| C26 | 4.2.2, fourth paragraph (target transformation) | "Negative predictions are clipped to zero on both datasets." | Confirm | — | ✅ |
+| C27 | 4.2.2, fifth paragraph (missing features) | "On Alibaba, a missing-value indicator is added for each history statistic before the statistic is filled with zero, …" | Confirm | — | ✅ |
+| C28 | 4.2.2, sixth paragraph (training rows) | "On Alibaba, the CPU model is trained only on rows with an available CPU target and the memory model only on rows with an available memory target, …" | Confirm | — | ✅ |
+| C9 | 4.2.2, seventh paragraph (tuning) | "On Alibaba, which has far more rows, every configuration in a small grid is fitted on the training set and scored on the validation set directly, which preserves time order at much lower cost. Small, explicit grids were preferred to adaptive search methods for reproducibility: every evaluated configuration is recorded." | **If no grid:** replace with "On Alibaba, which has far more rows, each model family is used with one fixed configuration, fitted on the training set and scored on the validation set, which preserves time order. On Google, small, explicit grids were preferred to adaptive search methods for reproducibility: every evaluated configuration is recorded." Add the absence of Alibaba tuning to the Chapter 9 limitations. **If a grid was added:** confirm | D4 | ✏️ |
+| C11 | 4.2.2, eighth paragraph (model selection) | "On Alibaba, the selection order is recorded with the selected models in the pipeline's selection record." | **If D1 is accuracy first:** replace with "On Alibaba, the selected model is the candidate with the lowest validation root mean squared error, followed by mean absolute error, with violation rate and average shortfall used only to break remaining ties." **If violation first:** describe that order and remove the following sentence about rejecting violation-first selection | D1 | ✏️ |
+| C29 | 4.2.2, last paragraph (final refit) | "After selection, the chosen model for each resource is refitted on the training and validation sets together." and "Hybrid is validated using predictions from the models fitted on training data only, …" | Confirm | — | ✅ |
+| C30 | 4.2.3, first paragraph (combination rule) | "If the baseline is unavailable for a row, Hybrid uses the ML prediction and the row is flagged." | Confirm | — | ✅ |
+| C31 | 4.2.3, third paragraph (safeguard baseline) | "Alibaba uses the baseline selected on validation in Section 4.2.1, at its selected `min_runs`, …" | Confirm | D3 | ✅ |
+| C32 | 4.3, paragraph before Figure 4.2 (lock and final test) | "The final test reads the test targets for the first time, scores all seven policies once and writes a run record; a second run is refused. A rerun is permitted only to correct a documented code defect, …" | Confirm against PR2; if PR2 does not refuse a second run or write a run record, rewrite the sentence to describe what it does | PR2 | ✏️ |
+| C33 | 4.4 Figure 4.3 | Published artifacts: "Baseline and ML outputs", "Decision manifest", "Evaluation results" | Confirm | PR2 | ✅ |
+| C16 | 4.4, paragraph after Figure 4.3 (integrity) | "On Alibaba GPU 2020, every published output folder contains a checksum file …" | Confirm the PR2 output folder has a `SHA256SUMS` file | PR2 | ✅ |
 
 ### Chapter 5
 
 | # | Section | Find (quoted) | Do | Condition | Done |
 |---|---|---|---|---|---|
-| C40 | Introduction | "Values from the Alibaba ML and Hybrid stages, which were produced last, are marked *pending* in the tables of this chapter and are added from the final artifacts." | Delete the sentence once every pending cell is filled (Step 4) | Step 4 | |
-| C4 | 5.1.1 Alibaba adapter | "GPU fields are not evaluated as targets; the GPU request and GPU type are used as features by the ML models (Section 5.3.1)." | Confirm | D6 | |
-| C3 | 5.3.1, second paragraph | Paragraph starting "The Alibaba features are defined in a separate configuration." | Confirm every listed feature, the exclusion list, one-hot encoding, `feature_order.json` and "no log transformation" against the merged code | D6 | |
-| C10 | 5.3.2, paragraph after Table 5.5 | "Its candidates are a constant predictor (`DummyRegressor` with the mean strategy), a decision tree, a random forest with 100 trees, histogram-based gradient boosting, and XGBoost with 300 trees of depth 6, …" | Confirm the candidates and settings. **If a grid was added:** replace the settings with the grid and say each configuration is fitted on train and scored on validation | D2, D4 | |
-| C41 | 5.3.2, paragraph after Table 5.5 | "The CPU and memory models are selected independently, using the selection order recorded with the result." | **If D1 is accuracy first:** replace with "The CPU and memory models are selected independently, by validation RMSE, then MAE, with violation rate and average shortfall used only to break remaining ties." | D1 | |
-| C6, C7 | 5.3.2, 5.3.3 | "`DummyRegressor` with the mean strategy"; "including the constant predictor" | Confirm | D2 | |
-| C42 | 5.4, second paragraph | "The Alibaba ML script applies the same function to each resource, with the locked recommendation of the selected baseline, P99 at `min_runs = 10`, as the safeguard." | Confirm against D3; if D8 = yes, add the file that holds the fallback count | D3, P4 | |
-| C13 | 5.5, third paragraph | "…the baseline script also produces the sensitivity results of Section 4.3: …" | Confirm (the ML script produces none); if PR2 adds sensitivity results on test, say so | PR2 | |
-| C14 | 5.6 Table 5.7, row "Final test" | "Final-test outputs pending" | Replace with a short description of the PR2 outputs, in the same style as the Google column | PR2 | |
-| C15 | 5.6, fourth paragraph | "The one-time Alibaba final test reads this manifest before it opens the test table." | Replace with a description of the PR2 checks, in the order PR2 runs them (compare with the Google paragraph just above it), and say whether a second run is refused | PR2 | |
+| C40 | Introduction | "Values from the Alibaba ML and Hybrid stages, which were produced last, are marked *pending* in the tables of this chapter and are added from the final artifacts." | Delete the sentence once every pending cell is filled (Step 4) | Step 4 | ✏️ |
+| C4 | 5.1.1 Alibaba adapter | "GPU fields are not evaluated as targets; the GPU request and GPU type are used as features by the ML models (Section 5.3.1)." | Confirm | D6 | ✅ |
+| C3 | 5.3.1, second paragraph | Paragraph starting "The Alibaba features are defined in a separate configuration." | Confirm every listed feature, the exclusion list, one-hot encoding, `feature_order.json` and "no log transformation" against the merged code | D6 | ✏️ |
+| C10 | 5.3.2, paragraph after Table 5.5 | "Its candidates are a constant predictor (`DummyRegressor` with the mean strategy), a decision tree, a random forest with 100 trees, histogram-based gradient boosting, and XGBoost with 300 trees of depth 6, …" | Confirm the candidates and settings. **If a grid was added:** replace the settings with the grid and say each configuration is fitted on train and scored on validation | D2, D4 | ✏️ |
+| C41 | 5.3.2, paragraph after Table 5.5 | "The CPU and memory models are selected independently, using the selection order recorded with the result." | **If D1 is accuracy first:** replace with "The CPU and memory models are selected independently, by validation RMSE, then MAE, with violation rate and average shortfall used only to break remaining ties." | D1 | ✏️ |
+| C6, C7 | 5.3.2, 5.3.3 | "`DummyRegressor` with the mean strategy"; "including the constant predictor" | Confirm | D2 | ✅ |
+| C42 | 5.4, second paragraph | "The Alibaba ML script applies the same function to each resource, with the locked recommendation of the selected baseline, P99 at `min_runs = 10`, as the safeguard." | Confirm against D3; if D8 = yes, add the file that holds the fallback count | D3, P4 | ✏️ |
+| C13 | 5.5, third paragraph | "…the baseline script also produces the sensitivity results of Section 4.3: …" | Confirm (the ML script produces none); if PR2 adds sensitivity results on test, say so | PR2 | ✏️ |
+| C14 | 5.6 Table 5.7, row "Final test" | "Final-test outputs pending" | Replace with a short description of the PR2 outputs, in the same style as the Google column | PR2 | ✏️ |
+| C15 | 5.6, fourth paragraph | "The one-time Alibaba final test reads this manifest before it opens the test table." | Replace with a description of the PR2 checks, in the order PR2 runs them (compare with the Google paragraph just above it), and say whether a second run is refused | PR2 | ✏️ |
 
 ---
 
@@ -193,12 +191,12 @@ The validation population must print 42,069. If the selected policy or `min_runs
 
 | File | Change | Done |
 |---|---|---|
-| `docs/design/traceadvisor_system_guide.md` §1, §7.2, §9, §12 | "Task 7 in progress" → complete; selected Alibaba models; Alibaba final test | |
-| `docs/design/canonical_schema_design_decisions.md` D-19 | Committed 29 Oct with the Task 6 decisions final and the ML and Hybrid bullets marked "Task 7, PR #99, confirm when merged". After Task 7: remove those markers if D1 and D3 match; if D5 = reference only, add back "the floor every selected model must beat"; optionally add the final ML-only and Hybrid validation violation rates from `validation_policy_comparison.csv` to the accuracy-first rationale | |
-| `reports/results/alibaba_gpu_2020/` | Add the final results report (the current report covers Tasks 1–6 only) | |
-| `reports/results/alibaba_gpu_2020/` | Copy the small result files so every report number traces to a committed file (only `canonical/count_report.md` and `canonical/metadata.json` are there now): `targets/metadata.json`; `baselines/baseline_selection.json`, `validation_comparison.csv`, `sensitivity_validation.csv`, `metadata.json`; `ml/decision_manifest.json`, `model_selection.json`, `candidate_models.csv`, `validation_policy_comparison.csv`, `feature_order.json`, `metadata.json`; and the PR2 final-test comparison and run record. Do not copy Parquet tables or model files. Check that no file contains a local absolute path | |
-| `docs/planning/github_issues/task7_machine_learning_hybrid_and_final_test.md` | Make decision D-2 and line 185 match D1 and D4 (P5), if not done in the PR | |
-| Report source maps (`ch2_source_map.md`, `ch3_source_map.md`, `ch5_source_map.md`) | Remove "planned" / "(Task 7)" / "(pending)" next to `scripts/run_alibaba_gpu_2020_ml.py`, `data/processed/alibaba_gpu_v2020_ml/` and the Task 7 rows; add the PR2 script | |
+| `docs/design/traceadvisor_system_guide.md` §1, §7.2, §9, §12 | "Task 7 in progress" → complete; selected Alibaba models; Alibaba final test | ✏️ |
+| `docs/design/canonical_schema_design_decisions.md` D-19 | Committed 29 Oct with the Task 6 decisions final and the ML and Hybrid bullets marked "Task 7, PR #99, confirm when merged". After Task 7: remove those markers if D1 and D3 match; if D5 = reference only, add back "the floor every selected model must beat"; optionally add the final ML-only and Hybrid validation violation rates from `validation_policy_comparison.csv` to the accuracy-first rationale | ✏️ |
+| `reports/results/alibaba_gpu_2020/` | Add the final results report (the current report covers Tasks 1–6 only) | ✏️ |
+| `reports/results/alibaba_gpu_2020/` | Copy the small result files so every report number traces to a committed file (only `canonical/count_report.md` and `canonical/metadata.json` are there now): `targets/metadata.json`; `baselines/baseline_selection.json`, `validation_comparison.csv`, `sensitivity_validation.csv`, `metadata.json`; `ml/decision_manifest.json`, `model_selection.json`, `candidate_models.csv`, `validation_policy_comparison.csv`, `feature_order.json`, `metadata.json`; and the PR2 final-test comparison and run record. Do not copy Parquet tables or model files. Check that no file contains a local absolute path | ✏️ |
+| `docs/planning/github_issues/task7_machine_learning_hybrid_and_final_test.md` | Make decision D-2 and line 185 match D1 and D4 (P5), if not done in the PR | ✏️ |
+| Report source maps (`ch2_source_map.md`, `ch3_source_map.md`, `ch5_source_map.md`) | Remove "planned" / "(Task 7)" / "(pending)" next to `scripts/run_alibaba_gpu_2020_ml.py`, `data/processed/alibaba_gpu_v2020_ml/` and the Task 7 rows; add the PR2 script | ✏️ |
 
 ---
 
@@ -238,3 +236,21 @@ These were applied before Task 7 finished, from PR #99 as it stood on 29 Oct. Th
 | C8 | Ch3 §3.2 | "Small grid" limited to Google; Alibaba uses one fixed configuration per model family, fitted on train and scored on validation |
 | C9 | Ch4 §4.2.2 | Same change; the reproducibility sentence about explicit grids now applies to Google only. The Chapter 9 limitation (no Alibaba tuning) is still to be written |
 | C10 | Ch5 §5.3.2 | Candidates and settings checked against `build_candidate_models()`: unchanged (XGBoost is now required, not optional) |
+
+**Applied 30 Oct 2026, after the final test (all remaining rows):**
+
+| Row | Chapter and section | Change |
+|---|---|---|
+| C1 | Ch4 §4.2.2 | GPU type specification added to the Alibaba features |
+| C23, C25 | Ch3 §3.2, Ch4 §4.2.2 | Categorical job descriptors added to the feature description |
+| C12 | Ch3 §3.2, Ch4 §4.2.2 | The constant predictor is reported but never selected, on both datasets |
+| C11, C41 | Ch4 §4.2.2, Ch5 §5.3.2 | Alibaba selection order stated: RMSE, then MAE, violation rate and shortfall as tie-breakers |
+| C32 | Ch4 §4.3 | Rerun wording: documented defect with a recorded reason (the final test refuses a lock built at another commit, so "under a new commit" was removed) |
+| C40 | Ch5 introduction | *Pending* sentence deleted |
+| C3, C10 | Ch5 §5.3.1–5.3.2 | 43 encoded columns; one fixed configuration; dummy excluded from selection; HistGradientBoosting selected for both resources |
+| — | Ch5 §5.3.3 | Alibaba comparison paragraph: ensembles within about 3% RMSE; dummy has the lowest violation rate |
+| C42 | Ch5 §5.4 | Hybrid fallback counts (0 on validation and test) and the files that hold them |
+| C13 | Ch5 §5.5 | Final-test script repeats the sensitivity cuts on test |
+| C14, C15 | Ch5 §5.6 | Table 5.7 final-test row; final-test checks in the order the script runs them |
+| Step 4 | Ch5 Tables 5.4, 5.6; §5.2.2–5.2.3 | Table 5.4 and Table 5.6 filled; selection and fallback rates (7.6 / 16.4 / 20.3 / 25.7%, median history 31) recomputed and unchanged; Table 5.2 unchanged |
+| Step 5 | System guide, D-19, source maps (Ch2, Ch3, Ch5–Ch9) | Task 7 marked complete with selected models and final-test results; [Task 7] items in the Ch6–Ch9 source maps filled |

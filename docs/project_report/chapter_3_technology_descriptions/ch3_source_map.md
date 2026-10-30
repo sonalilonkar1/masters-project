@@ -20,7 +20,7 @@
 | Versions | `requirements-lock.txt`: pandas 2.3.3, numpy 2.5.4, pyarrow 23.0.1, matplotlib 3.11.2, seaborn 0.13.2, jupyterlab 4.6.5, pytest 9.2.0, scipy 1.18.1 |
 | Minimum versions | `requirements.txt` |
 | Code: usage | pandas and numpy throughout `src/` and all Google notebooks; pyarrow in `src/features/target_builder.py` and the Alibaba scripts; typed headerless loading in `src/sources/alibaba_gpu_2020.py` — `load_table` (L343), `iter_table_chunks` (L376) |
-| Pipelines | `pipelines/google_subset/00–06_*.ipynb` (notebooks); `scripts/build_alibaba_gpu_2020_canonical.py`, `build_alibaba_gpu_2020_targets.py`, `run_alibaba_gpu_2020_baselines.py`, `run_alibaba_gpu_2020_ml.py` *(Task 7)* (scripts) |
+| Pipelines | `pipelines/google_subset/00–06_*.ipynb` (notebooks); `scripts/build_alibaba_gpu_2020_canonical.py`, `build_alibaba_gpu_2020_targets.py`, `run_alibaba_gpu_2020_baselines.py`, `run_alibaba_gpu_2020_ml.py`, `run_alibaba_gpu_2020_final_test.py` (scripts) |
 | Tests | `pytest.ini` (`pythonpath = src`, `testpaths = tests`); 19 test files in `tests/` |
 
 ## 3.2 Machine Learning Libraries and Models
@@ -32,7 +32,7 @@
 | Writing source | System guide §9 (ML candidates and ranking) |
 | Versions | `requirements-lock.txt`: scikit-learn 1.9.1, xgboost 3.4.1, joblib 1.6.0 |
 | Google models | `pipelines/google_subset/05_evaluateRecommendations.ipynb`: `DecisionTreeRegressor`, `RandomForestRegressor`, `XGBRegressor` tuned with `GridSearchCV` over label-purged `TimeSeriesSplit` folds (`purged_time_series_folds`); `DummyRegressor(strategy="median")` as the floor; `log1p` targets, predictions `expm1` then clipped at 0; `GroupKFold` by `recurrence_key` reported as a robustness check only; models saved with joblib to `n05_locked_models/` |
-| Alibaba models | Task 7 issue: `DummyRegressor` (`mean`/`median`), `DecisionTreeRegressor`, `RandomForestRegressor`, `HistGradientBoostingRegressor` (or `GradientBoostingRegressor`), `XGBRegressor`; each grid configuration fitted on train and scored on validation, no cross-validation search (issue L184); `scripts/run_alibaba_gpu_2020_ml.py` *(Task 7)* |
+| Alibaba models | `build_candidate_models()` in `src/models/alibaba_gpu_2020_candidates.py`: `DummyRegressor` (mean; never selected), `DecisionTreeRegressor`, `RandomForestRegressor` (100 trees), `HistGradientBoostingRegressor`, `XGBRegressor` (required); one fixed setting each, fitted on train and scored on validation, no search; `scripts/run_alibaba_gpu_2020_ml.py` |
 | Feature helpers | `src/features/ml_prep.py` — `validate_features` (L113), `purged_time_series_folds` (L359); `src/features/feature_config.py` |
 | Design docs | `docs/planning/github_issues/task7_machine_learning_hybrid_and_final_test.md`; `canonical_schema_design_decisions.md` D-19 |
 | Results | `reports/results/google_subset/tables/ml_validation_model_comparison.csv`, `n05_ml_metadata.json` |
