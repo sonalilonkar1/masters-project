@@ -68,7 +68,7 @@ The web frontend will let a developer look up a recurring workload and choose ho
 - **Balanced** shows the P95 recommendation;
 - **Efficient** shows the P90 recommendation.
 
-Next to each recommended CPU and memory value, the frontend shows the workload's original request and the violation rate and average waste that the selected policy had in the test period, so the developer sees what each level costs and how often it was exceeded. On Alibaba, for example, memory recommendations were exceeded by 3.15% of test occurrences under Hybrid, 6.04% under P95 and 9.89% under P90, at average waste of 8.71, 7.89 and 7.44 GB (Table 7.3). Mean and ML alone are not offered, because they were exceeded by more than a third of test occurrences on both datasets; they remain in the policy comparison view (Figure 8.2).
+Next to each recommended CPU and memory value, the frontend shows the workload's original request and the violation rate and average waste that the selected policy had in the test period, so the developer sees what each level costs and how often it was exceeded. On Alibaba, for example, memory recommendations were exceeded by 3.15% of test occurrences under Hybrid, 6.04% under P95 and 9.89% under P90, at average waste of 8.71, 7.89 and 7.44 GB (Table 7.3). Mean and ML alone are not offered, because they were exceeded by about a third or more of test occurrences on both datasets; they remain in the policy comparison view (Figure 8.2).
 
 **[Placeholder: screenshot of the risk-level recommendation view]**
 
