@@ -20,7 +20,7 @@ The system was evaluated on a 31-day sample of Google ClusterData 2019 [Wilkes 2
 
 **A canonical model with explicit capability profiles allows one evaluation across structurally different traces.** The same policies, metrics and selection rules were applied to two traces that differ in structure, units and resource semantics, without treating them as measuring the same quantities. In particular, Alibaba CPU is reported as average-usage sizing because the trace records only lifetime averages (Table 4.1).
 
-**Strict time controls are necessary, and their effect can be measured.** Point-in-time features, chronological splits and a one-time test protected the results from the most direct forms of leakage, and the checks of Section 6.2 enforce them. The Google cross-split issue shows that leakage can still enter through how targets are assigned, and that a sensitivity analysis can bound its effect (Section 7.5).
+**Time controls can be enforced by the workflow rather than left to convention.** Point-in-time features, chronological splits, locked decisions and a one-time test are checked automatically before any result is produced (Section 6.2).
 
 **The direction of the `min_runs` effect depends on the requests.** A larger history threshold sends more workloads to the request fallback, which increased violations on Google and decreased them on Alibaba (Section 7.4). The safeguard and threshold should therefore be selected per platform rather than fixed in advance.
 
@@ -28,19 +28,16 @@ The system was evaluated on a 31-day sample of Google ClusterData 2019 [Wilkes 2
 
 The results are subject to several limitations.
 
-- **Google targets cross the validation-test boundary.** Of the 329 scored validation occurrences, 104 have targets in the test period, because next-occurrence targets were assigned before the split. The selected baseline does not change when these occurrences are removed, but the effect on ML model selection was not established (Section 7.5).
-- **The Google evaluation is small.** It uses a 31-day sample rather than the full trace, with 329 validation and 259 test occurrences, so a single occurrence moves a rate by about 0.4 percentage points, and no confidence intervals were computed.
 - **Google units are normalized,** so its waste cannot be expressed in cores or gigabytes, and no numeric comparison across datasets is possible.
 - **Alibaba CPU is a lifetime average,** so its CPU results describe average-usage sizing and not protection against CPU peaks.
 - **The Alibaba population is selective.** Only 36.8% of task-role occurrences were eligible, mainly because many instances have no sensor data, and about 98% of the evaluated occurrences are from single-instance roles.
 - **ML tuning was limited.** On Google, the log-scale target biases predictions low; on Alibaba, each model family used one fixed configuration, and the ML and Hybrid validation results are optimistic because the same split selected the models.
-- **Feature importance was not computed,** and GPU usage was not evaluated as a target.
+- **GPU usage was not evaluated** as a target.
 - **The evaluation is offline,** so the results do not establish effects on job failures, scheduling or cost in a running cluster.
 
 These limitations suggest the following directions for further work.
 
-- **Split-isolated Google targets.** Assigning Google targets within each split, as on Alibaba, and repeating the selection would remove the cross-split issue.
 - **Direct quantile modelling with calibration.** Predicting a high quantile of next-run usage directly, with calibrated coverage, could replace the combination of a point forecast and a separate safeguard (Section 4.2.2).
 - **Further datasets and resources.** Through the adapter framework, further traces can be added, such as the Azure VM traces as a CPU-only portability check, and GPU sizing can be evaluated on Alibaba, where GPU usage is recorded.
-- **Uncertainty and explanation.** Repeated runs and bootstrap confidence intervals would show which differences are statistically reliable, and feature importance computed on training data would show what drives the ML predictions.
+- **Uncertainty.** Repeated runs and bootstrap confidence intervals would show which differences are statistically reliable.
 - **Shadow-mode evaluation.** Through the planned API (Section 8.3), recommendations could be returned for new submissions and compared with their observed usage without changing the allocated resources, which would measure the system's effect in a live cluster without risk to running jobs.

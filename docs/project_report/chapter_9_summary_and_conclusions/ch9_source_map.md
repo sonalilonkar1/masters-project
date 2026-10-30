@@ -62,3 +62,4 @@
 | 3 | Chapter 1 | Related-work comparisons depend on the rewritten literature review | Refer to Chapter 1 without citing until it is final |
 | 4 | Citations | [Cortez 2017] added in 9.2 for history-guided allocation | Maps to [2] in `references.md` |
 | 5 | Feature importance | Removed from Chapter 7 | Listed as a limitation and future work |
+| 6 | Removed from 9.3 (30 Oct 2026) | Google cross-split targets, small Google evaluation, feature importance | Tracked in `docs/planning/github_issues/task14_google_evaluation_followups.md` |
