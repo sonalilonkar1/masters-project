@@ -118,7 +118,7 @@ The rest of the report is organized as follows. Chapters 2 and 3 present the arc
 
 **Artifact-driven workflow.** Each stage reads files written by the previous stage and writes new files. The checksums of the inputs, the code version and the library versions are recorded with the outputs: for every stage of the Alibaba pipeline, and in the decision manifest that governs the final test of the Google pipeline. Any reported number can be traced back to the data, code and environment that produced it.
 
-**Presentation.** A REST API exposes the published results, and a web frontend built on it lets developers browse workloads, view their recommendations and compare policies. Figure 2.1 shows the overall architecture.
+**Presentation.** A planned REST API will expose the published results, and a web frontend built on it will let developers browse workloads, view their recommendations and compare policies. Figure 2.1 shows the overall architecture.
 
 ![](chapter_2_project_architecture/figures/fig_2_1.png)
 
@@ -161,7 +161,7 @@ A single evaluator scores every policy on both datasets with the same formulas: 
 
 ### 2.2.6 Artifact Repository and Presentation Layer
 
-Every stage writes its outputs as files, and the checksums of the inputs, the code version and the library versions are recorded per stage on Alibaba and in the decision manifest on Google, so any result can be traced to the data and code that produced it. The artifact repository holds these outputs, from canonical views to final results. A REST API exposes the published recommendations and evaluation results, and a web frontend built on it lets developers browse workloads, view their recommendations and compare policies. The presentation layer only reads published results; it does not run the pipeline or change any artifact.
+Every stage writes its outputs as files, and the checksums of the inputs, the code version and the library versions are recorded per stage on Alibaba and in the decision manifest on Google, so any result can be traced to the data and code that produced it. The artifact repository holds these outputs, from canonical views to final results. A planned REST API will expose the published recommendations and evaluation results, and a web frontend built on it will let developers browse workloads, view their recommendations and compare policies (Section 8.3). The presentation layer will only read published results; it will not run the pipeline or change any artifact.
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -266,7 +266,7 @@ Each Alibaba run also records its provenance in a metadata file: the checksums o
 
 Git is used for version control of the code, documentation, configuration and final results (reports and result tables). The raw traces and intermediate tables, which together amount to several gigabytes, are kept outside Git; the committed checksums of the official Alibaba source files let anyone who downloads the traces confirm that they have the same data.
 
-The presentation layer is built from two components. A REST API serves the recommendations and evaluation results held in the artifact repository over HTTP, returning them in JSON so that any client can use them. A web frontend built on this API presents the results to developers in a browser, allowing them to look up a workload, see its recommended CPU and memory, and compare the policies. The presentation layer only reads published results; it does not run the pipeline or modify any artifact.
+The presentation layer is planned as two components (Section 8.3). A REST API will serve the recommendations and evaluation results held in the artifact repository over HTTP, returning them in JSON so that any client can use them. A web frontend built on this API will present the results to developers in a browser, allowing them to look up a workload, see its recommended CPU and memory, and compare the policies. The presentation layer will only read published results; it will not run the pipeline or modify any artifact.
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -412,7 +412,7 @@ On Alibaba GPU 2020, every published output folder contains a checksum file list
 
 Tables are stored in Parquet, which preserves column types, including nullable integers and strings, so missing values survive every stage unchanged; CSV would not distinguish a missing value from an empty string. Metadata, selection records and manifests are stored in JSON and reported result tables in CSV. Raw and intermediate data remain local because of their size, while code, documentation, configuration and final results are versioned in the project repository.
 
-A REST API exposes the published recommendations and evaluation results over HTTP in JSON, organized by dataset, workload and policy, and a web frontend built on it lets developers look up a workload, see its recommended CPU and memory under each policy and compare policies. The API is read-only: it serves only published, locked results and never runs the pipeline or modifies an artifact, so developers see exactly what was evaluated. Because it depends only on published files, it is decoupled from the pipeline and can be developed and deployed independently. Units and dataset labels, such as the fact that Alibaba CPU results describe average usage, are returned with each result, so the frontend never presents a value without the information needed to interpret it. Deployment is described in Chapter 8.
+The presentation layer is designed but not yet implemented (Section 8.3). A REST API exposes the published recommendations and evaluation results over HTTP in JSON, organized by dataset, workload and policy, and a web frontend built on it lets developers look up a workload, see its recommended CPU and memory under each policy and compare policies. The API is read-only: it serves only published, locked results and never runs the pipeline or modifies an artifact, so developers see exactly what was evaluated. Because it depends only on published files, it is decoupled from the pipeline and can be developed and deployed independently. Units and dataset labels, such as the fact that Alibaba CPU results describe average usage, are returned with each result, so the frontend never presents a value without the information needed to interpret it. Deployment is described in Chapter 8.
 
 ## 4.5 Summary of Dataset-Specific Design Choices
 
