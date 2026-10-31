@@ -5,7 +5,7 @@
 **Scope rules**
 - Datasets: Google ClusterData 2019 (Kaggle subset) and Alibaba GPU Cluster Trace 2020. Alibaba 2018 is not in the report.
 - The old report draft and `REPORT_TRACEABILITY.md` are not sources; nor are `docs/data/google_clusterdata_2019_analysis.md` (full trace) or `docs/data/alibaba_gpu_2020_evidence_and_limitations.md` (dropped).
-- Task 13, Alibaba Task 7 and the presentation layer are written as implemented. Statements that depend on Alibaba Task 7 go in `docs/project_report/pending_checks_after_task7.md`; Task 13 and the presentation layer are written as implemented and are not tracked there.
+- Task 13 and Alibaba Task 7 are written as implemented; the Task 7 statements were checked against the Task 7 artifacts on 30 Oct 2026. The REST API and web frontend are described as planned (Chapter 8 §8.3; Task 15).
 - Every factual claim is checked against code, committed config or real outputs, not only documents.
 - Line numbers are from the working tree on `docs/issue-17-final-report` (after `0b07fed`).
 
@@ -122,6 +122,6 @@
 | 2 | Missing-value design differs | Google keeps NaN for models with native missing support (no imputation); Alibaba adds a missing-indicator per history statistic, then zero-fills | State both in 4.2.2 with the reason (zero and missing must stay distinguishable) |
 | 3 | Hybrid safeguard differs | Google's safeguard is P95, fixed in advance from the backlog, although Notebook 04 selected P99 as the best baseline; `max(ML, P99)` is reported as a supplement. Alibaba uses its selected baseline (P99 at `min_runs = 10`) | Explain both choices in 4.2.3 so the difference does not look inconsistent |
 | 4 | Common population differs | Google requires both targets; Alibaba requires at least one, with per-resource denominators | State in 4.3 |
-| 5 | ML ranking order (D1) | System guide §9 and the D-19 edit: accuracy first. Task 7 issue D-2: violation first | Write accuracy first, as in the system guide; listed in `pending_checks_after_task7.md` D1 |
+| 5 | ML ranking order (D1) | System guide §9 and the D-19 edit: accuracy first. Task 7 issue D-2: violation first | Write accuracy first, as in the system guide; checked against the merged Task 7 code on 30 Oct 2026 |
 | 6 | Section title 4.2.3 | "Hybrid Risk-Aware Layer": there is no risk level or safety-buffer setting; the risk control is the baseline floor | Keep the title but define "risk-aware" as the baseline floor, or retitle to "Hybrid Safeguard Layer" |
 | 7 | Google split boundary | Google targets may cross splits (104 of 330 validation targets in the test period); Alibaba targets are split-isolated | Explain as a design difference and known limitation in 4.1, consistent with Chapter 2 |
