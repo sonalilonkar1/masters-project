@@ -3,7 +3,7 @@
 **Purpose:** for each Chapter 8 section, the sources describing how TraceAdvisor is run, reproduced and used. Chapter 8 is about **operating the system**: running the pipelines, reproducing results, the repository layout, and the developer-facing API and frontend. Design reasons for the artifact layer are in Chapter 4 §4.4 and implementation in Chapter 5 §5.6; refer to them.
 
 **Scope rules**
-- The REST API and web frontend, and the Google thin adapter, are written as implemented, kept general (no framework names until chosen).
+- The REST API and web frontend are not implemented yet: 8.3 describes the planned design, with image placeholders for frontend screenshots (advisor guidance, 30 Oct 2026); no framework names until chosen.
 - Alibaba Task 7 is merged and run (30 Oct 2026); the ML and final-test steps are described from the merged scripts.
 - Style: formal prose; commands may be shown in short code blocks; citations only for the two datasets.
 
@@ -37,13 +37,13 @@
 | Tests | `pytest` in the locked environment (Chapter 6) |
 | Earlier experiments | Azure Resource Central, Splitwise, ModServe notebooks and `reports/eval/` (system guide §11): kept for context, not part of the evaluated system |
 
-## 8.3 Developer-Facing API and Web Frontend (retitle from "Interactive Developer Dashboard (Planned)")
+## 8.3 Developer-Facing API and Web Frontend 
 
-**What the section says:** how developers use TraceAdvisor's results: the read-only REST API over the published artifacts and the web frontend built on it. Written as implemented and kept general.
+**What the section says:** the planned read-only REST API over the published artifacts and the web frontend built on it, with Figures 8.1 and 8.2 as screenshot placeholders.
 
 | Kind | Source |
 |---|---|
-| Design | Chapter 4 §4.4 (read-only, decoupled from the pipeline, units and dataset labels travel with every value), Figure 4.3; Chapter 2 §2.2.6 |
+| Design | Chapter 4 §4.4 (read-only, decoupled from the pipeline, units and dataset labels travel with every value), Figure 4.4; Chapter 2 §2.2.6 |
 | Content served | Recommendations per policy and split, evaluation summaries, units, CPU semantics label, dataset labels; organized by dataset, workload and policy |
 | Data source | Published artifacts under `data/processed/` and `reports/results/` |
 | Deployment | General description: the API reads published files and needs no access to the pipeline or raw data |
@@ -55,7 +55,8 @@
 
 | # | Item | Finding | Effect on Chapter 8 |
 |---|---|---|---|
-| 1 | 8.3 title | Table of contents says "Interactive Developer Dashboard (Planned)" | Retitle; written as implemented |
+| 1 | 8.3 status | No API or frontend code in the repository (30 Oct 2026) | Written as planned, with placeholders; replace them with screenshots once built |
 | 2 | Lock file | `requirements-lock.txt` committed in `02184f2`; header gives the install commands | Quote the commands |
 | 3 | Alibaba scripts | All five scripts on `main` (ML in PR #98, final test in PR #102) | Describe the full run order |
 | 4 | `reports/` layout | `reports/results/` (final) and `reports/eval/` (earlier experiments); kept as is | Describe both |
+| 5 | Peak memory | The 5 GB / 1.9 GB figures are not in the results files | Left out of 8.1 |
