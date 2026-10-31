@@ -10,7 +10,8 @@ section (Chapter 4 -> IV, 4.3 -> IV-C); "Section 4.3", "Table 7.1" and
 with a thebibliography built from references.md; tables and figures become
 floats. The SJSU front pages (title, copyright, approval, abstract,
 acknowledgments) come first, single-column. Upload the whole latex/ folder to
-Overleaf and compile report.tex with pdfLaTeX or XeLaTeX.
+Overleaf and compile report.tex with pdfLaTeX or XeLaTeX, or paste
+report_single_file.tex into the Overleaf main file and upload figures/.
 """
 
 import argparse
@@ -315,6 +316,10 @@ def main(argv=None) -> int:
         + bibliography() + "\n\\end{document}\n"
     )
     (OUT_DIR / "report.tex").write_text(report, encoding="utf-8")
+    # The same document in one file, with every chapter inlined, for pasting into Overleaf.
+    single = re.sub(r"\\input\{sections/([^}]+)\}",
+                    lambda m: (OUT_DIR / "sections" / f"{m[1]}.tex").read_text(encoding="utf-8"), report)
+    (OUT_DIR / "report_single_file.tex").write_text(single, encoding="utf-8")
     print(f"wrote {OUT_DIR.relative_to(REPORT_DIR.parent.parent)}/")
 
     if args.compile:
