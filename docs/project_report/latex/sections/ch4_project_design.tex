@@ -1,6 +1,6 @@
 \section{Project Design}\label{sec:4}
 
-This chapter presents the design of TraceAdvisor and the reasoning behind it. Section~\ref{sec:2} introduced the subsystems and how they connect; here each design decision is stated together with the problem it addresses, the alternatives considered and the reasons for the choice. Implementation details and measured outputs follow in Section~\ref{sec:5}.
+This section presents the design of TraceAdvisor and the reasoning behind it. Section~\ref{sec:2} introduced the subsystems and how they connect; here each design decision is stated together with the problem it addresses, the alternatives considered and the reasons for the choice. Implementation details and measured outputs follow in Section~\ref{sec:5}.
 
 Three requirements shape the design. The first is pre-execution validity: a recommendation may use only information available before the run it sizes, because any path by which future information reaches a recommendation, directly or through the evaluation procedure, produces results that cannot be achieved in practice. The second is asymmetric risk: a job whose memory is exceeded can be killed and rerun, whereas an over-provisioned job only wastes capacity, so under- and over-provisioning must be treated separately rather than averaged. The third is dataset heterogeneity: production traces differ in what they record, at what level and in which units \cite{ref7,ref19}, and policies must be compared fairly within each dataset without assuming that the datasets measure the same thing.
 
@@ -126,7 +126,7 @@ TraceAdvisor is evaluated by replaying historical traces, the only feasible meth
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/fig_4_2.png}
+\includegraphics[width=0.6\linewidth]{figures/fig_4_2.png}
 \caption{Waste and shortfall for an over-provisioned and an under-provisioned run (illustrative values)}\label{fig:4.2}
 \end{figure*}
 

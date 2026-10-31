@@ -1,6 +1,6 @@
 \section{Performance, Results, and Discussion}\label{sec:7}
 
-This chapter presents TraceAdvisor's offline evaluation results, focusing on the tradeoff between under-provisioning and excess resource allocation. Preliminary studies on three Azure traces examine historical baselines, while Google ClusterData 2019 \cite{ref7} serves as the primary evaluation dataset and Alibaba GPU 2020 \cite{ref19} provides a second recurring-workload evaluation. Validation results are used to describe policy and model selection, while final-test results assess the selected approaches. The chapter also compares findings across the two datasets and discusses evaluation limitations.
+This section presents TraceAdvisor's offline evaluation results, focusing on the tradeoff between under-provisioning and excess resource allocation. Preliminary studies on three Azure traces examine historical baselines, while Google ClusterData 2019 \cite{ref7} serves as the primary evaluation dataset and Alibaba GPU 2020 \cite{ref19} provides a second recurring-workload evaluation. Validation results are used to describe policy and model selection, while final-test results assess the selected approaches. The chapter also compares findings across the two datasets and discusses evaluation limitations.
 
 \subsection{Preliminary Baseline Studies on Azure Traces}\label{sec:7.1}
 
@@ -52,7 +52,7 @@ Fig.~\ref{fig:7.1} illustrates the validation results used for baseline selectio
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/fig_7_1.pdf}
+\includegraphics[width=0.6\linewidth]{figures/fig_7_1.pdf}
 \caption{Google validation baseline candidates: any-resource violation rate versus average CPU waste, with \texttt{min\_runs} at the line ends and the selected P99 candidate (\texttt{min\_runs\ =\ 1}) circled}\label{fig:7.1}
 \end{figure*}
 

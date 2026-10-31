@@ -5,7 +5,7 @@
 **Scope rules**
 - Datasets: Google ClusterData 2019 (Kaggle subset) and Alibaba GPU Cluster Trace 2020. Alibaba 2018 and Azure VM code exists in `src/adapters/` but is out of scope.
 - No old report draft, no traceability file, no full-trace Google analysis doc, no dropped Alibaba evidence doc.
-- Task 13 and the REST API and frontend are written as implemented. Alibaba Task 7 is merged and run; its statements were checked through `pending_checks_after_task7.md` (30 Oct 2026).
+- Task 13 is written as implemented; the REST API and frontend are described as planned (Chapter 8 §8.3; Task 15). Alibaba Task 7 is merged and run; its statements were checked against the Task 7 artifacts on 30 Oct 2026.
 - Every number is checked against code, committed config or real outputs.
 - Measured outputs moved from Chapters 2 and 4 are now in the Chapter 5 text; their sources are listed in the rows below.
 - Style: formal, paper-style prose; citations only for the two datasets.
@@ -92,7 +92,7 @@
 | Google | `03_buildProfilesAndMetrics.ipynb` "Validate Cold Starts and Missing Values"; `06_finalPolicyComparison.ipynb` cell 8 ("Validation rows where Hybrid falls back to ML") |
 | Google counts (measured 29 Oct 2026, locked environment, `{train,val,test}_occurrences.parquet`) | Rows with no prior completed occurrence: 1,801 / 239 / 240 of 3,473 / 675 / 731. On the evaluation population (both targets: 1,983 / 329 / 259), P99@1 uses history for CPU 1,372 / 303 / 250 and memory 1,368 / 301 / 250; the rest fall back to Request (CPU 611 / 26 / 9, memory 615 / 28 / 9). Request is itself missing on 23 / 3 / 2 of these rows, so P95 and P99 are missing on 7 / 1 / 0 (CPU) and 9 / 1 / 0 (memory). Validation rows where Hybrid falls back to ML: CPU 1, memory 1 (matches Notebook 06 cell 8 output) |
 | How Table 5.3 is computed | Not saved in any output file; recompute with the locked environment (`~/venvs/traceadvisor-lock`) from `data/processed/google_subset_v1/{train,val,test}_occurrences.parquet`. Evaluated population = rows with both `target_cpu_next_occurrence_peak_ncu` and `target_memory_next_occurrence_peak_normalized` present. "From history" = `uses_history_{cpu,memory}_p99` true; "Request fallback" = false; "No value" = `rec_{cpu,memory}_p99` missing. Cold starts = `prior_completed_occurrence_count == 0` on all rows. Snippet below this table |
-| Alibaba counts | Table 5.4 from `alibaba_gpu_v2020_targets/` and `alibaba_gpu_v2020_baselines/` with the snippet in `pending_checks_after_task7.md` Step 4 (run 30 Oct 2026, after the final test); Hybrid fallback 0 from `ml/metadata.json` and `final_test/run_record.json` |
+| Alibaba counts | Table 5.4 from `alibaba_gpu_v2020_targets/` and `alibaba_gpu_v2020_baselines/` (counted 30 Oct 2026, after the final test); Hybrid fallback 0 from `ml/metadata.json` and `final_test/run_record.json` |
 
 **Table 5.3 snippet** (Google, selected baseline P99 at `min_runs = 1`):
 
@@ -195,6 +195,6 @@ Expected output (29 Oct 2026): train 3473 / 1801 / 1983 / 1372 1368 / 611 615 / 
 | 3 | Cold-start and fallback counts | Google computed (see 5.2.3). Fallback to Request and lack of usable history are the same rows, so they are counted once. Alibaba recomputed 30 Oct 2026 | Google counts in 5.2.3; Alibaba in Table 5.4 |
 | 4 | Google `DummyRegressor` | `strategy="median"` | Use in 5.3.2 |
 | 5 | Tests | 19 test files, 665 passing and 1 skipped (last run 29 Oct 2026). Alibaba 2018 and Azure tests exist for out-of-scope adapters | One coverage sentence in 5.5; file and test counts go to Chapter 6 |
-| 6 | Alibaba ML, Hybrid, final test | Merged and run 30 Oct 2026 | Numbers and settings filled from the artifacts (`pending_checks_after_task7.md` Step 4) |
+| 6 | Alibaba ML, Hybrid, final test | Merged and run 30 Oct 2026 | Numbers and settings filled from the artifacts (30 Oct 2026) |
 | 8 | Google locked decisions | Checked in `decision_manifest.json` `decisions`: P99, `baseline_min_runs = 1`, Random Forest for both resources with the settings above, Hybrid = max(ML, P95) with fallback to ML, `Hybrid_P99` supplementary | Take values from the manifest |
 | 7 | Overlap with Chapter 4 | Chapter 4 explains why; Chapter 5 must say how and how much | Refer back to Chapter 4 sections instead of repeating rationale |
