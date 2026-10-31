@@ -12,7 +12,7 @@ The data pipeline turns two structurally different traces into evaluation rows t
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_4_1.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_4_1.pdf}
 \caption{Data ingestion and canonicalization}\label{fig:4.1}
 \end{figure*}
 
@@ -124,11 +124,11 @@ TraceAdvisor is evaluated by replaying historical traces, the only feasible meth
   Combined violation: a row counts as violated if either resource is violated and as not violated only if both resources are valid and neither is violated; otherwise it is unknown.
 \end{itemize}
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_4_2.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_4_2.png}
 \caption{Waste and shortfall for an over-provisioned and an under-provisioned run (illustrative values)}\label{fig:4.2}
-\end{figure}
+\end{figure*}
 
 A row with a missing actual value or recommendation is unknown for that resource, is excluded from that resource's denominator and is never counted as a success; counting unknown rows as successes would make every policy look safer and would favour policies that produce missing recommendations. CPU and memory have separate denominators, and every rate is reported with its denominator. The capability profile decides what may be reported and how it is labelled. Alibaba CPU results are labelled as average-usage sizing, and the combined violation rate is reported only for Google, because on Alibaba it would combine an average-based CPU result with a peak-based memory result and have no clear meaning.
 
@@ -138,7 +138,7 @@ Repeatedly evaluating design choices against the same data and adjusting them ov
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_4_3.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_4_3.pdf}
 \caption{Time-ordered selection and final test}\label{fig:4.3}
 \end{figure*}
 
@@ -148,7 +148,7 @@ Each stage reads files written by earlier stages and writes its own (Fig.~\ref{f
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_4_4.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_4_4.pdf}
 \caption{Artifact repository and presentation layer}\label{fig:4.4}
 \end{figure*}
 

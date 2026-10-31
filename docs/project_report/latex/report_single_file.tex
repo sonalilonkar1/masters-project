@@ -68,6 +68,10 @@ By Shivani Jariwala, Meghana Koti, Sonali Lonkar and Sofia Silva
 \newpage
 \tableofcontents
 \newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
 \twocolumn
 \pagenumbering{arabic}
 \title{TraceAdvisor: Pre-Execution Resource Recommendations for Recurring Cluster Workloads}
@@ -181,7 +185,7 @@ The rest of the report is organized as follows. Sections~\ref{sec:2} and~\ref{se
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_2_1.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_2_1.pdf}
 \caption{TraceAdvisor architecture}\label{fig:2.1}
 \end{figure*}
 
@@ -364,7 +368,7 @@ The data pipeline turns two structurally different traces into evaluation rows t
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_4_1.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_4_1.pdf}
 \caption{Data ingestion and canonicalization}\label{fig:4.1}
 \end{figure*}
 
@@ -476,11 +480,11 @@ TraceAdvisor is evaluated by replaying historical traces, the only feasible meth
   Combined violation: a row counts as violated if either resource is violated and as not violated only if both resources are valid and neither is violated; otherwise it is unknown.
 \end{itemize}
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_4_2.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_4_2.png}
 \caption{Waste and shortfall for an over-provisioned and an under-provisioned run (illustrative values)}\label{fig:4.2}
-\end{figure}
+\end{figure*}
 
 A row with a missing actual value or recommendation is unknown for that resource, is excluded from that resource's denominator and is never counted as a success; counting unknown rows as successes would make every policy look safer and would favour policies that produce missing recommendations. CPU and memory have separate denominators, and every rate is reported with its denominator. The capability profile decides what may be reported and how it is labelled. Alibaba CPU results are labelled as average-usage sizing, and the combined violation rate is reported only for Google, because on Alibaba it would combine an average-based CPU result with a peak-based memory result and have no clear meaning.
 
@@ -490,7 +494,7 @@ Repeatedly evaluating design choices against the same data and adjusting them ov
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_4_3.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_4_3.pdf}
 \caption{Time-ordered selection and final test}\label{fig:4.3}
 \end{figure*}
 
@@ -500,7 +504,7 @@ Each stage reads files written by earlier stages and writes its own (Fig.~\ref{f
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_4_4.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_4_4.pdf}
 \caption{Artifact repository and presentation layer}\label{fig:4.4}
 \end{figure*}
 
@@ -882,11 +886,11 @@ This tradeoff reflects how percentile-based recommendations are calculated. High
 
 Fig.~\ref{fig:7.1} illustrates the validation results used for baseline selection, while Table~\ref{tab:7.1} presents the separate final-test results.
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_7_1.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_7_1.pdf}
 \caption{Google validation baseline candidates: any-resource violation rate versus average CPU waste, with \texttt{min\_runs} at the line ends and the selected P99 candidate (\texttt{min\_runs\ =\ 1}) circled}\label{fig:7.1}
-\end{figure}
+\end{figure*}
 
 \subsubsection{ML and Hybrid Recommendation Results}\label{sec:7.2.2}
 
@@ -921,7 +925,7 @@ Fig.~\ref{fig:7.2} illustrates the resource-specific tradeoffs between violation
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_7_2.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_7_2.pdf}
 \caption{Google final test: CPU (left) and memory (right) violation rate versus average waste in normalized units, 259 occurrences}\label{fig:7.2}
 \end{figure*}
 
@@ -978,7 +982,7 @@ Fig.~\ref{fig:7.3} shows these trade-offs for both resources. Two final-test sen
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=\linewidth]{figures/fig_7_3.png}
+\includegraphics[width=0.92\linewidth]{figures/fig_7_3.pdf}
 \caption{Alibaba final test: memory (left) and CPU (right) violation rate versus average waste, 44,053 occurrences}\label{fig:7.3}
 \end{figure*}
 
@@ -1113,17 +1117,17 @@ The web frontend will let a developer look up a recurring workload and choose ho
 
 Next to each recommended CPU and memory value, the frontend shows the workload's original request and the violation rate and average waste that the selected policy had in the test period, so the developer sees what each level costs and how often it was exceeded. On Alibaba, for example, memory recommendations were exceeded by 3.15\% of test occurrences under Hybrid, 6.04\% under P95 and 9.89\% under P90, at average waste of 8.71, 7.89 and 7.44 GB (Table~\ref{tab:7.3}). Mean and ML alone are not offered, because they were exceeded by about a third or more of test occurrences on both datasets; they remain in the policy comparison view (Fig.~\ref{fig:8.2}).
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
 \fbox{\parbox[c][1.6in][c]{0.9\linewidth}{\centering Placeholder: screenshot of the risk-level recommendation view}}
 \caption{Risk-based recommendation: recommended CPU and memory for one workload at the selected risk level, with the policy's test violation rate and waste}\label{fig:8.1}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
 \fbox{\parbox[c][1.6in][c]{0.9\linewidth}{\centering Placeholder: screenshot of the policy comparison view}}
 \caption{Policy comparison: violation rate and waste for each policy on one dataset}\label{fig:8.2}
-\end{figure}
+\end{figure*}
 
 Because the API depends only on published files, it can be deployed on any host that can read the results directory, without access to the cluster or the raw traces. For the same reason, results produced by later corrections or reruns appear in the frontend once they are published, without changes to the API or frontend. The same interface could later support a shadow-mode deployment, in which recommendations are returned for new submissions and compared with their observed usage without changing the resources actually allocated (Section~\ref{sec:9.3}).
 

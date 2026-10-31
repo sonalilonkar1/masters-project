@@ -92,16 +92,16 @@ The web frontend will let a developer look up a recurring workload and choose ho
 
 Next to each recommended CPU and memory value, the frontend shows the workload's original request and the violation rate and average waste that the selected policy had in the test period, so the developer sees what each level costs and how often it was exceeded. On Alibaba, for example, memory recommendations were exceeded by 3.15\% of test occurrences under Hybrid, 6.04\% under P95 and 9.89\% under P90, at average waste of 8.71, 7.89 and 7.44 GB (Table~\ref{tab:7.3}). Mean and ML alone are not offered, because they were exceeded by about a third or more of test occurrences on both datasets; they remain in the policy comparison view (Fig.~\ref{fig:8.2}).
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
 \fbox{\parbox[c][1.6in][c]{0.9\linewidth}{\centering Placeholder: screenshot of the risk-level recommendation view}}
 \caption{Risk-based recommendation: recommended CPU and memory for one workload at the selected risk level, with the policy's test violation rate and waste}\label{fig:8.1}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[!t]
+\begin{figure*}[!t]
 \centering
 \fbox{\parbox[c][1.6in][c]{0.9\linewidth}{\centering Placeholder: screenshot of the policy comparison view}}
 \caption{Policy comparison: violation rate and waste for each policy on one dataset}\label{fig:8.2}
-\end{figure}
+\end{figure*}
 
 Because the API depends only on published files, it can be deployed on any host that can read the results directory, without access to the cluster or the raw traces. For the same reason, results produced by later corrections or reruns appear in the frontend once they are published, without changes to the API or frontend. The same interface could later support a shadow-mode deployment, in which recommendations are returned for new submissions and compared with their observed usage without changing the resources actually allocated (Section~\ref{sec:9.3}).

@@ -42,8 +42,6 @@ FRONT = {
     ),
 }
 
-# Figures that need the full page width in two-column layout.
-WIDE_FIGURES = {"2.1", "4.1", "4.3", "4.4", "7.2", "7.3"}
 
 UNICODE = {"²": "$^{2}$", "−": "$-$", "±": "$\\pm$", "·": "$\\cdot$", "⁻¹": "$^{-1}$", "¹": "$^{1}$"}
 
@@ -123,9 +121,10 @@ def convert_table(caption: str, number: str, rows: list[str]) -> str:
 
 
 def convert_figure(image: str | None, placeholder: str | None, number: str, caption: str) -> str:
-    env = "figure*" if number in WIDE_FIGURES else "figure"
+    # Every figure spans the full page width, so its text prints at a readable size.
+    env = "figure*"
     if image:
-        body = f"\\includegraphics[width=\\linewidth]{{figures/{Path(image).name}}}"
+        body = f"\\includegraphics[width=0.92\\linewidth]{{figures/{Path(image).name}}}"
     else:
         body = f"\\fbox{{\\parbox[c][1.6in][c]{{0.9\\linewidth}}{{\\centering {pandoc(placeholder)}}}}}"
     return "\n".join([f"\\begin{{{env}}}[!t]", "\\centering", body,
@@ -146,9 +145,13 @@ def convert_chapter(path: Path) -> tuple[str, list[Path]]:
         return f"\n\n{key}\n\n"
 
     def figure(m: re.Match) -> str:
-        if m["image"]:
-            images.append(path.parent / m["image"])
-        return stash(convert_figure(m["image"], m["placeholder"], m["number"], m["caption"]))
+        image = m["image"]
+        if image:
+            # Use the vector PDF when there is one; it stays sharp at any size.
+            if (path.parent / image).with_suffix(".pdf").exists():
+                image = str(Path(image).with_suffix(".pdf"))
+            images.append(path.parent / image)
+        return stash(convert_figure(image, m["placeholder"], m["number"], m["caption"]))
 
     text = re.sub(
         r"(?:!\[[^\]]*\]\((?P<image>figures/[^)]+)\)|\*\*\[(?P<placeholder>Placeholder:[^\]]*)\]\*\*)\n\n"
@@ -251,6 +254,10 @@ By {", ".join(f['authors'][:-1])} and {f['authors'][-1]}
 \noindent {f['acknowledgments']}
 \newpage
 \tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
 \newpage
 \twocolumn
 \pagenumbering{{arabic}}
