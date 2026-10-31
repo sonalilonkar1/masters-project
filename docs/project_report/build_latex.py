@@ -43,6 +43,9 @@ FRONT = {
 }
 
 
+# Single-panel figures, set narrower than the page width.
+NARROW_FIGURES = {"4.2": 0.6, "7.1": 0.6}
+
 UNICODE = {"²": "$^{2}$", "−": "$-$", "±": "$\\pm$", "·": "$\\cdot$", "⁻¹": "$^{-1}$", "¹": "$^{1}$"}
 
 NUM = r"\d+(?:\.\d+)*"
@@ -121,15 +124,31 @@ def convert_table(caption: str, number: str, rows: list[str]) -> str:
 
 
 def convert_figure(image: str | None, placeholder: str | None, number: str, caption: str) -> str:
-    # Every figure spans the full page width, so its text prints at a readable size.
+    # Every figure spans the full page width, so its text prints at a readable size;
+    # single plots are drawn narrower so they do not fill half a page.
     env = "figure*"
     if image:
-        body = f"\\includegraphics[width=0.92\\linewidth]{{figures/{Path(image).name}}}"
+        width = NARROW_FIGURES.get(number, 0.92)
+        body = f"\\includegraphics[width={width}\\linewidth]{{figures/{Path(image).name}}}"
     else:
         body = f"\\fbox{{\\parbox[c][1.6in][c]{{0.9\\linewidth}}{{\\centering {pandoc(placeholder)}}}}}"
     return "\n".join([f"\\begin{{{env}}}[!t]", "\\centering", body,
                       f"\\caption{{{pandoc(inline_refs(caption), wrap='none')}}}\\label{{{label('fig', number)}}}",
                       f"\\end{{{env}}}"])
+
+
+def wrap_commands(block: str, width: int = 52) -> str:
+    """Break long shell command lines with a backslash continuation so they fit one column."""
+    out = []
+    for line in block.split("\n"):
+        while len(line) > width:
+            cut = line.rfind(" ", 0, width)
+            if cut <= 0:
+                break
+            out.append(line[:cut] + " \\")
+            line = "    " + line[cut + 1:]
+        out.append(line)
+    return "\n".join(out)
 
 
 def convert_chapter(path: Path) -> tuple[str, list[Path]]:
@@ -172,11 +191,15 @@ def convert_chapter(path: Path) -> tuple[str, list[Path]]:
 
     text = re.sub(r"^(#{1,3}) (?:Chapter )?(\d+(?:\.\d+)*\.?) (.+)$", heading, text, flags=re.M)
 
+    # In the IEEE layout each chapter is a section.
+    text = re.sub(r"\b([Tt])his chapter\b", lambda m: f"{m[1]}his section", text)
     parts = re.split(r"(```.*?```)", text, flags=re.S)
     text = "".join(p if p.startswith("```") else inline_refs(p) for p in parts)
     tex = pandoc(text)
     for key, value in blocks.items():
         tex = tex.replace(key, value)
+    tex = re.sub(r"\\begin\{verbatim\}(.*?)\\end\{verbatim\}",
+                 lambda m: "\\begin{verbatim}" + wrap_commands(m[1]) + "\\end{verbatim}", tex, flags=re.S)
     tex = re.sub(r"\\begin\{verbatim\}(.*?)\\end\{verbatim\}",
                  lambda m: "{\\footnotesize\n\\begin{verbatim}" + m[1] + "\\end{verbatim}\n}", tex, flags=re.S)
     return tex + "\n", images

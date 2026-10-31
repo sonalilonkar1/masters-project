@@ -356,7 +356,7 @@ The presentation layer is planned as two components (Section~\ref{sec:8.3}). A R
 
 \section{Project Design}\label{sec:4}
 
-This chapter presents the design of TraceAdvisor and the reasoning behind it. Section~\ref{sec:2} introduced the subsystems and how they connect; here each design decision is stated together with the problem it addresses, the alternatives considered and the reasons for the choice. Implementation details and measured outputs follow in Section~\ref{sec:5}.
+This section presents the design of TraceAdvisor and the reasoning behind it. Section~\ref{sec:2} introduced the subsystems and how they connect; here each design decision is stated together with the problem it addresses, the alternatives considered and the reasons for the choice. Implementation details and measured outputs follow in Section~\ref{sec:5}.
 
 Three requirements shape the design. The first is pre-execution validity: a recommendation may use only information available before the run it sizes, because any path by which future information reaches a recommendation, directly or through the evaluation procedure, produces results that cannot be achieved in practice. The second is asymmetric risk: a job whose memory is exceeded can be killed and rerun, whereas an over-provisioned job only wastes capacity, so under- and over-provisioning must be treated separately rather than averaged. The third is dataset heterogeneity: production traces differ in what they record, at what level and in which units \cite{ref7,ref19}, and policies must be compared fairly within each dataset without assuming that the datasets measure the same thing.
 
@@ -482,7 +482,7 @@ TraceAdvisor is evaluated by replaying historical traces, the only feasible meth
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/fig_4_2.png}
+\includegraphics[width=0.6\linewidth]{figures/fig_4_2.png}
 \caption{Waste and shortfall for an over-provisioned and an under-provisioned run (illustrative values)}\label{fig:4.2}
 \end{figure*}
 
@@ -539,7 +539,7 @@ Evaluation population & Rows with both targets & Rows with at least one target \
 
 \section{Project Implementation}\label{sec:5}
 
-This chapter describes how the design of Section~\ref{sec:4} was implemented and what each stage produced on the two datasets; the reasons behind the design are given in Section~\ref{sec:4}, testing in Section~\ref{sec:6} and evaluation results in Section~\ref{sec:7}. The two pipelines share their core code but are run differently. The Google ClusterData 2019 pipeline \cite{ref7} is a sequence of seven Jupyter notebooks, numbered 00 to 06, that call shared modules for splitting, feature preparation, the Hybrid rule and evaluation. The Alibaba GPU 2020 pipeline \cite{ref19} is a sequence of command-line scripts, one per stage, each of which verifies its inputs, builds its outputs in a staging folder and publishes them only when every check passes.
+This section describes how the design of Section~\ref{sec:4} was implemented and what each stage produced on the two datasets; the reasons behind the design are given in Section~\ref{sec:4}, testing in Section~\ref{sec:6} and evaluation results in Section~\ref{sec:7}. The two pipelines share their core code but are run differently. The Google ClusterData 2019 pipeline \cite{ref7} is a sequence of seven Jupyter notebooks, numbered 00 to 06, that call shared modules for splitting, feature preparation, the Hybrid rule and evaluation. The Alibaba GPU 2020 pipeline \cite{ref19} is a sequence of command-line scripts, one per stage, each of which verifies its inputs, builds its outputs in a staging folder and publishes them only when every check passes.
 
 \subsection{Data Pipeline}\label{sec:5.1}
 
@@ -763,11 +763,11 @@ On Google, Notebook 06 freezes the decisions in \texttt{decision\_manifest.json}
 
 On Alibaba, the ML script writes its decision manifest after selection and refit, before the test table has been opened. It records the baseline selection and the hash of its record, the input checksums, the selected models with their hyperparameters and file hashes, the feature list and order, the Hybrid and clipping rules, the selection order, the random seed, the library versions, the result semantics and the code commit. The final-test script, \texttt{run\_alibaba\_gpu\_2020\_final\_test.py}, opens the test table only after it has verified every input against the manifest, confirmed that the manifest was built from a clean working tree at the current commit and logged the run, and it refuses a second run for the same manifest whatever output folder is requested (Section~\ref{sec:6.2}). It then loads the locked models without refitting, scores the seven policies on the 44,053 test rows with at least one available target, and writes the comparison, the sensitivity results, row-level predictions and a run record.
 
-Raw and processed data remain outside version control because of their size, while the final results of each dataset, including the decision manifests and run records, are committed under \texttt{reports/results/}, and all final runs use the locked environment of \texttt{requirements-lock.txt} (Table~\ref{tab:3.1}). The REST API serves the published recommendation and result files as JSON, organized by dataset, workload and policy and labelled with their units, and the web frontend presents them to developers; neither component runs a pipeline stage or modifies an artifact (Section~\ref{sec:4.4}).
+Raw and processed data remain outside version control because of their size, while the final results of each dataset, including the decision manifests and run records, are committed under \texttt{reports/results/}, and all final runs use the locked environment of \texttt{requirements-lock.txt} (Table~\ref{tab:3.1}). A planned REST API will serve the published recommendation and result files as JSON, organized by dataset, workload and policy and labelled with their units, and a web frontend will present them to developers; neither component will run a pipeline stage or modify an artifact (Sections~\ref{sec:4.4} and~\ref{sec:8.3}).
 
 \section{Testing and Verification}\label{sec:6}
 
-This chapter describes how the implementation of Section~\ref{sec:5} was verified: what each check tests, how it tests it and what it found. The design that the checks protect is given in Section~\ref{sec:4}, and the evaluation results are presented in Section~\ref{sec:7}. Verification in TraceAdvisor takes three forms. Automated tests run the shared modules and the Alibaba GPU 2020 scripts \cite{ref19} on small constructed inputs whose correct outputs are known; checks inside the Google ClusterData 2019 notebooks \cite{ref7} and the Alibaba scripts stop a stage when a condition fails on the real data; and the saved outputs of every stage record counts and checksums that later stages verify. The full test suite was run on 30 October 2026 at the final commit in the locked environment: 699 tests passed and one was skipped. Of these, 658 cover the two datasets in scope; the remainder belong to adapters for other traces that are not evaluated in this report. The skipped test loads the full official Alibaba tables and runs only when they are downloaded and explicitly enabled. Table~\ref{tab:6.1} summarizes the checks by stage.
+This section describes how the implementation of Section~\ref{sec:5} was verified: what each check tests, how it tests it and what it found. The design that the checks protect is given in Section~\ref{sec:4}, and the evaluation results are presented in Section~\ref{sec:7}. Verification in TraceAdvisor takes three forms. Automated tests run the shared modules and the Alibaba GPU 2020 scripts \cite{ref19} on small constructed inputs whose correct outputs are known; checks inside the Google ClusterData 2019 notebooks \cite{ref7} and the Alibaba scripts stop a stage when a condition fails on the real data; and the saved outputs of every stage record counts and checksums that later stages verify. The full test suite was run on 30 October 2026 at the final commit in the locked environment: 699 tests passed and one was skipped. Of these, 658 cover the two datasets in scope; the remainder belong to adapters for other traces that are not evaluated in this report. The skipped test loads the full official Alibaba tables and runs only when they are downloaded and explicitly enabled. Table~\ref{tab:6.1} summarizes the checks by stage.
 
 \begin{table*}[!t]
 \centering
@@ -796,7 +796,7 @@ For Google, the notebooks verify each reconstruction step on the data itself. No
 
 For Alibaba, verification starts at the source files. The loader checks each official table against its recorded checksum, size, line count and header before any row is parsed, and the adapter tests cover the joins between jobs, task roles and worker instances, the exclusion reasons and the aggregation rules. Two aggregation rules are tested directly because an error in either would change every result without failing elsewhere: a role's resource value is the maximum over its covered workers, never their sum, and a missing value on a covered worker makes the role's value missing rather than zero. The canonical build reconciles its counts on the real data, and the saved report shows no difference between the number of source rows and the number of accepted plus rejected records. Of the 461,900 eligible role occurrences, 1,224 have no CPU measurement but a valid memory measurement, which is why CPU and memory validity are recorded separately.
 
-Every Alibaba stage writes a \texttt{SHA256SUMS} file with its outputs, and each later stage verifies the files it reads against that list before using them; the target builder also checks the row counts and column order of the canonical tables. A file altered, truncated or regenerated after a stage completed therefore stops the next stage. The independent verification planned in Task 8, a separate script that re-validates every artifact and reproduces the pipeline in a fresh environment, was not completed; the evidence for the Alibaba pipeline is therefore the per-stage verification above, the end-to-end tests of Section~\ref{sec:6.2} and the logged final run.
+Every Alibaba stage writes a \texttt{SHA256SUMS} file with its outputs, and each later stage verifies the files it reads against that list before using them; the target builder also checks the row counts and column order of the canonical tables. A file altered, truncated or regenerated after a stage completed therefore stops the next stage. A planned independent verification, a separate script that re-validates every artifact and reproduces the pipeline in a fresh environment, was not completed; the evidence for the Alibaba pipeline is therefore the per-stage verification above, the end-to-end tests of Section~\ref{sec:6.2} and the logged final run.
 
 \subsection{Temporal Leakage and Split Integrity}\label{sec:6.2}
 
@@ -836,7 +836,7 @@ Each metric is averaged over the rows on which it is defined, so different metri
 
 \section{Performance, Results, and Discussion}\label{sec:7}
 
-This chapter presents TraceAdvisor's offline evaluation results, focusing on the tradeoff between under-provisioning and excess resource allocation. Preliminary studies on three Azure traces examine historical baselines, while Google ClusterData 2019 \cite{ref7} serves as the primary evaluation dataset and Alibaba GPU 2020 \cite{ref19} provides a second recurring-workload evaluation. Validation results are used to describe policy and model selection, while final-test results assess the selected approaches. The chapter also compares findings across the two datasets and discusses evaluation limitations.
+This section presents TraceAdvisor's offline evaluation results, focusing on the tradeoff between under-provisioning and excess resource allocation. Preliminary studies on three Azure traces examine historical baselines, while Google ClusterData 2019 \cite{ref7} serves as the primary evaluation dataset and Alibaba GPU 2020 \cite{ref19} provides a second recurring-workload evaluation. Validation results are used to describe policy and model selection, while final-test results assess the selected approaches. The chapter also compares findings across the two datasets and discusses evaluation limitations.
 
 \subsection{Preliminary Baseline Studies on Azure Traces}\label{sec:7.1}
 
@@ -888,7 +888,7 @@ Fig.~\ref{fig:7.1} illustrates the validation results used for baseline selectio
 
 \begin{figure*}[!t]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/fig_7_1.pdf}
+\includegraphics[width=0.6\linewidth]{figures/fig_7_1.pdf}
 \caption{Google validation baseline candidates: any-resource violation rate versus average CPU waste, with \texttt{min\_runs} at the line ends and the selected P99 candidate (\texttt{min\_runs\ =\ 1}) circled}\label{fig:7.1}
 \end{figure*}
 
@@ -1025,7 +1025,7 @@ Generalizability is further limited by the relatively small Google test populati
 
 \section{Operations, Reproducibility, and Future Deployment}\label{sec:8}
 
-This chapter describes how TraceAdvisor is run and how its reported results can be reproduced. Section~\ref{sec:8.1} gives the run order for each dataset and the checks that protect a run, Section~\ref{sec:8.2} the environment, repository layout and provenance records needed to reproduce the results, and Section~\ref{sec:8.3} the planned developer-facing API and web frontend. The design of the artifact layer is described in Section~\ref{sec:4.4} and its implementation in Section~\ref{sec:5.6}.
+This section describes how TraceAdvisor is run and how its reported results can be reproduced. Section~\ref{sec:8.1} gives the run order for each dataset and the checks that protect a run, Section~\ref{sec:8.2} the environment, repository layout and provenance records needed to reproduce the results, and Section~\ref{sec:8.3} the planned developer-facing API and web frontend. The design of the artifact layer is described in Section~\ref{sec:4.4} and its implementation in Section~\ref{sec:5.6}.
 
 \subsection{Offline Artifact Workflow}\label{sec:8.1}
 
@@ -1058,8 +1058,10 @@ On the reference machine, the published Alibaba run of 30 October 2026 took 56 s
 {\footnotesize
 \begin{verbatim}
 python3.12 -m venv ~/venvs/traceadvisor-lock
-~/venvs/traceadvisor-lock/bin/python -m pip install -r requirements-lock.txt
-~/venvs/traceadvisor-lock/bin/python -m ipykernel install --user --name traceadvisor-lock
+~/venvs/traceadvisor-lock/bin/python -m pip install \
+    -r requirements-lock.txt
+~/venvs/traceadvisor-lock/bin/python -m ipykernel \
+    install --user --name traceadvisor-lock
 \end{verbatim}
 }
 
@@ -1133,7 +1135,7 @@ Because the API depends only on published files, it can be deployed on any host 
 
 \section{Summary, Conclusions, and Recommendations}\label{sec:9}
 
-This chapter summarizes the project, states the conclusions supported by the results of Section~\ref{sec:7}, and discusses the limitations of the evaluation and directions for further work. It introduces no new results.
+This section summarizes the project, states the conclusions supported by the results of Section~\ref{sec:7}, and discusses the limitations of the evaluation and directions for further work. It introduces no new results.
 
 \subsection{Summary}\label{sec:9.1}
 
