@@ -1,0 +1,107 @@
+\section{Operations, Reproducibility, and Future Deployment}\label{sec:8}
+
+This chapter describes how TraceAdvisor is run and how its reported results can be reproduced. Section~\ref{sec:8.1} gives the run order for each dataset and the checks that protect a run, Section~\ref{sec:8.2} the environment, repository layout and provenance records needed to reproduce the results, and Section~\ref{sec:8.3} the planned developer-facing API and web frontend. The design of the artifact layer is described in Section~\ref{sec:4.4} and its implementation in Section~\ref{sec:5.6}.
+
+\subsection{Offline Artifact Workflow}\label{sec:8.1}
+
+TraceAdvisor runs offline as a sequence of stages, each of which reads the outputs of the previous stage from disk and writes its own outputs as files. No stage depends on a running service, so a stage can be rerun or inspected on its own, and every reported number can be traced to the files that produced it.
+
+\textbf{Google ClusterData 2019.} The Google pipeline consists of seven notebooks in \texttt{pipelines/google\_subset/}, run in order with the locked \texttt{traceadvisor-lock} kernel. Notebook 00 reviews the quality of the raw Kaggle sample \cite{ref7}; Notebooks 01 to 04 ingest it into canonical observations, reconstruct executions, build point-in-time historical profiles, and create the chronological splits, next-occurrence targets and baselines; and Notebook 05 trains and selects the ML models. All outputs are written to \texttt{data/processed/google\_subset\_v1/}. Notebook 06 performs the final comparison in two steps. With \texttt{FREEZE\_STATUS\ =\ "final"}, it writes a decision manifest that records the selected policy, the selected models and the SHA-256 checksums of thirteen inputs, including the prediction tables, the model files and the evaluation code. With \texttt{RUN\_FINAL\_TEST\ =\ True}, at the same commit, it then scores the test period once. Before scoring, the notebook checks that the manifest is final, that it was written at the current commit, that only the notebook itself is uncommitted, that the code hash and inputs match the manifest, and that no final-test result already exists (Section~\ref{sec:6.2}).
+
+\textbf{Alibaba GPU 2020.} The Alibaba pipeline consists of five command-line scripts in \texttt{scripts/}, run in order from a clean checkout:
+
+{\footnotesize
+\begin{verbatim}
+python scripts/build_alibaba_gpu_2020_canonical.py
+python scripts/build_alibaba_gpu_2020_targets.py
+python scripts/run_alibaba_gpu_2020_baselines.py
+python scripts/run_alibaba_gpu_2020_ml.py
+python scripts/run_alibaba_gpu_2020_final_test.py
+\end{verbatim}
+}
+
+The first script verifies the official tables against their published checksums and builds the canonical views \cite{ref19}; the second builds the next-occurrence targets for each split; the third evaluates the historical baselines and selects one on validation; the fourth trains, selects and locks the ML models and writes a decision manifest; and the fifth scores the test period. Because the canonical build reads the full official tables, it was run once and its output was shared with the team; each member then checks a copy with \texttt{-\/-verify}, which compares the files against the \texttt{SHA256SUMS} file written at build time instead of rebuilding them.
+
+Each script refuses to run on a working tree with uncommitted changes and refuses to overwrite an existing output directory. The options \texttt{-\/-allow-dirty} and \texttt{-\/-force} override these checks for development runs, and \texttt{-\/-out-dir} writes to a different directory. The final-test script adds stricter checks: it verifies the checksums and fields of the decision manifest, requires the ML lock to have been built from a clean tree at the current commit, and records every run in a run log keyed by the manifest's checksum. A second run for the same manifest is refused, whatever the output directory, unless a defect is documented with \texttt{-\/-defect-rerun-reason}, and the ML script refuses to replace a lock that has already been tested. These checks make the one-time test an enforced property of the workflow rather than a convention (Section~\ref{sec:6.2}).
+
+On the reference machine, the published Alibaba run of 30 October 2026 took 56 seconds for the targets, 110 seconds for the baselines, 2 minutes 53 seconds for the ML stage, and 7 seconds for the final test.
+
+\subsection{Reproducibility and Repository Layout}\label{sec:8.2}
+
+\textbf{Environment.} All final runs used a locked Python 3.12 environment. \texttt{requirements-lock.txt} pins the exact version of every package, while \texttt{requirements.txt} keeps the minimum versions (Table~\ref{tab:3.1}). The environment is created as follows:
+
+{\footnotesize
+\begin{verbatim}
+python3.12 -m venv ~/venvs/traceadvisor-lock
+~/venvs/traceadvisor-lock/bin/python -m pip install -r requirements-lock.txt
+~/venvs/traceadvisor-lock/bin/python -m ipykernel install --user --name traceadvisor-lock
+\end{verbatim}
+}
+
+The last command registers the kernel used by the Google notebooks. The test suite is run in the same environment with \texttt{pytest} (Section~\ref{sec:6}).
+
+\textbf{Data.} Raw and processed data are not stored in the repository because of their size. The Google pipeline reads the Kaggle sample from \texttt{subset/borg\_traces\_data.csv}. The Alibaba pipeline reads the official cluster-trace-gpu-v2020 tables, whose archive and file checksums are recorded in \texttt{config/alibaba\_gpu\_2020\_sources.json} and checked before any table is read. \texttt{scripts/verify\_data\_setup.py} checks that the data for either dataset is in place.
+
+\textbf{Repository layout.} The repository separates reusable code, runnable pipelines, configuration and results:
+
+\begin{itemize}
+\tightlist
+\item
+  \texttt{src/}: the shared library, with the canonical schema, dataset adapters and sources, feature construction, baselines, models, policies and evaluation;
+\item
+  \texttt{pipelines/google\_subset/}: the Google notebooks;
+\item
+  \texttt{scripts/}: the Alibaba command-line stages and setup checks;
+\item
+  \texttt{config/}: dataset source checksums and capability profiles;
+\item
+  \texttt{tests/}: the automated tests;
+\item
+  \texttt{data/}: raw and processed data, local only;
+\item
+  \texttt{reports/results/}: the final results for both datasets, with tables, figures and copies of the provenance records;
+\item
+  \texttt{reports/eval/}: the earlier Azure baseline experiments (Section~\ref{sec:7.1}), kept for context and not part of the evaluated system;
+\item
+  \texttt{docs/}: design notes, data analyses and this report.
+\end{itemize}
+
+Code, configuration, documentation and final results are versioned in Git, while data and model files remain local, as described in Section~\ref{sec:4.4}.
+
+\textbf{Provenance records.} Each result can be traced to the data and code that produced it. On Google, the decision manifest records the selections and the checksums of the thirteen inputs, and \texttt{final\_test\_run\_metadata.json} records the commit and manifest checksum of the test run. On Alibaba, every stage writes a \texttt{metadata.json} and a \texttt{SHA256SUMS} file, the canonical build writes a count report that reconciles output rows with the source tables, and the ML stage writes a decision manifest. The run log \texttt{ml/final\_test\_runs.jsonl} and the record \texttt{final\_test/run\_record.json} document the single test run. Copies of these records are kept with the results in \texttt{reports/results/}.
+
+\textbf{Reproduction limits.} Because each final test can be run only once per decision manifest, the published test results cannot be produced again in the same output location. They can be reproduced elsewhere from the same commit: the Google freeze and test from a clean checkout of \texttt{e59349e}, and the Alibaba ML lock and final test from a clean checkout of \texttt{fe38ea0}, the commit used for the published run. Building a new Alibaba ML lock produces a new decision manifest, which counts as a new experiment rather than a reproduction of the published one.
+
+\subsection{Developer-Facing API and Web Frontend}\label{sec:8.3}
+
+The presentation layer is planned as a read-only REST API over the published results and a web frontend built on it (Section~\ref{sec:4.4}, Fig.~\ref{fig:4.4}). It is not yet implemented; this section describes the planned design, and the figures are placeholders for screenshots of the frontend.
+
+The API will serve the recommendations for each workload, policy and split, together with the evaluation summaries, organized by dataset, workload and policy. Every value will be returned with its unit and dataset label, including the label that Alibaba CPU results describe average usage, so that no client can display a number without the information needed to interpret it. The API will read only published files under \texttt{data/processed/} and \texttt{reports/results/}. It will not run the pipeline, read raw data or modify any artifact, so developers see exactly the results that were evaluated, and the API can be developed and deployed independently of the pipeline.
+
+The web frontend will let a developer look up a recurring workload and choose how much risk to accept (Fig.~\ref{fig:8.1}). The evaluated policies form a scale from safe and wasteful to efficient and risky, and the right point on it depends on the job: a job that must not fail justifies extra capacity, while a job that can simply be rerun can trade some risk for less waste. The frontend therefore offers three risk levels, each mapped to an evaluated policy:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Restrictive} shows the Hybrid recommendation, the safest policy on both datasets and the default;
+\item
+  \textbf{Balanced} shows the P95 recommendation;
+\item
+  \textbf{Efficient} shows the P90 recommendation.
+\end{itemize}
+
+Next to each recommended CPU and memory value, the frontend shows the workload's original request and the violation rate and average waste that the selected policy had in the test period, so the developer sees what each level costs and how often it was exceeded. On Alibaba, for example, memory recommendations were exceeded by 3.15\% of test occurrences under Hybrid, 6.04\% under P95 and 9.89\% under P90, at average waste of 8.71, 7.89 and 7.44 GB (Table~\ref{tab:7.3}). Mean and ML alone are not offered, because they were exceeded by about a third or more of test occurrences on both datasets; they remain in the policy comparison view (Fig.~\ref{fig:8.2}).
+
+\begin{figure}[!t]
+\centering
+\fbox{\parbox[c][1.6in][c]{0.9\linewidth}{\centering Placeholder: screenshot of the risk-level recommendation view}}
+\caption{Risk-based recommendation: recommended CPU and memory for one workload at the selected risk level, with the policy's test violation rate and waste}\label{fig:8.1}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\fbox{\parbox[c][1.6in][c]{0.9\linewidth}{\centering Placeholder: screenshot of the policy comparison view}}
+\caption{Policy comparison: violation rate and waste for each policy on one dataset}\label{fig:8.2}
+\end{figure}
+
+Because the API depends only on published files, it can be deployed on any host that can read the results directory, without access to the cluster or the raw traces. For the same reason, results produced by later corrections or reruns appear in the frontend once they are published, without changes to the API or frontend. The same interface could later support a shadow-mode deployment, in which recommendations are returned for new submissions and compared with their observed usage without changing the resources actually allocated (Section~\ref{sec:9.3}).
