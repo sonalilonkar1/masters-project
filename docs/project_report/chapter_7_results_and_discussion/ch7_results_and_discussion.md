@@ -120,7 +120,7 @@ Hybrid also achieved a CPU violation rate of 3.77%, compared with 6.45% for P99,
 
 ML alone produced the lowest average memory waste at 1.328 GB, but had a substantially higher memory violation rate of 44.77%. Hybrid also achieved a lower average memory shortfall of 0.197 GB, compared with 0.233 GB for P99 and 1.046 GB for ML.
 
-Two final-test sensitivity checks support the same ordering. On the 595 occurrences from multi-instance roles, Hybrid’s memory violation rate was 5.71% compared with 8.07% for P99. When each workload is weighted equally rather than each occurrence, Hybrid’s CPU and memory violation rates were 4.08% and 3.71%, compared with 11.38% and 4.17% for P99.
+Figure 7.3 shows these trade-offs for both resources. Two final-test sensitivity checks support the same ordering. On the 595 occurrences from multi-instance roles, Hybrid’s memory violation rate was 5.71% compared with 8.07% for P99. When each workload is weighted equally rather than each occurrence, Hybrid’s CPU and memory violation rates were 4.08% and 3.71%, compared with 11.38% and 4.17% for P99.
 
 ![Alibaba GPU 2020 final-test CPU and memory trade-offs](figures/fig_7_3.png)
 
@@ -129,6 +129,8 @@ Two final-test sensitivity checks support the same ordering. On the 595 occurren
 Overall, the saved final-test results indicate that Hybrid improves reliability relative to its P99 safeguard with only a small increase in average memory waste and a moderate increase in average CPU waste. Although Request achieves a similar memory violation rate, its average memory waste is substantially higher. These findings are limited to the evaluated target definitions, and no combined CPU-or-memory violation rate is reported for Alibaba.
 
 ## 7.4 Analysis Across Datasets
+
+Table 7.4 summarizes how demand is defined and evaluated on each dataset.
 
 **Table 7.4** Measurement definitions and evaluation scope for the two evaluation datasets
 
