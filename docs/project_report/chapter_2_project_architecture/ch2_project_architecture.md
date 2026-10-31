@@ -14,7 +14,7 @@
 
 **Artifact-driven workflow.** Each stage reads files written by the previous stage and writes new files. The checksums of the inputs, the code version and the library versions are recorded with the outputs: for every stage of the Alibaba pipeline, and in the decision manifest that governs the final test of the Google pipeline. Any reported number can be traced back to the data, code and environment that produced it.
 
-**Presentation.** A REST API exposes the published results, and a web frontend built on it lets developers browse workloads, view their recommendations and compare policies. Figure 2.1 shows the overall architecture.
+**Presentation.** A planned REST API will expose the published results, and a web frontend built on it will let developers browse workloads, view their recommendations and compare policies. Figure 2.1 shows the overall architecture.
 
 ```mermaid
 flowchart TB
@@ -90,4 +90,4 @@ A single evaluator scores every policy on both datasets with the same formulas: 
 
 ### 2.2.6 Artifact Repository and Presentation Layer
 
-Every stage writes its outputs as files, and the checksums of the inputs, the code version and the library versions are recorded per stage on Alibaba and in the decision manifest on Google, so any result can be traced to the data and code that produced it. The artifact repository holds these outputs, from canonical views to final results. A REST API exposes the published recommendations and evaluation results, and a web frontend built on it lets developers browse workloads, view their recommendations and compare policies. The presentation layer only reads published results; it does not run the pipeline or change any artifact.
+Every stage writes its outputs as files, and the checksums of the inputs, the code version and the library versions are recorded per stage on Alibaba and in the decision manifest on Google, so any result can be traced to the data and code that produced it. The artifact repository holds these outputs, from canonical views to final results. A planned REST API will expose the published recommendations and evaluation results, and a web frontend built on it will let developers browse workloads, view their recommendations and compare policies (Section 8.3). The presentation layer will only read published results; it will not run the pipeline or change any artifact.

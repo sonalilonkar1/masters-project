@@ -6,8 +6,8 @@ be rebuilt from a fresh checkout:
 
     ~/venvs/traceadvisor-lock/bin/python reports/results/make_results_figures.py
 
-Writes PNGs to reports/results/alibaba_gpu_2020/figures/ and
-reports/results/google_subset/figures/.
+Writes PNGs, and PDF copies for the LaTeX report, to
+reports/results/alibaba_gpu_2020/figures/ and reports/results/google_subset/figures/.
 """
 
 from __future__ import annotations
@@ -51,8 +51,10 @@ def _save(fig, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
     fig.savefig(path, dpi=DPI, facecolor="white")
+    # Vector copy for the LaTeX report, which stays sharp at any size.
+    fig.savefig(path.with_suffix(".pdf"), facecolor="white", metadata={"CreationDate": None})
     plt.close(fig)
-    print(f"wrote {path.relative_to(HERE.parents[1])}")
+    print(f"wrote {path.relative_to(HERE.parents[1])} (+ .pdf)")
 
 
 def _tradeoff_panel(ax, frame, waste_col, viol_col, title, xlabel, ylabel, offsets=None):
