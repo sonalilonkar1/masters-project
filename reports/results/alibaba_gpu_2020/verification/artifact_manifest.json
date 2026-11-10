@@ -1,0 +1,367 @@
+{
+  "artifacts": [
+    {
+      "path": "data/processed/alibaba_gpu_v2020/count_report.md",
+      "row_count": null,
+      "sha256": "8b21d1d7456e95bbe4a246bc28836f246878e14bb801ee0e732d71c4f92dff46",
+      "stage": "task3_canonical"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020/instance.parquet",
+      "row_count": 7410783,
+      "sha256": "c209d4aebfbaabb2222ccdb0b0c6aaa83edb2de32dfffcc50567abe404b18b63",
+      "stage": "task3_canonical"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020/metadata.json",
+      "row_count": null,
+      "sha256": "d831a813b974155baeb820f5e67f5232b39c5305a61ebccbd9007bf5347927fc",
+      "stage": "task3_canonical"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020/rejected.parquet",
+      "row_count": 121824,
+      "sha256": "f1891c5bd544e3e3a184c642d0c2f054ee29039e7242b0a7efe21bb00ff94ef4",
+      "stage": "task3_canonical"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020/role_occurrence.parquet",
+      "row_count": 1254108,
+      "sha256": "e1823b92b2851675d567a9b4f55cdce47036b74082e7eb8247c1b77d1c33b107",
+      "stage": "task3_canonical"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_targets/metadata.json",
+      "row_count": null,
+      "sha256": "1a24461ecebeddcca725383720ebc7c2cc84628c2e242f6b823a57bc9fe3c455",
+      "stage": "task4_targets"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_targets/test.parquet",
+      "row_count": 69285,
+      "sha256": "daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f",
+      "stage": "task4_targets"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_targets/train.parquet",
+      "row_count": 323329,
+      "sha256": "f2378317f8fd26bda7663df84052ff7ec446af4c282c19e838fa4df76fef81e4",
+      "stage": "task4_targets"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_targets/validation.parquet",
+      "row_count": 69286,
+      "sha256": "a30adc80aa036d34e71f9033330cb9b17bf7d18acd4678707df74ce70f985421",
+      "stage": "task4_targets"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_baselines/baseline_selection.json",
+      "row_count": null,
+      "sha256": "ec3c4e07f51b991c16ad27825b90752191958339aa9b78f25f06a51b61c6ad5e",
+      "stage": "task6_baselines"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_baselines/history_statistics.parquet",
+      "row_count": 461900,
+      "sha256": "39e12b6ed581cc1a03735cdc04c88c17e2c021ab9da0c67beff1d9552edd54d3",
+      "stage": "task6_baselines"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_baselines/metadata.json",
+      "row_count": null,
+      "sha256": "7a44dd9606f6164b518a5aece3c260758ec9ab5a15c77dcd2ac88af3d965d048",
+      "stage": "task6_baselines"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_baselines/recommendations_test.parquet",
+      "row_count": 69285,
+      "sha256": "1e3361f68224d6565c00ab92820cf38bcbdeda703843647c5ef96fd820046e1b",
+      "stage": "task6_baselines"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_baselines/recommendations_train.parquet",
+      "row_count": 323329,
+      "sha256": "93d618830576724defa523755ac8bf26ad281cc96a61725dc56094ee683de05b",
+      "stage": "task6_baselines"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_baselines/recommendations_validation.parquet",
+      "row_count": 69286,
+      "sha256": "1d3df7a8aa0b81776340f4469171c8efbbc7d68ce15b0ab94a3ca865e4ddbc65",
+      "stage": "task6_baselines"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_baselines/sensitivity_validation.csv",
+      "row_count": 25,
+      "sha256": "fd01cf2ca082cd60902180a450d9136c90936f21d08dd2884974d243aff7f1c0",
+      "stage": "task6_baselines"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_baselines/validation_comparison.csv",
+      "row_count": 20,
+      "sha256": "3b19cb6b5aff26fec79585064a44bb88d5658387433db255070490368460fb78",
+      "stage": "task6_baselines"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_ml/candidate_models.csv",
+      "row_count": 10,
+      "sha256": "ef474ef5ac200f4163772a19e0af75c2bea7903577bb4bf934f963b28137262c",
+      "stage": "task7_pr1_ml"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_ml/cpu_model.joblib",
+      "row_count": null,
+      "sha256": "ff4a1521eb02343d1fb0ef089af0c24acdfbff72a28a73c823890c3740258384",
+      "stage": "task7_pr1_ml"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_ml/decision_manifest.json",
+      "row_count": null,
+      "sha256": "f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950",
+      "stage": "task7_pr1_ml"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_ml/feature_order.json",
+      "row_count": null,
+      "sha256": "b9b74433fafbb4401284f76966d2fb134685f9a44e3bdde5c56adb526a34f925",
+      "stage": "task7_pr1_ml"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_ml/memory_model.joblib",
+      "row_count": null,
+      "sha256": "c79c29ded8eb466a235ac93dad26d23d7166efbf4e8a69dcc461cdf8cbc5286a",
+      "stage": "task7_pr1_ml"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_ml/metadata.json",
+      "row_count": null,
+      "sha256": "b9a2fa94a27f3989fbfef4f9c6a847c9640d30b458e870ba5afa9b0f31fdea54",
+      "stage": "task7_pr1_ml"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_ml/model_selection.json",
+      "row_count": null,
+      "sha256": "b9357ea5b0c139d79cbb23c56f8e781f24c2a0b2276b2ce64b813f2cbb177e08",
+      "stage": "task7_pr1_ml"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_ml/validation_ml_hybrid_predictions.parquet",
+      "row_count": 69286,
+      "sha256": "5d71419ec52383f6cedc4db0d3776c8ffba9795e9670b925081e6bf8cf4c245d",
+      "stage": "task7_pr1_ml"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_ml/validation_policy_comparison.csv",
+      "row_count": 7,
+      "sha256": "382bb89be7024e3474e34ed3f4f19563513858c06df71d9a201a2d3c2898a463",
+      "stage": "task7_pr1_ml"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_final_test/final_test_policy_comparison.csv",
+      "row_count": 7,
+      "sha256": "c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8",
+      "stage": "task7_pr2_final_test"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_final_test/final_test_predictions.parquet",
+      "row_count": 69285,
+      "sha256": "f01df084e317381325010698554f08d50f22b8b3731198c4c176a2615dab06e5",
+      "stage": "task7_pr2_final_test"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_final_test/final_test_sensitivity.csv",
+      "row_count": 35,
+      "sha256": "e7f25120d954ec54341b10082142b254893c16ecdb4f670a8b839f0b90433fc1",
+      "stage": "task7_pr2_final_test"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_final_test/metadata.json",
+      "row_count": null,
+      "sha256": "110a72b592eacdc4fc6c581b40ccb7372e0bdae48596f2edd8913583aa193ae8",
+      "stage": "task7_pr2_final_test"
+    },
+    {
+      "path": "data/processed/alibaba_gpu_v2020_final_test/run_record.json",
+      "row_count": null,
+      "sha256": "993454a044bc7f1bac861eae2c782ee077ea3ba232050387f9e1b2cd83d5b31e",
+      "stage": "task7_pr2_final_test"
+    }
+  ],
+  "checks": [
+    {
+      "detail": "5 checksums match",
+      "name": "task3_canonical.sha256",
+      "ok": true
+    },
+    {
+      "detail": "4 checksums match",
+      "name": "task4_targets.sha256",
+      "ok": true
+    },
+    {
+      "detail": "8 checksums match",
+      "name": "task6_baselines.sha256",
+      "ok": true
+    },
+    {
+      "detail": "9 checksums match",
+      "name": "task7_pr1_ml.sha256",
+      "ok": true
+    },
+    {
+      "detail": "5 checksums match",
+      "name": "task7_pr2_final_test.sha256",
+      "ok": true
+    },
+    {
+      "detail": "expected 'alibaba_gpu_v2020', found 'alibaba_gpu_v2020'",
+      "name": "task3.dataset_id",
+      "ok": true
+    },
+    {
+      "detail": "expected '0.2.0', found '0.2.0'",
+      "name": "task3.schema_version",
+      "ok": true
+    },
+    {
+      "detail": "expected 'alibaba_gpu_v2020', found 'alibaba_gpu_v2020'",
+      "name": "task4.dataset_id",
+      "ok": true
+    },
+    {
+      "detail": "expected '0.2.0', found '0.2.0'",
+      "name": "task4.schema_version",
+      "ok": true
+    },
+    {
+      "detail": "expected 'alibaba_gpu_v2020', found 'alibaba_gpu_v2020'",
+      "name": "task6.dataset_id",
+      "ok": true
+    },
+    {
+      "detail": "expected '0.2.0', found '0.2.0'",
+      "name": "task6.schema_version",
+      "ok": true
+    },
+    {
+      "detail": "expected 'alibaba_gpu_v2020', found 'alibaba_gpu_v2020'",
+      "name": "task7_pr1.dataset_id",
+      "ok": true
+    },
+    {
+      "detail": "expected '0.2.0', found '0.2.0'",
+      "name": "task7_pr1.schema_version",
+      "ok": true
+    },
+    {
+      "detail": "expected 'alibaba_gpu_v2020', found 'alibaba_gpu_v2020'",
+      "name": "task7_pr2.dataset_id",
+      "ok": true
+    },
+    {
+      "detail": "expected '0.2.0', found '0.2.0'",
+      "name": "task7_pr2.schema_version",
+      "ok": true
+    },
+    {
+      "detail": "selected_policy='P99'",
+      "name": "task6.selected_policy",
+      "ok": true
+    },
+    {
+      "detail": "selected_min_runs=10",
+      "name": "task6.selected_min_runs",
+      "ok": true
+    },
+    {
+      "detail": "phase='pr1_validation_lock'",
+      "name": "task7_pr1.phase",
+      "ok": true
+    },
+    {
+      "detail": "cpu_result_semantics='average_usage'",
+      "name": "task7_pr1.cpu_semantics",
+      "ok": true
+    },
+    {
+      "detail": "primary_resource='memory'",
+      "name": "task7_pr1.primary_resource",
+      "ok": true
+    },
+    {
+      "detail": "any_resource_metric_reported=False",
+      "name": "task7_pr1.no_any_resource",
+      "ok": true
+    },
+    {
+      "detail": "selected_models={'cpu': 'hist_gradient_boosting', 'memory': 'hist_gradient_boosting'}",
+      "name": "task7_pr1.models_locked",
+      "ok": true
+    },
+    {
+      "detail": "policies=('Request', 'Mean', 'P90', 'P95', 'P99', 'ML', 'Hybrid')",
+      "name": "task7_pr2.seven_policies",
+      "ok": true
+    },
+    {
+      "detail": "required=['valid_cpu_violation_count', 'valid_memory_violation_count'], columns=['policy', 'row_count', 'valid_cpu_violation_count', 'valid_memory_violation_count', 'valid_cpu_utilization_count', 'valid_memory_utilization_count', 'cpu_violation_pct', 'memory_violation_pct', 'average_cpu_utilization', 'average_memory_utilization', 'average_cpu_waste', 'average_memory_waste', 'average_cpu_shortfall', 'average_memory_shortfall', 'cpu_result_semantics', 'primary_resource', 'any_resource_metric_reported']",
+      "name": "task7_pr2.separate_denominators",
+      "ok": true
+    },
+    {
+      "detail": "all rows must carry cpu_result_semantics=average_usage",
+      "name": "task7_pr2.cpu_semantics",
+      "ok": true
+    },
+    {
+      "detail": "all rows must carry primary_resource=memory",
+      "name": "task7_pr2.memory_primary",
+      "ok": true
+    },
+    {
+      "detail": "forbidden columns=[]",
+      "name": "task7_pr2.no_gpu_or_any_resource_metrics",
+      "ok": true
+    },
+    {
+      "detail": "lock='2026-11-10T22:50:19Z', final_run='2026-11-10T23:14:38Z'",
+      "name": "task7.lock_before_final_test",
+      "ok": true
+    },
+    {
+      "detail": "expected manifest sha='f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950', run_record='f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950'",
+      "name": "task7.final_run_traces_manifest",
+      "ok": true
+    },
+    {
+      "detail": "expected explicit test_evaluator_call_count=1, found 1",
+      "name": "task7.test_evaluator_call_count",
+      "ok": true
+    },
+    {
+      "detail": "expected explicit test_target_read_count=1, found 1",
+      "name": "task7.test_target_read_count",
+      "ok": true
+    },
+    {
+      "detail": "expected non-empty run_id, found '7dd3942e-c2c0-4816-9466-efd32e486cc2'",
+      "name": "task7.final_run_id",
+      "ok": true
+    },
+    {
+      "detail": "missing=[]",
+      "name": "task7.prediction_columns",
+      "ok": true
+    },
+    {
+      "detail": "expected CPU=percent_of_vcpu, memory=gb, scope=task_role_per_instance",
+      "name": "task7.prediction_units_scope",
+      "ok": true
+    }
+  ],
+  "dataset_id": "alibaba_gpu_v2020",
+  "decision_manifest_sha256": "f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950",
+  "schema_version": "0.2.0",
+  "verification_timestamp_utc": "2026-11-10T23:18:43Z",
+  "verified": true
+}
