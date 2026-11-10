@@ -27,6 +27,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+from uuid import uuid4
 import shutil
 import sys
 import tempfile
@@ -55,6 +56,7 @@ DEFAULT_TARGETS_DIR = targets_build.DEFAULT_OUT_DIR
 DEFAULT_BASELINES_DIR = baselines_run.DEFAULT_OUT_DIR
 DEFAULT_ML_DIR = ml_run.DEFAULT_OUT_DIR
 DEFAULT_OUT_DIR = REPO_ROOT / "data/processed/alibaba_gpu_v2020_final_test"
+SCHEMA_VERSION = "0.2.0"
 
 OUTPUT_FILES = (
     "final_test_policy_comparison.csv",
@@ -331,10 +333,12 @@ def run(
         return EXIT_REFUSED
 
     staging = None
+    run_id = str(uuid4())
     try:
         # All integrity/duplicate checks above happen before test is opened.
         # Log the run first, so a run that fails after reading test still counts.
         _append_run_log(run_log, {
+            "run_id": run_id,
             "decision_manifest_sha256": decision_sha,
             "code_commit": commit,
             "code_dirty": dirty,
@@ -344,6 +348,8 @@ def run(
             "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         })
         test = pd.read_parquet(targets_dir / "test.parquet")
+        test_target_read_count = 1
+
         history_statistics = pd.read_parquet(
             baselines_dir / "history_statistics.parquet"
         )
@@ -365,6 +371,12 @@ def run(
             manifest,
             PROFILE,
         )
+
+        if result.evaluator_call_count != 1:
+            raise RuntimeError(
+                "Final-test evaluator must be called exactly once; "
+                f"reported {result.evaluator_call_count}"
+            )
 
         if list(result.comparison["policy"]) != list(FINAL_POLICIES):
             raise RuntimeError(
@@ -408,9 +420,14 @@ def run(
         )
 
         run_record = {
+            "dataset_id": PROFILE.dataset_id,
+            "schema_version": SCHEMA_VERSION,
             "task": "task7_alibaba_gpu_2020_ml_hybrid",
             "phase": "pr2_final_test",
+            "run_id": run_id,
             "run_fingerprint": fingerprint,
+            "test_target_read_count": test_target_read_count,
+            "test_evaluator_call_count": result.evaluator_call_count,
             "decision_manifest_sha256": decision_sha,
             "code_commit": commit,
             "code_dirty": dirty,
@@ -454,9 +471,13 @@ def run(
         )
 
         metadata = {
+            "dataset_id": PROFILE.dataset_id,
+            "schema_version": SCHEMA_VERSION,
             "task": "task7_alibaba_gpu_2020_ml_hybrid",
             "phase": "pr2_final_test",
             "reads_test": True,
+            "test_target_read_count": test_target_read_count,
+            "test_evaluator_call_count": result.evaluator_call_count,
             "trains_models": False,
             "changes_selection": False,
             "changes_manifest": False,

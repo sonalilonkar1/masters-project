@@ -50,6 +50,7 @@ class FinalTestResult:
     n_clipped: dict[str, int]
     safeguard_missing: dict[str, int]
     final_population_size: int
+    evaluator_call_count: int
 
 
 def validate_locked_manifest(manifest: Mapping[str, object]) -> None:
@@ -179,7 +180,13 @@ def _build_eval_frame(rows, cpu_values, memory_values, policy_name):
     frame["dataset_id"] = rows["dataset_id"]
     frame["workload_id"] = rows["workload_id"]
     frame["policy_name"] = policy_name
-    for column in ("role_key", "occurrence_id", "recurrence_key"):
+    for column in (
+        "role_key",
+        "occurrence_id",
+        "recurrence_key",
+        "next_occurrence_same_second",
+        "inst_num",
+    ):
         if column in rows.columns:
             frame[column] = rows[column]
 
@@ -211,18 +218,13 @@ def _policy_arrays(rows: pd.DataFrame, policy: str):
     )
 
 
-def _score_policy(
-    rows: pd.DataFrame,
-    policy: str,
+def _summary_from_evaluated(
+    evaluated: pd.DataFrame,
     evaluator: RecommendationEvaluator,
     *,
     group_weighted: bool = False,
 ) -> dict[str, object]:
-    cpu_rec, mem_rec = _policy_arrays(rows, policy)
-    evaluated = evaluator.evaluate_canonical(
-        _build_eval_frame(rows, cpu_rec, mem_rec, policy)
-    )
-    record: dict[str, object] = {"policy": policy, "row_count": int(len(rows))}
+    record: dict[str, object] = {"row_count": int(len(evaluated))}
 
     if group_weighted:
         record.update(a6.group_weighted_summary(evaluated))
@@ -232,8 +234,41 @@ def _score_policy(
             record[key] = summary.get(key, np.nan)
 
     metadata = evaluator.summary_metadata(evaluated)
-    for key in ("cpu_result_semantics", "primary_resource", "any_resource_metric_reported"):
+    for key in (
+        "cpu_result_semantics",
+        "primary_resource",
+        "any_resource_metric_reported",
+    ):
         record[key] = metadata.get(key)
+    return record
+
+
+
+def _score_policy(
+    rows: pd.DataFrame,
+    policy: str,
+    evaluator: RecommendationEvaluator,
+    *,
+    group_weighted: bool = False,
+) -> dict[str, object]:
+    """Compatibility helper for focused/unit evaluation.
+
+    The real final-test path does not call this helper; it uses
+    _evaluate_all_policies_once() so test outcomes pass through the evaluator
+    exactly once.
+    """
+    cpu_rec, mem_rec = _policy_arrays(rows, policy)
+    evaluated = evaluator.evaluate_canonical(
+        _build_eval_frame(rows, cpu_rec, mem_rec, policy)
+    )
+    record: dict[str, object] = {"policy": policy}
+    record.update(
+        _summary_from_evaluated(
+            evaluated,
+            evaluator,
+            group_weighted=group_weighted,
+        )
+    )
     return record
 
 
@@ -241,6 +276,11 @@ def build_final_sensitivity(
     rows: pd.DataFrame,
     profile: DatasetCapabilities,
 ) -> pd.DataFrame:
+    """Compatibility wrapper retained for existing tests.
+
+    Production final-test execution uses build_final_sensitivity_from_evaluated()
+    after the single shared evaluator call.
+    """
     for column in ("next_occurrence_same_second", "inst_num"):
         if column not in rows.columns:
             raise ValueError(f"Final sensitivity requires column {column!r}")
@@ -248,16 +288,37 @@ def build_final_sensitivity(
     evaluator = RecommendationEvaluator(capabilities=profile)
     records: list[dict[str, object]] = []
     cuts = [
-        ("occurrence_weighted", pd.Series(True, index=rows.index), False),
-        ("same_second_excluded", ~rows["next_occurrence_same_second"].eq(True), False),
-        ("same_second_only", rows["next_occurrence_same_second"].eq(True), False),
-        ("multi_instance", rows["inst_num"] > 1, False),
-        ("group_weighted", pd.Series(True, index=rows.index), True),
+        (
+            "occurrence_weighted",
+            pd.Series(True, index=rows.index),
+            False,
+        ),
+        (
+            "same_second_excluded",
+            ~rows["next_occurrence_same_second"].eq(True),
+            False,
+        ),
+        (
+            "same_second_only",
+            rows["next_occurrence_same_second"].eq(True),
+            False,
+        ),
+        (
+            "multi_instance",
+            rows["inst_num"] > 1,
+            False,
+        ),
+        (
+            "group_weighted",
+            pd.Series(True, index=rows.index),
+            True,
+        ),
     ]
+
     for label, mask, group_weighted in cuts:
         subset = rows.loc[mask]
         for policy in FINAL_POLICIES:
-            record = {
+            record: dict[str, object] = {
                 "sensitivity": label,
                 "policy": policy,
                 "row_count": int(len(subset)),
@@ -272,6 +333,119 @@ def build_final_sensitivity(
                     )
                 )
                 record["sensitivity"] = label
+                record["policy"] = policy
+            records.append(record)
+
+    return pd.DataFrame(records)
+
+
+def _evaluate_all_policies_once(
+    rows: pd.DataFrame,
+    evaluator: RecommendationEvaluator,
+) -> pd.DataFrame:
+    """Evaluate all seven policies in one shared evaluator call.
+
+    This is the only call to evaluate_canonical on final-test rows. All policy
+    comparisons and sensitivity summaries are computed from this returned
+    row-level evaluated frame.
+    """
+    frames = []
+    for policy in FINAL_POLICIES:
+        cpu_rec, mem_rec = _policy_arrays(rows, policy)
+        frames.append(
+            _build_eval_frame(
+                rows,
+                cpu_rec,
+                mem_rec,
+                policy,
+            )
+        )
+
+    combined = pd.concat(frames, ignore_index=True)
+    evaluated = evaluator.evaluate_canonical(combined)
+
+    expected_rows = len(rows) * len(FINAL_POLICIES)
+    if len(evaluated) != expected_rows:
+        raise RuntimeError(
+            "Evaluator changed the final-test row count: "
+            f"expected {expected_rows}, found {len(evaluated)}"
+        )
+    if set(evaluated["policy_name"]) != set(FINAL_POLICIES):
+        raise RuntimeError(
+            "Evaluator output does not contain exactly the seven final policies"
+        )
+    return evaluated
+
+
+def build_final_comparison_from_evaluated(
+    evaluated: pd.DataFrame,
+    evaluator: RecommendationEvaluator,
+) -> pd.DataFrame:
+    records = []
+    for policy in FINAL_POLICIES:
+        subset = evaluated.loc[evaluated["policy_name"].eq(policy)]
+        record = {"policy": policy}
+        record.update(_summary_from_evaluated(subset, evaluator))
+        records.append(record)
+    return pd.DataFrame(records)
+
+
+def build_final_sensitivity_from_evaluated(
+    evaluated: pd.DataFrame,
+    evaluator: RecommendationEvaluator,
+) -> pd.DataFrame:
+    for column in ("next_occurrence_same_second", "inst_num"):
+        if column not in evaluated.columns:
+            raise ValueError(f"Final sensitivity requires column {column!r}")
+
+    records: list[dict[str, object]] = []
+    cuts = [
+        (
+            "occurrence_weighted",
+            pd.Series(True, index=evaluated.index),
+            False,
+        ),
+        (
+            "same_second_excluded",
+            ~evaluated["next_occurrence_same_second"].eq(True),
+            False,
+        ),
+        (
+            "same_second_only",
+            evaluated["next_occurrence_same_second"].eq(True),
+            False,
+        ),
+        (
+            "multi_instance",
+            evaluated["inst_num"] > 1,
+            False,
+        ),
+        (
+            "group_weighted",
+            pd.Series(True, index=evaluated.index),
+            True,
+        ),
+    ]
+
+    for label, mask, group_weighted in cuts:
+        cut = evaluated.loc[mask]
+        for policy in FINAL_POLICIES:
+            subset = cut.loc[cut["policy_name"].eq(policy)]
+            record: dict[str, object] = {
+                "sensitivity": label,
+                "policy": policy,
+                "row_count": int(len(subset)),
+            }
+            if not subset.empty:
+                record.update(
+                    _summary_from_evaluated(
+                        subset,
+                        evaluator,
+                        group_weighted=group_weighted,
+                    )
+                )
+                record["sensitivity"] = label
+                record["policy"] = policy
             records.append(record)
 
     return pd.DataFrame(records)
@@ -330,10 +504,19 @@ def evaluate_final_test(
 
     population = _final_population(rows)
     evaluator = RecommendationEvaluator(capabilities=profile)
-    comparison = pd.DataFrame(
-        [_score_policy(population, policy, evaluator) for policy in FINAL_POLICIES]
+
+    # The final-test outcomes are passed through RecommendationEvaluator exactly
+    # once. All seven policies are concatenated into one canonical frame before
+    # that call; comparison and sensitivity tables summarize its returned rows.
+    evaluated = _evaluate_all_policies_once(population, evaluator)
+    comparison = build_final_comparison_from_evaluated(
+        evaluated,
+        evaluator,
     )
-    sensitivity = build_final_sensitivity(population, profile)
+    sensitivity = build_final_sensitivity_from_evaluated(
+        evaluated,
+        evaluator,
+    )
 
     prediction_columns = [
         c for c in (
@@ -362,4 +545,5 @@ def evaluate_final_test(
         n_clipped=n_clipped,
         safeguard_missing=safeguard_missing,
         final_population_size=int(len(population)),
+        evaluator_call_count=1,
     )
