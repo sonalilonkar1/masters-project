@@ -16,7 +16,7 @@ Separate dataset-specific ingestion and transformation from shared TraceAdvisor 
 
 | Dataset | Adapter | Status |
 |---|---|---|
-| Google Cluster Data 2019 (Kaggle subset) | A thin `GoogleSubsetAdapter` maps the corrected artifacts. Precomputed targets are attached outside the adapter. | In scope: reference pipeline |
+| Google Cluster Data 2019 (Kaggle subset) | A thin `GoogleSubsetAdapter` maps the current Google occurrence artifacts. Precomputed targets are attached outside the adapter. | In scope: reference pipeline |
 | Alibaba GPU 2020 | `AlibabaGPU2020Adapter` (`src/adapters/alibaba_gpu_2020.py`), implemented in Task 3 | In scope: second full integration |
 | Alibaba Cluster Trace 2018 | `Alibaba2018Adapter` (`src/adapters/alibaba.py`, updated to 0.2.0) | Out of current scope; may be added if time permits |
 | Azure public VM | `AzureVMAdapter` (`src/adapters/azure_vm.py`, 0.1.0) | Dropped from integration; code retained unchanged. Its sample data matches the V1 (2017) release despite the `azure_public_vm_v2` identifier |
@@ -223,7 +223,7 @@ Google episode reconstruction and aligned-window summing are Google-specific. Th
 
 ### 9.1 Google Cluster Data 2019 (reference)
 - **Task 13:** a thin `GoogleSubsetAdapter` performs the mapping below through `adapt()`, validated against `GOOGLE_CAPABILITIES`; a helper outside the adapter attaches the precomputed targets. Its output plus targets must equal the contract view (`tests/test_google_canonical_contract.py`). Details: system guide §6.6 and `docs/planning/github_issues/task13_google_subset_thin_adapter.md`.
-- A thin `GoogleSubsetAdapter` maps the corrected artifacts. Precomputed targets are attached outside the adapter.
+- A thin `GoogleSubsetAdapter` maps the current Google occurrence artifacts. Precomputed targets are attached outside the adapter.
   - `workload_id` and `recurrence_key` ← `recurrence_key`;
   - `occurrence_id` ← `occurrence_key`;
   - `start_time_us` ← `execution_start_time_us`;
@@ -231,7 +231,7 @@ Google episode reconstruction and aligned-window summing are Google-specific. Th
 - `attach_google_precomputed_targets(view, occurrences)` joins the existing targets and source splits by `occurrence_id`, preserving nulls. The split files have no `split` column: callers label rows from their source filenames (`train`, `validation`, `test`) for attachment and pass the concatenated current occurrences without `split` to `adapt()`.
 - All rows are `valid`, and `exclusion_reason` stays null.
 - Key separator: `||`.
-- Google behavior is unchanged by this framework.
+- Task 13 adapts the existing Google occurrence artifacts without recomputing targets or chronological splits. Existing cross-split target behavior remains unchanged; Task 10 owns the Google corrections and rerun.
 
 ### 9.2 Alibaba GPU 2020 (required)
 - **Source tables:**

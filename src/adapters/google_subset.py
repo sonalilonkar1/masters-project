@@ -1,4 +1,4 @@
-"""Thin mapping of corrected Google subset occurrences; no pipeline logic."""
+"""Thin mapping of existing Google occurrence artifacts; no pipeline logic."""
 
 from __future__ import annotations
 
@@ -53,7 +53,8 @@ def attach_google_precomputed_targets(
     them (``train``, ``validation``, ``test``). Pass a split-free source frame
     to ``adapt()`` and retain the labeled occurrences for this helper.
     The validated view's row order and index are preserved; neither input is
-    modified. Missing matches are errors, whereas null target values remain
+    modified. Source split labels must be non-null and one of the labels above.
+    Missing matches are errors, whereas null target values remain
     null, including globally final occurrences and existing cross-split targets.
     """
     names = {
@@ -63,6 +64,12 @@ def attach_google_precomputed_targets(
         "split": "split",
     }
     targets = occurrences[list(names)].rename(columns=names)
+    if targets["split"].isna().any():
+        raise ValueError("Source split labels must not be null")
+    if not targets["split"].isin(["train", "validation", "test"]).all():
+        raise ValueError(
+            "Source split labels must be one of: train, validation, test"
+        )
     attached_columns = {
         "actual_cpu", "actual_memory", "actual_cpu_unit", "actual_memory_unit",
         "split",

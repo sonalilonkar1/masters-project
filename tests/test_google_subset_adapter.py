@@ -17,7 +17,7 @@ def _load_occurrences(paths):
     """Preserve source-file membership; the saved files contain no split field."""
     for path in paths.values():
         if not path.exists():
-            pytest.skip(f"Corrected N04 artifact not available: {path}")
+            pytest.skip(f"Existing Google occurrence artifact not available: {path}")
     frames = []
     for split, path in paths.items():
         frame = pd.read_parquet(path)
@@ -125,5 +125,27 @@ def test_missing_artifacts_skip_without_loading_partial_data(tmp_path, monkeypat
         pytest.fail("Missing artifacts should be detected before loading")
 
     monkeypatch.setattr(pd, "read_parquet", unexpected_read)
-    with pytest.raises(pytest.skip.Exception, match="Corrected N04 artifact not available"):
+    with pytest.raises(
+        pytest.skip.Exception, match="Existing Google occurrence artifact not available"
+    ):
         _load_occurrences({"train": tmp_path / "missing.parquet"})
+
+
+@pytest.mark.parametrize("invalid_split", [None, pd.NA, float("nan")])
+def test_attachment_rejects_null_split_labels(occurrences, invalid_split):
+    view = GoogleSubsetAdapter().adapt(occurrences.drop(columns="split")).canonical
+    source = occurrences.copy(deep=True)
+    source.loc[source.index[0], "split"] = invalid_split
+    with pytest.raises(ValueError, match="Source split labels must not be null"):
+        attach_google_precomputed_targets(view, source)
+
+
+@pytest.mark.parametrize("invalid_split", ["val", "", "TRAIN"])
+def test_attachment_rejects_unsupported_split_labels(occurrences, invalid_split):
+    view = GoogleSubsetAdapter().adapt(occurrences.drop(columns="split")).canonical
+    source = occurrences.copy(deep=True)
+    source.loc[source.index[0], "split"] = invalid_split
+    with pytest.raises(
+        ValueError, match="Source split labels must be one of: train, validation, test"
+    ):
+        attach_google_precomputed_targets(view, source)
