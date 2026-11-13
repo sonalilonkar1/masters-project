@@ -184,9 +184,10 @@ def test_sensitivity_cuts_and_group_counts_preserved(inputs, tmp_path):
     }
 
 
-def test_upstream_verification_requires_matching_complete_checksums(inputs, tmp_path):
-    spec = inputs["datasets"][report.ALIBABA]
-    manifest = {"dataset_id": report.ALIBABA, "verified": True,
+@pytest.mark.parametrize("dataset", [report.GOOGLE, report.ALIBABA])
+def test_consistent_manifest_cannot_promote_pr1_inputs(inputs, tmp_path, dataset):
+    spec = inputs["datasets"][dataset]
+    manifest = {"dataset_id": dataset, "verified": True,
                 "checks": [{"name": "fixture", "ok": True}],
                 "artifacts": [{"path": spec[k], "sha256": report.sha256(Path(spec[k]))}
                               for k in ("results", "metadata")]}
@@ -195,11 +196,58 @@ def test_upstream_verification_requires_matching_complete_checksums(inputs, tmp_
     spec["verification_manifest"] = str(path)
     build(inputs, tmp_path / "ok")
     statuses = pd.read_csv(tmp_path / "ok/dataset_status.csv").set_index("dataset_id")
-    assert statuses.loc[report.ALIBABA, "report_status"] == "upstream_verified_inputs"
+    assert statuses.loc[dataset, "report_status"] == "provisional"
+    rows = pd.read_csv(tmp_path / "ok" / dataset / "results.csv")
+    assert rows.status.eq("provisional").all()
     manifest["artifacts"][0]["sha256"] = "0" * 64
     path.write_text(json.dumps(manifest))
     with pytest.raises(report.ReportError, match="does not match"):
         build(inputs, tmp_path / "bad")
+
+
+def test_committed_inputs_disclose_provenance_and_trace_all_399_metric_cells(tmp_path):
+    config = json.loads((report.REPO_ROOT / "config/cross_dataset_report_pr1.json").read_text())
+    out = tmp_path / "report"
+    receipt = build(config, out)
+    text = (out / "report.md").read_text()
+    reason = config["datasets"][report.ALIBABA]["reason"]
+    assert reason in text
+    assert report.sha256(report.REPO_ROOT / config["datasets"][report.ALIBABA]["results"]) in reason
+    for detail in (
+        "earlier provisional rendering", "not final verified findings",
+        "de560f38741a60d5e427a4c21c7444debcc8e4a558dc4382fded3a10590b4d27",
+        "c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8",
+        "f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950",
+        "7dd3942e-c2c0-4816-9466-efd32e486cc2",
+        "not accepted as authoritative inputs", "Task 12 PR 2",
+    ):
+        assert detail in reason
+    sources = {s["path"]: s["sha256"] for s in receipt["sources"]}
+    cells = 0
+    for dataset, name in ((report.GOOGLE, "results"), (report.ALIBABA, "results"),
+                          (report.ALIBABA, "sensitivity")):
+        rows = pd.read_csv(out / dataset / f"{name}.csv")
+        assert rows.status.eq("provisional").all()
+        for _, row in rows.iterrows():
+            path = report.REPO_ROOT / row.source_path
+            assert sources[row.source_path] == row.source_sha256 == report.sha256(path)
+            source = pd.read_csv(path)
+            original = source.loc[int(row.source_csv_row) - 2]
+            expected = original[row.source_column]
+            if pd.isna(expected):
+                assert pd.isna(row.value)
+            else:
+                assert row.value == pytest.approx(expected, rel=1e-15)
+            if pd.notna(row.denominator_column):
+                expected_denominator = original[row.denominator_column]
+                if pd.isna(expected_denominator):
+                    assert pd.isna(row.denominator)
+                else:
+                    assert row.denominator == expected_denominator
+            cells += 1
+    assert cells == 399
+    for output in receipt["outputs"]:
+        assert report.sha256(out / output["path"]) == output["sha256"]
 
 
 @pytest.mark.parametrize("defect", ["missing_inventory", "no_checks", "failed_check", "failed_verification"])
@@ -344,7 +392,7 @@ def test_artifact_root_does_not_require_schema_or_generator_files(inputs, tmp_pa
     assert all(entry["path"].startswith("artifacts/") for entry in receipt["sources"])
 
 
-def verified_alibaba_inputs(inputs, tmp_path):
+def manifest_checked_alibaba_inputs(inputs, tmp_path):
     spec = inputs["datasets"][report.ALIBABA]
     frame = pd.read_csv(spec["results"])
     sensitivity = tmp_path / "sensitivity.csv"
@@ -365,7 +413,7 @@ def verified_alibaba_inputs(inputs, tmp_path):
 
 
 def test_unchanged_inputs_allow_repeated_access_and_resolved_aliases(inputs, tmp_path):
-    spec = verified_alibaba_inputs(inputs, tmp_path)
+    spec = manifest_checked_alibaba_inputs(inputs, tmp_path)
     metadata = Path(spec["metadata"])
     alias = tmp_path / "metadata-alias.json"
     alias.symlink_to(metadata)
@@ -376,18 +424,18 @@ def test_unchanged_inputs_allow_repeated_access_and_resolved_aliases(inputs, tmp
     matches = [ref for ref in receipt["sources"] if Path(ref["path"]).resolve() == metadata.resolve()]
     assert len(matches) == 1 and matches[0]["sha256"] == initial
     sensitivity = pd.read_csv(out / report.ALIBABA / "sensitivity.csv")
-    assert sensitivity.status.eq("upstream_verified_inputs").all()
+    assert sensitivity.status.eq("provisional").all()
 
 
 def test_sensitivity_input_change_after_manifest_verification_is_rejected(inputs, tmp_path, monkeypatch):
-    spec = verified_alibaba_inputs(inputs, tmp_path)
+    spec = manifest_checked_alibaba_inputs(inputs, tmp_path)
     path = Path(spec["sensitivity"])
     initial = report.sha256(path)
     mutated = []
 
     def render(table, resource, dataset, status):
         if dataset == report.ALIBABA and not mutated:
-            assert status == "upstream_verified_inputs"  # Manifest check already succeeded.
+            assert status == "provisional"  # Manifest consistency check already succeeded.
             frame = pd.read_csv(path)
             frame.loc[0, "memory_violation_pct"] += 0.125
             frame.to_csv(path, index=False)
@@ -401,11 +449,11 @@ def test_sensitivity_input_change_after_manifest_verification_is_rejected(inputs
     assert mutated and report.sha256(path) != initial
     assert initial in str(error.value)  # The first digest remains the expected baseline.
     assert report.sha256(path) in str(error.value)
-    assert not out.exists()  # No changed data or verified status can be published.
+    assert not out.exists()  # No changed data can be published.
 
 
 def test_sensitivity_symlink_cannot_change_target_after_verification(inputs, tmp_path, monkeypatch):
-    spec = verified_alibaba_inputs(inputs, tmp_path)
+    spec = manifest_checked_alibaba_inputs(inputs, tmp_path)
     original = Path(spec["sensitivity"])
     replacement = tmp_path / "replacement.csv"
     frame = pd.read_csv(original)
@@ -418,7 +466,7 @@ def test_sensitivity_symlink_cannot_change_target_after_verification(inputs, tmp
 
     def render(table, resource, dataset, status):
         if dataset == report.ALIBABA and not retargeted:
-            assert status == "upstream_verified_inputs"
+            assert status == "provisional"
             alias.unlink()
             alias.symlink_to(replacement)
             retargeted.append(True)
@@ -433,14 +481,14 @@ def test_sensitivity_symlink_cannot_change_target_after_verification(inputs, tmp
 
 @pytest.mark.parametrize("key", ["results", "metadata", "verification_manifest"])
 def test_other_input_changes_during_reporting_are_rejected(inputs, tmp_path, monkeypatch, key):
-    spec = verified_alibaba_inputs(inputs, tmp_path)
+    spec = manifest_checked_alibaba_inputs(inputs, tmp_path)
     path = Path(spec[key])
     initial = report.sha256(path)
     mutated = []
 
     def render(table, resource, dataset, status):
         if dataset == report.ALIBABA and not mutated:
-            assert status == "upstream_verified_inputs"
+            assert status == "provisional"
             path.write_bytes(path.read_bytes() + b"\n")
             mutated.append(True)
         return "<svg/>\n"
@@ -454,7 +502,7 @@ def test_other_input_changes_during_reporting_are_rejected(inputs, tmp_path, mon
 
 @pytest.mark.parametrize("key", ["results", "metadata", "verification_manifest"])
 def test_consumed_bytes_must_match_initial_digest(inputs, tmp_path, monkeypatch, key):
-    spec = verified_alibaba_inputs(inputs, tmp_path)
+    spec = manifest_checked_alibaba_inputs(inputs, tmp_path)
     path = Path(spec[key]).resolve()
     initial = report.sha256(path)
     original_read = Path.read_bytes

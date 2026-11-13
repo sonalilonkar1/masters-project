@@ -18,7 +18,7 @@
           "docs/planning/github_issues/task8_alibaba_gpu_2020_final_verification.md"
         ],
         "metadata": "reports/results/alibaba_gpu_2020/ml/decision_manifest.json",
-        "reason": "Task 7 report copies are available; matching Task 8 verification evidence is not supplied on this main. All scores remain provisional. Results apply to successfully completed, resource-valid roles with complete telemetry: eligibility selection bias, low multi-instance sensor coverage, the shortened telemetry window and same-second targets limit generalization.",
+        "reason": "These committed Alibaba results are an earlier provisional rendering, not final verified findings. The PR 1 comparison source SHA-256 is de560f38741a60d5e427a4c21c7444debcc8e4a558dc4382fded3a10590b4d27; the newer Task 8 report references c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8, decision manifest f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950, and final run 7dd3942e-c2c0-4816-9466-efd32e486cc2. These newer references are review-reported and are not accepted as authoritative inputs. The authoritative Task 7 artifact chain has not yet been reconciled with Task 8; this is a provenance discrepancy, not merely pending verification. Alibaba reporting outputs will be regenerated in Task 12 PR 2 after Task 7 and Task 8 provenance is reconciled. Results apply to successfully completed, resource-valid roles with complete telemetry: eligibility selection bias, low multi-instance sensor coverage, the shortened telemetry window and same-second targets limit generalization.",
         "results": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
         "sensitivity": "reports/results/alibaba_gpu_2020/final_test/final_test_sensitivity.csv"
       },
@@ -230,7 +230,7 @@
         "path": "scripts/build_final_cross_dataset_report.py",
         "path_base": "executing_checkout",
         "role": "generator",
-        "sha256": "20aeb1122b319d9b2ef8fb5845c7744b1ceced64d9c6a4d62979ca86a5b3b574"
+        "sha256": "8ea13c42424ae396e63063d19b26add494242b608d53e3bcab3bdacb95b63c05"
       },
       {
         "path": "src/canonical/schema.py",
@@ -301,11 +301,11 @@
     },
     {
       "path": "dataset_status.csv",
-      "sha256": "94b551603c97b7fe4ecb9f5f5ce1b4d29db930c38892a6e7f4b0e472224456d4"
+      "sha256": "0c94c34bf968a35438497c18225f81162fc6a2121ce0fc753d9e6669ccd0784c"
     },
     {
       "path": "dataset_status.md",
-      "sha256": "8ec8beca82509360110094e79423f02da1e46eebf98703947540c44232d09fba"
+      "sha256": "536d3661ba1898a179823aad05b5b3e5679e8113b8c5f2ce2d665d64385152c5"
     },
     {
       "path": "google_clusterdata2019/01_cpu.csv",
@@ -353,11 +353,11 @@
     },
     {
       "path": "report.md",
-      "sha256": "350daaed79357179add215f6c127352aff9a498853e6663c0574637a77d7f151"
+      "sha256": "cf563fd6cfa0eeb8c650c5035472ef74b9aa8b14c8c34bb5e0745157b36d03f9"
     },
     {
       "path": "report_sources.csv",
-      "sha256": "1ac5b9c5e2355925a52d2a5174feeca4aa531e2a5b927e22d70b55a4d2cf4a4f"
+      "sha256": "c59e423e7fc3e841f7b3b944014d5eb38b736768dfbc72272b8623ccf11f3d79"
     }
   ],
   "reference_documents": [

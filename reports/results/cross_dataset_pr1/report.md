@@ -4,6 +4,8 @@ Raw violation, utilization, accuracy and CPU percentages must not be compared or
 
 These are source renderings. Source hash checks do not certify final experimental reproducibility. Final release verification and conclusions remain pending.
 
+PR 1 keeps all pipeline results provisional, including when an upstream manifest passes the supplied consistency checks. Authoritative upstream verification and any promotion of reporting status are deferred to PR 2.
+
 Receipts separate input artifacts resolved under `--root` from the actual executing generator, imported Python capability definitions and effective profile values. The mirrored capability JSON is not loaded.
 
 [Dataset status](dataset_status.md) · [Contract comparison](contract_comparison.md) · [Comparability](comparability.md) · [Source inventory](report_sources.csv) · [Reporting receipts](report_provenance.json)
@@ -34,7 +36,7 @@ Status: **provisional**. [Table](google_clusterdata2019/03_any_resource.md) · [
 
 ## alibaba_gpu_v2020
 
-Task 7 report copies are available; matching Task 8 verification evidence is not supplied on this main. All scores remain provisional. Results apply to successfully completed, resource-valid roles with complete telemetry: eligibility selection bias, low multi-instance sensor coverage, the shortened telemetry window and same-second targets limit generalization.
+These committed Alibaba results are an earlier provisional rendering, not final verified findings. The PR 1 comparison source SHA-256 is de560f38741a60d5e427a4c21c7444debcc8e4a558dc4382fded3a10590b4d27; the newer Task 8 report references c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8, decision manifest f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950, and final run 7dd3942e-c2c0-4816-9466-efd32e486cc2. These newer references are review-reported and are not accepted as authoritative inputs. The authoritative Task 7 artifact chain has not yet been reconciled with Task 8; this is a provenance discrepancy, not merely pending verification. Alibaba reporting outputs will be regenerated in Task 12 PR 2 after Task 7 and Task 8 provenance is reconciled. Results apply to successfully completed, resource-valid roles with complete telemetry: eligibility selection bias, low multi-instance sensor coverage, the shortened telemetry window and same-second targets limit generalization.
 
 ### memory: peak outcomes
 

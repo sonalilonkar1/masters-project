@@ -3,7 +3,7 @@
 
 Input paths in the JSON configuration are relative to --root (repository by
 default). Executable provenance always identifies the running checkout.
-Use a new output directory on every run. Unverified inputs remain provisional.
+Use a new output directory on every run. PR 1 pipeline results remain provisional.
 Source receipts establish reporting traceability, not experimental reproducibility.
 """
 
@@ -318,6 +318,9 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
     sections = ["# Cross-dataset reporting — PR 1", "", NONCOMPARABILITY, "",
                 "These are source renderings. Source hash checks do not certify final experimental "
                 "reproducibility. Final release verification and conclusions remain pending.", "",
+                "PR 1 keeps all pipeline results provisional, including when an upstream manifest "
+                "passes the supplied consistency checks. Authoritative upstream verification and "
+                "any promotion of reporting status are deferred to PR 2.", "",
                 "Receipts separate input artifacts resolved under `--root` from the actual "
                 "executing generator, imported Python capability definitions and effective profile "
                 "values. The mirrored capability JSON is not loaded.", "",
@@ -386,8 +389,8 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
                 raise ReportError(f"{dataset}: results require pipeline status and metadata")
             frame, result_ref = read_csv(result_path)
             validate_summary(frame, dataset)
-            # Check only an explicit upstream attestation, never infer verification
-            # from a filename or an adjacent SHA256SUMS file.
+            # Validate supplied manifest consistency only. Self-reported checks and
+            # matching hashes cannot establish authoritative upstream verification.
             if spec.get("verification_manifest"):
                 manifest, _ = read_json(spec["verification_manifest"])
                 if manifest.get("verified") is not True or manifest.get("dataset_id") != dataset:
@@ -402,7 +405,6 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
                     needed.append(ref)
                 if any(entries.get(ref["path"]) != ref["sha256"] for ref in needed):
                     raise ReportError(f"{dataset}: upstream manifest does not match all reported artifacts")
-                status = "upstream_verified_inputs"
             table_rows = result_rows(frame, dataset, result_ref, status)
             table(f"{dataset}/results", table_rows)
             resources = ("memory", "cpu") if dataset == ALIBABA else ("cpu", "memory", "any_resource")
