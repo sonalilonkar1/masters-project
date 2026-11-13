@@ -1,6 +1,7 @@
 # TraceAdvisor Dataset Adapter Framework
 
-**New Development Issue 3**  
+**Task 1: Shared adapter framework**
+
 **Canonical contract:** schema version `0.2.0`, frozen design (`docs/design/canonical_workload_schema.md`), implemented in `src/canonical/schema.py` and `src/adapters/`; see [section 2](#2-implementation-status).
 
 **Scope update (29 Oct 2026):** the framework was first planned for Alibaba GPU 2020, Alibaba 2018 and Azure VM. The current project scope is **Google (Kaggle subset) and Alibaba GPU 2020**. Azure VM was dropped from integration because it does not describe recurring jobs with per-job requests and usage (`docs/data/azure_vm_traceadvisor_feasibility.md`). Alibaba 2018 is out of the current scope and may be added later if time permits. Their sections are kept below for reference.
@@ -15,7 +16,7 @@ Separate dataset-specific ingestion and transformation from shared TraceAdvisor 
 
 | Dataset | Adapter | Status |
 |---|---|---|
-| Google Cluster Data 2019 (Kaggle subset) | Thin `GoogleSubsetAdapter` (Task 13) that maps the Google occurrence artifacts; precomputed targets are attached outside the adapter. Until it lands, the contract view in `tests/test_google_canonical_contract.py` does this mapping | In scope: reference pipeline |
+| Google Cluster Data 2019 (Kaggle subset) | A thin `GoogleSubsetAdapter` maps the corrected artifacts. Precomputed targets are attached outside the adapter. | In scope: reference pipeline |
 | Alibaba GPU 2020 | `AlibabaGPU2020Adapter` (`src/adapters/alibaba_gpu_2020.py`), implemented in Task 3 | In scope: second full integration |
 | Alibaba Cluster Trace 2018 | `Alibaba2018Adapter` (`src/adapters/alibaba.py`, updated to 0.2.0) | Out of current scope; may be added if time permits |
 | Azure public VM | `AzureVMAdapter` (`src/adapters/azure_vm.py`, 0.1.0) | Dropped from integration; code retained unchanged. Its sample data matches the V1 (2017) release despite the `azure_public_vm_v2` identifier |
@@ -24,7 +25,7 @@ Separate dataset-specific ingestion and transformation from shared TraceAdvisor 
 
 ## 2. Implementation status
 
-The 0.2.0 framework contract described in this document is implemented.
+The 0.2.0 framework contract described in this document is implemented. Schema and capability validation were implemented in 0.2.0 (PR #86).
 
 | Area | Status |
 |---|---|
@@ -33,17 +34,7 @@ The 0.2.0 framework contract described in this document is implemented.
 | Source loading | Implemented for Alibaba GPU 2020 in `src/sources/alibaba_gpu_2020.py` (checksum verification, typed headerless loading, column lists, chunked reads) |
 | Alibaba GPU 2020 adapter | Implemented (Task 3) |
 | Shared target builder | Implemented outside the adapters in `src/features/target_builder.py` (Task 4) |
-| Google adapter | Thin adapter (Task 13), see [section 9.1](#91-google-cluster-data-2019-reference) |
-
----|---|---|
-| `BaseDatasetAdapter` (`src/adapters/base.py`) | `adapt(source)` takes one in-memory DataFrame; metadata has name, version, dataset ID, row counts, capabilities; no rejected output | Formal multi-table preparation step; per-view adaptation; a separate rejected output; provenance, exclusion-count and rejection-count metadata ([sections 4](#4-adapter-contract)–[6](#6-adapter-metadata-and-provenance)) |
-| `validate_adapter_output` (`src/adapters/validation.py`) | Checks listed in [section 7.1](#71-current-checks-010) | Checks listed in [section 7.2](#72-checks-required-for-020) |
-| Multi-table preparation | Adapter-specific only: Alibaba 2018 `prepare_source` / `adapt_tables`; Azure `prepare_cpu_intervals` / `adapt_cpu_readings` | Part of the base contract |
-| Loading | `scripts/build_external_canonical_samples.py` reads whole files with `pd.read_csv` | Columnar loading with explicit column lists and schemas ([section 5](#5-source-loading)) |
-| Alibaba GPU 2020 adapter | Not implemented | Implement ([section 9.2](#92-alibaba-gpu-2020-required)) |
-| Shared target builder | Not implemented for canonical data | Implement outside the adapters ([section 8](#8-adapter-boundaries)) |
-
-Schema code, validators, JSON configuration, examples, adapters and tests move to 0.2.0 in a later implementation change. No further design approval is needed.
+| Google adapter | Implemented: thin adapter (Task 13), see [section 9.1](#91-google-cluster-data-2019-reference) |
 
 ---
 
@@ -208,7 +199,7 @@ All checks in this table are implemented in `src/adapters/validation.py`.
 | Units include `percent_of_vcpu` and `percent_of_gpu`; GPU fields are in the resource field list | New Alibaba GPU 2020 units and retained GPU fields |
 | `recurrence_key` null exactly when `recurrence_key_origin = none`, or on rows excluded as `no_recurrence_key` | Recurrence is never invented |
 | Non-null `workload_id` and `role_key` on every Alibaba GPU 2020 row, including jobs without `group` | The fallback keys must keep validation working |
-| Adapter output contains no `split`, `actual_*` or target-status values | Those belong to shared code (Google artifacts excepted) |
+| Adapter output contains no `split`, `actual_*` or target-status values | Those belong outside adapters; Google's precomputed targets are attached afterwards |
 | Alibaba GPU 2020 instance rows have `event_time_us` populated, and `workload_id`, `occurrence_id` and `role_key` equal to their parent role row's values | Audit rows must be placeable in time and joinable to their role |
 | Rejected output passes its minimal checks ([section 4.4](#44-rejected-output)) | Rejected records stay auditable |
 
@@ -232,11 +223,12 @@ Google episode reconstruction and aligned-window summing are Google-specific. Th
 
 ### 9.1 Google Cluster Data 2019 (reference)
 - **Task 13:** a thin `GoogleSubsetAdapter` performs the mapping below through `adapt()`, validated against `GOOGLE_CAPABILITIES`; a helper outside the adapter attaches the precomputed targets. Its output plus targets must equal the contract view (`tests/test_google_canonical_contract.py`). Details: system guide §6.6 and `docs/planning/github_issues/task13_google_subset_thin_adapter.md`.
-- No production adapter is needed. The canonical view maps the corrected occurrence artifacts directly:
+- A thin `GoogleSubsetAdapter` maps the corrected artifacts. Precomputed targets are attached outside the adapter.
   - `workload_id` and `recurrence_key` ← `recurrence_key`;
   - `occurrence_id` ← `occurrence_key`;
   - `start_time_us` ← `execution_start_time_us`;
-  - requests, peaks and the precomputed next-occurrence targets.
+  - current requests and peaks, without splits, targets or target statuses.
+- `attach_google_precomputed_targets(view, occurrences)` joins the existing targets and source splits by `occurrence_id`, preserving nulls. The split files have no `split` column: callers label rows from their source filenames (`train`, `validation`, `test`) for attachment and pass the concatenated current occurrences without `split` to `adapt()`.
 - All rows are `valid`, and `exclusion_reason` stays null.
 - Key separator: `||`.
 - Google behavior is unchanged by this framework.
@@ -324,5 +316,5 @@ Field-level definitions are in `canonical_workload_schema.md` §5–§9.
 
 ## 11. Issue boundary
 
-- **Issue 3** ends with the shared adapter framework and contract tests: the base contract, multi-table preparation, per-view validation, the rejected output, metadata, and the 0.2.0 validation checks.
-- **Issue 4** implements the Alibaba GPU 2020 adapter and canonical integration artifacts (required), and optionally upgrades the Alibaba 2018 adapter. Azure VM integration is deferred.
+- **Task 1** covers the shared adapter framework and contract tests: the base contract, multi-table preparation, per-view validation, the rejected output, metadata, and the 0.2.0 validation checks.
+- **Task 3** implements the Alibaba GPU 2020 adapter and canonical integration artifacts. Alibaba 2018 remains optional and Azure VM integration is deferred.
