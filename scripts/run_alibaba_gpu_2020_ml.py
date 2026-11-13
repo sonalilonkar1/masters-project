@@ -54,7 +54,6 @@ import models.alibaba_gpu_2020_candidates as candidates
 DEFAULT_TARGETS_DIR = targets_build.DEFAULT_OUT_DIR
 DEFAULT_BASELINES_DIR = baselines_run.DEFAULT_OUT_DIR
 DEFAULT_OUT_DIR = REPO_ROOT / "data/processed/alibaba_gpu_v2020_ml"
-SCHEMA_VERSION = "0.2.0"
 
 MODEL_FILES = {"cpu": "cpu_model.joblib", "memory": "memory_model.joblib"}
 OUTPUT_FILES = (
@@ -302,8 +301,6 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
             json.dumps(manifest, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
 
         metadata = {
-            "dataset_id": PROFILE.dataset_id,
-            "schema_version": SCHEMA_VERSION,
             "task": "task7_alibaba_gpu_2020_ml_hybrid",
             "phase": "pr1_validation_lock",
             "reads_test": False,

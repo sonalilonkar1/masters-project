@@ -46,7 +46,6 @@ import baselines.alibaba_gpu_2020 as a6
 
 DEFAULT_TARGETS_DIR = targets_build.DEFAULT_OUT_DIR
 DEFAULT_OUT_DIR = REPO_ROOT / "data/processed/alibaba_gpu_v2020_baselines"
-SCHEMA_VERSION = "0.2.0"
 
 # Task 4 target/status columns that Task 6 must never load for the test split.
 TEST_FORBIDDEN_COLUMNS = (
@@ -271,7 +270,6 @@ def run(targets_dir: Path = DEFAULT_TARGETS_DIR,
 
         metadata = {
             "dataset_id": PROFILE.dataset_id,
-            "schema_version": SCHEMA_VERSION,
             "task": "task6_alibaba_gpu_2020_baselines",
             "profile": asdict(PROFILE),
             "units": {"cpu": a6.RESOURCE_UNIT["cpu"], "memory": a6.RESOURCE_UNIT["memory"]},
