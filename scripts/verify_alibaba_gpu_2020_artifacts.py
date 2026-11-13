@@ -30,10 +30,12 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import pyarrow.parquet as pq
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 for path in (REPO_ROOT, REPO_ROOT / "src"):
@@ -43,6 +45,62 @@ for path in (REPO_ROOT, REPO_ROOT / "src"):
 DATASET_ID = "alibaba_gpu_v2020"
 SCHEMA_VERSION = "0.2.0"
 FINAL_POLICIES = ("Request", "Mean", "P90", "P95", "P99", "ML", "Hybrid")
+
+TASK3_REQUIRED_FILES = {
+    "role_occurrence.parquet",
+    "instance.parquet",
+    "rejected.parquet",
+    "metadata.json",
+}
+TASK4_REQUIRED_FILES = {
+    "train.parquet", "validation.parquet", "test.parquet", "metadata.json"
+}
+TASK6_REQUIRED_FILES = {
+    "baseline_selection.json",
+    "validation_comparison.csv",
+    "sensitivity_validation.csv",
+    "history_statistics.parquet",
+    "recommendations_train.parquet",
+    "recommendations_validation.parquet",
+    "recommendations_test.parquet",
+    "metadata.json",
+}
+TASK7_PR1_REQUIRED_FILES = {
+    "decision_manifest.json",
+    "model_selection.json",
+    "candidate_models.csv",
+    "validation_policy_comparison.csv",
+    "validation_ml_hybrid_predictions.parquet",
+    "feature_order.json",
+    "cpu_model.joblib",
+    "memory_model.joblib",
+    "metadata.json",
+}
+TASK7_FINAL_REQUIRED_FILES = {
+    "final_test_policy_comparison.csv",
+    "final_test_sensitivity.csv",
+    "final_test_predictions.parquet",
+    "run_record.json",
+    "metadata.json",
+}
+
+UNVERIFIED_ITEMS = [
+    {
+        "item": "Task 4 split isolation / history timing / target-value consistency on test rows",
+        "reason": (
+            "Task 8 deliberately does not reopen test target values. Test-side value-level "
+            "checks are therefore inherited from the frozen Task 4 artifact checksums and metadata, "
+            "not independently recomputed here."
+        ),
+    },
+    {
+        "item": "Task 7 model-prediction reproduction on the real test feature rows",
+        "reason": (
+            "The verifier checks the locked model checksums, feature-order lock, saved prediction "
+            "artifact checksum and run provenance, but does not rerun model inference in Task 8."
+        ),
+    },
+]
 
 DEFAULT_CANONICAL_DIR = REPO_ROOT / "data/processed/alibaba_gpu_v2020"
 DEFAULT_TARGETS_DIR = REPO_ROOT / "data/processed/alibaba_gpu_v2020_targets"
@@ -90,34 +148,347 @@ def parse_sha256sums(directory: Path) -> dict[str, str]:
     return recorded
 
 
-def verify_sha256sums(directory: Path) -> tuple[bool, str, dict[str, str]]:
+def verify_sha256sums(
+    directory: Path,
+    *,
+    required_files: set[str] | None = None,
+    exact_files: bool = False,
+) -> tuple[bool, str, dict[str, str]]:
     try:
         recorded = parse_sha256sums(directory)
     except Exception as exc:
         return False, str(exc), {}
+
+    if not recorded:
+        return False, f"empty SHA256SUMS: {directory / 'SHA256SUMS'}", {}
+
     failures: list[str] = []
+    recorded_names = set(recorded)
+    if required_files:
+        missing_from_manifest = sorted(required_files - recorded_names)
+        if missing_from_manifest:
+            failures.append(
+                f"required artifacts absent from SHA256SUMS: {missing_from_manifest}"
+            )
+        if exact_files:
+            unexpected = sorted(recorded_names - required_files)
+            if unexpected:
+                failures.append(
+                    f"unexpected artifacts in SHA256SUMS: {unexpected}"
+                )
+
     for name, digest in recorded.items():
         path = directory / name
         if not path.exists():
             failures.append(f"missing {name}")
             continue
+        if not path.is_file():
+            failures.append(f"not a regular file: {name}")
+            continue
         actual = sha256(path)
         if actual != digest:
             failures.append(f"{name}: expected {digest}, got {actual}")
+
     if failures:
         return False, "; ".join(failures), recorded
     return True, f"{len(recorded)} checksums match", recorded
 
+def _parse_utc_timestamp(value: str | None) -> datetime:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"missing or invalid UTC timestamp: {value!r}")
 
+    return datetime.fromisoformat(
+        value.replace("Z", "+00:00")
+    ).astimezone(timezone.utc)
+    
 def artifact_row_count(path: Path) -> int | None:
+    """Return row count without reading Parquet row data.
+
+    This is especially important for Task 4 test.parquet: Task 8 must not reopen
+    test target values merely to count rows.
+    """
     try:
         if path.suffix == ".parquet":
-            return int(len(pd.read_parquet(path)))
+            return int(pq.ParquetFile(path).metadata.num_rows)
         if path.suffix == ".csv":
-            return int(len(pd.read_csv(path)))
+            with path.open("rb") as handle:
+                # Header is not a data row; blank trailing lines are ignored.
+                return max(sum(1 for line in handle if line.strip()) - 1, 0)
     except Exception:
         return None
     return None
+
+
+def _load_run_log(path: Path, decision_sha: str) -> list[dict[str, Any]]:
+    if not path.exists():
+        raise VerificationError(f"missing final-test run log: {path}")
+    matches: list[dict[str, Any]] = []
+    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise VerificationError(
+                f"invalid JSON in {path} line {lineno}: {exc}"
+            ) from exc
+        if entry.get("decision_manifest_sha256") == decision_sha:
+            matches.append(entry)
+    return matches
+
+def _check_run_history(
+    *,
+    run_record: dict[str, Any],
+    decision: dict[str, Any],
+    decision_sha: str,
+    run_log_path: Path,
+    final_dir: Path,
+) -> list[Check]:
+    checks: list[Check] = []
+
+    try:
+        matches = _load_run_log(
+            run_log_path,
+            decision_sha,
+        )
+    except VerificationError as exc:
+        return [
+            Check(
+                "task7.run_log",
+                False,
+                str(exc),
+            )
+        ]
+
+    run_id = run_record.get("run_id")
+
+    matching_ids = [
+        entry
+        for entry in matches
+        if entry.get("run_id") == run_id
+    ]
+
+    checks.append(
+        Check(
+            "task7.run_log_contains_final_run",
+            len(matching_ids) == 1,
+            (
+                f"matching entries for "
+                f"run_id={run_id!r}: "
+                f"{len(matching_ids)}"
+            ),
+        )
+    )
+
+    if len(matching_ids) == 1:
+        logged = matching_ids[0]
+
+        # Only compare fields that are expected to exist in both
+        # the pre-test log and the post-test run record.
+        fields_to_match = (
+            "run_id",
+            "decision_manifest_sha256",
+            "code_commit",
+            "defect_rerun_reason",
+        )
+
+        mismatches = {
+            key: (
+                logged.get(key),
+                run_record.get(key),
+            )
+            for key in fields_to_match
+            if logged.get(key)
+            != run_record.get(key)
+        }
+
+        checks.append(
+            Check(
+                "task7.run_log_matches_run_record",
+                not mismatches,
+                f"mismatches={mismatches}",
+            )
+        )
+
+        # Validate the logged output directory independently.
+        logged_out_dir = logged.get("out_dir")
+
+        try:
+            expected_out_dir = str(
+                final_dir.resolve().relative_to(
+                    REPO_ROOT.resolve()
+                )
+            )
+        except ValueError:
+            expected_out_dir = str(
+                final_dir.resolve()
+            )
+
+        checks.append(
+            Check(
+                "task7.run_log_output_directory",
+                logged_out_dir
+                == expected_out_dir,
+                (
+                    f"logged_out_dir="
+                    f"{logged_out_dir!r}, "
+                    f"expected_out_dir="
+                    f"{expected_out_dir!r}"
+                ),
+            )
+        )
+
+        # The run log is written before the test is opened,
+        # while run_record.json is written after evaluation.
+        # Therefore timestamps should be ordered, not equal.
+        log_timestamp = logged.get(
+            "timestamp_utc"
+        )
+        record_timestamp = run_record.get(
+            "timestamp_utc"
+        )
+
+        try:
+            log_time = _parse_utc_timestamp(
+                log_timestamp
+            )
+            record_time = _parse_utc_timestamp(
+                record_timestamp
+            )
+
+            timestamp_ok = (
+                log_time <= record_time
+            )
+
+            timestamp_detail = (
+                f"run_log={log_timestamp!r}, "
+                f"run_record={record_timestamp!r}"
+            )
+
+        except (TypeError, ValueError):
+            timestamp_ok = False
+
+            timestamp_detail = (
+                "invalid timestamps: "
+                f"run_log={log_timestamp!r}, "
+                f"run_record="
+                f"{record_timestamp!r}"
+            )
+
+        checks.append(
+            Check(
+                "task7.run_log_precedes_run_record",
+                timestamp_ok,
+                timestamp_detail,
+            )
+        )
+
+        # Verify complete chronology:
+        # PR1 lock <= run log <= final run record.
+        lock_timestamp = decision.get(
+            "lock_timestamp_utc"
+        )
+
+        try:
+            lock_time = _parse_utc_timestamp(
+                lock_timestamp
+            )
+
+            chronology_ok = (
+                lock_time
+                <= log_time
+                <= record_time
+            )
+
+            chronology_detail = (
+                f"lock={lock_timestamp!r}, "
+                f"run_log={log_timestamp!r}, "
+                f"run_record="
+                f"{record_timestamp!r}"
+            )
+
+        except (TypeError, ValueError):
+            chronology_ok = False
+
+            chronology_detail = (
+                "invalid chronology timestamps: "
+                f"lock={lock_timestamp!r}, "
+                f"run_log={log_timestamp!r}, "
+                f"run_record="
+                f"{record_timestamp!r}"
+            )
+
+        checks.append(
+            Check(
+                "task7.final_run_chronology",
+                chronology_ok,
+                chronology_detail,
+            )
+        )
+
+    ids = [
+        entry.get("run_id")
+        for entry in matches
+    ]
+
+    unique_ids = (
+        len(ids) == len(set(ids))
+        and all(
+            isinstance(value, str)
+            and bool(value)
+            for value in ids
+        )
+    )
+
+    documented = all(
+        index == 0
+        or bool(
+            entry.get(
+                "defect_rerun_reason"
+            )
+        )
+        for index, entry
+        in enumerate(matches)
+    )
+
+    checks.append(
+        Check(
+            "task7.run_history_documented",
+            bool(matches)
+            and unique_ids
+            and documented,
+            (
+                f"matching_runs="
+                f"{len(matches)}, "
+                f"unique_run_ids="
+                f"{unique_ids}, "
+                f"documented_reruns="
+                f"{documented}"
+            ),
+        )
+    )
+
+    decision_commit = (
+        decision.get("build") or {}
+    ).get("code_commit")
+
+    checks.append(
+        Check(
+            "task7.final_run_code_commit_matches_lock",
+            bool(decision_commit)
+            and run_record.get(
+                "code_commit"
+            ) == decision_commit,
+            (
+                f"decision_commit="
+                f"{decision_commit!r}, "
+                f"run_commit="
+                f"{run_record.get('code_commit')!r}"
+            ),
+        )
+    )
+
+    return checks
 
 
 def git_state(repo: Path) -> tuple[str | None, bool]:
@@ -198,16 +569,18 @@ def verify_pipeline(
         "artifacts": [],
     }
 
-    stage_dirs = {
-        "task3_canonical": canonical_dir,
-        "task4_targets": targets_dir,
-        "task6_baselines": baselines_dir,
-        "task7_pr1_ml": ml_dir,
-        "task7_pr2_final_test": final_dir,
+    stage_specs = {
+        "task3_canonical": (canonical_dir, TASK3_REQUIRED_FILES, False),
+        "task4_targets": (targets_dir, TASK4_REQUIRED_FILES, True),
+        "task6_baselines": (baselines_dir, TASK6_REQUIRED_FILES, True),
+        "task7_pr1_ml": (ml_dir, TASK7_PR1_REQUIRED_FILES, True),
+        "task7_pr2_final_test": (final_dir, TASK7_FINAL_REQUIRED_FILES, True),
     }
     stage_manifests: dict[str, dict[str, str]] = {}
-    for stage, directory in stage_dirs.items():
-        ok, detail, recorded = verify_sha256sums(directory)
+    for stage, (directory, required, exact) in stage_specs.items():
+        ok, detail, recorded = verify_sha256sums(
+            directory, required_files=required, exact_files=exact
+        )
         checks.append(Check(f"{stage}.sha256", ok, detail))
         stage_manifests[stage] = recorded
         if recorded:
@@ -357,6 +730,23 @@ def verify_pipeline(
             f"expected non-empty run_id, found {run_id!r}",
         ))
 
+        run_log_value = run_record.get("run_log")
+        run_log_path = (
+            REPO_ROOT / run_log_value
+            if isinstance(run_log_value, str) and not Path(run_log_value).is_absolute()
+            else Path(run_log_value)
+            if isinstance(run_log_value, str)
+            else ml_dir / "final_test_runs.jsonl"
+        )
+        if decision_sha:
+            checks.extend(_check_run_history(
+                run_record=run_record,
+                decision=decision,
+                decision_sha=decision_sha,
+                run_log_path=run_log_path,
+                final_dir=final_dir,
+            ))
+
     # Prediction artifact traceability and expected units/scope.
     pred_path = final_dir / "final_test_predictions.parquet"
     if pred_path.exists():
@@ -384,6 +774,15 @@ def verify_pipeline(
 
     manifest["verification_timestamp_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     manifest["decision_manifest_sha256"] = decision_sha
+    manifest["final_run_identity"] = {
+        "run_id": run_record.get("run_id") if run_record else None,
+        "timestamp_utc": run_record.get("timestamp_utc") if run_record else None,
+        "code_commit": run_record.get("code_commit") if run_record else None,
+        "decision_manifest_sha256": (
+            run_record.get("decision_manifest_sha256") if run_record else None
+        ),
+    }
+    manifest["unverified_items"] = UNVERIFIED_ITEMS
     manifest["checks"] = [asdict(c) for c in checks]
     manifest["verified"] = all(c.ok for c in checks)
     return checks, manifest
@@ -400,6 +799,9 @@ def render_report(checks: list[Check], manifest: dict[str, Any]) -> str:
         f"- Result: **{'PASS' if failed == 0 else 'FAIL'}**",
         f"- Checks: {passed} passed, {failed} failed",
         f"- Generated: `{manifest['verification_timestamp_utc']}`",
+        f"- Decision manifest SHA-256: `{manifest.get('decision_manifest_sha256')}`",
+        f"- Final run ID: `{(manifest.get('final_run_identity') or {}).get('run_id')}`",
+        f"- Final run code commit: `{(manifest.get('final_run_identity') or {}).get('code_commit')}`",
         "",
         "## Verification checks",
         "",
@@ -409,6 +811,14 @@ def render_report(checks: list[Check], manifest: dict[str, Any]) -> str:
     for check in checks:
         detail = check.detail.replace("|", "\\|").replace("\n", " ")
         lines.append(f"| `{check.name}` | {'PASS' if check.ok else 'FAIL'} | {detail} |")
+
+    lines += [
+        "",
+        "## Explicit verification limitations",
+        "",
+    ]
+    for item in manifest.get("unverified_items", []):
+        lines.append(f"- **UNVERIFIED:** {item['item']} — {item['reason']}")
 
     lines += [
         "",

@@ -349,6 +349,41 @@
       "ok": true
     },
     {
+      "detail": "matching entries for run_id='7dd3942e-c2c0-4816-9466-efd32e486cc2': 1",
+      "name": "task7.run_log_contains_final_run",
+      "ok": true
+    },
+    {
+      "detail": "mismatches={}",
+      "name": "task7.run_log_matches_run_record",
+      "ok": true
+    },
+    {
+      "detail": "logged_out_dir='data/processed/alibaba_gpu_v2020_final_test', expected_out_dir='data/processed/alibaba_gpu_v2020_final_test'",
+      "name": "task7.run_log_output_directory",
+      "ok": true
+    },
+    {
+      "detail": "run_log='2026-11-10T23:14:33Z', run_record='2026-11-10T23:14:38Z'",
+      "name": "task7.run_log_precedes_run_record",
+      "ok": true
+    },
+    {
+      "detail": "lock='2026-11-10T22:50:19Z', run_log='2026-11-10T23:14:33Z', run_record='2026-11-10T23:14:38Z'",
+      "name": "task7.final_run_chronology",
+      "ok": true
+    },
+    {
+      "detail": "matching_runs=1, unique_run_ids=True, documented_reruns=True",
+      "name": "task7.run_history_documented",
+      "ok": true
+    },
+    {
+      "detail": "decision_commit='b463d5d3239cd2a223045ee034f1ecb9ca89317a', run_commit='b463d5d3239cd2a223045ee034f1ecb9ca89317a'",
+      "name": "task7.final_run_code_commit_matches_lock",
+      "ok": true
+    },
+    {
       "detail": "missing=[]",
       "name": "task7.prediction_columns",
       "ok": true
@@ -361,7 +396,23 @@
   ],
   "dataset_id": "alibaba_gpu_v2020",
   "decision_manifest_sha256": "f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950",
+  "final_run_identity": {
+    "code_commit": "b463d5d3239cd2a223045ee034f1ecb9ca89317a",
+    "decision_manifest_sha256": "f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950",
+    "run_id": "7dd3942e-c2c0-4816-9466-efd32e486cc2",
+    "timestamp_utc": "2026-11-10T23:14:38Z"
+  },
   "schema_version": "0.2.0",
-  "verification_timestamp_utc": "2026-11-10T23:18:43Z",
+  "unverified_items": [
+    {
+      "item": "Task 4 split isolation / history timing / target-value consistency on test rows",
+      "reason": "Task 8 deliberately does not reopen test target values. Test-side value-level checks are therefore inherited from the frozen Task 4 artifact checksums and metadata, not independently recomputed here."
+    },
+    {
+      "item": "Task 7 model-prediction reproduction on the real test feature rows",
+      "reason": "The verifier checks the locked model checksums, feature-order lock, saved prediction artifact checksum and run provenance, but does not rerun model inference in Task 8."
+    }
+  ],
+  "verification_timestamp_utc": "2026-11-13T06:25:31Z",
   "verified": true
 }

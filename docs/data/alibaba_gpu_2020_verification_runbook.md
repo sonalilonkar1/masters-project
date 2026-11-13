@@ -93,3 +93,34 @@ Commit only:
 - generated verification manifest/report/reproduction metadata after a successful final verification.
 
 Do not modify Task 3/4/6/7 pipeline behavior in this PR.
+
+## PR #121 review clarifications
+
+### Test-target access
+
+Task 8 must not reopen Task 4 test target values. Parquet row counts are obtained
+from Parquet file metadata only. Value-level checks on test targets (split isolation,
+history timing and target consistency) are therefore not recomputed by Task 8; the
+verification report labels them explicitly as unverified and relies on the frozen Task 4
+checksum/metadata evidence for those items.
+
+### Final-run provenance
+
+The verifier cross-checks all of the following:
+
+- the current `decision_manifest.json` SHA-256;
+- `run_record.json` decision hash, run ID, timestamp and code commit;
+- the matching entry in `data/processed/alibaba_gpu_v2020_ml/final_test_runs.jsonl`;
+- uniqueness/documentation of any rerun IDs;
+- the PR1 lock code commit against the final-run code commit;
+- lock timestamp ordering.
+
+Do not manually edit a verification report to reconcile provenance. Regenerate the
+report against the authoritative frozen artifacts.
+
+### Task 8 scope
+
+Task 8 changes only verification/reporting files. Changes to Task 6/7 runners or
+`src/models/alibaba_gpu_2020_final_test.py` belong in a Task 7 follow-up PR and should
+be merged (or otherwise established as the frozen upstream implementation) before the
+Task 8 report is regenerated.

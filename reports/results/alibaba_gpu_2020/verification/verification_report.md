@@ -3,8 +3,11 @@
 - Dataset: `alibaba_gpu_v2020`
 - Schema: `0.2.0`
 - Result: **PASS**
-- Checks: 34 passed, 0 failed
-- Generated: `2026-11-10T23:18:43Z`
+- Checks: 41 passed, 0 failed
+- Generated: `2026-11-13T06:25:31Z`
+- Decision manifest SHA-256: `f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950`
+- Final run ID: `7dd3942e-c2c0-4816-9466-efd32e486cc2`
+- Final run code commit: `b463d5d3239cd2a223045ee034f1ecb9ca89317a`
 
 ## Verification checks
 
@@ -42,8 +45,20 @@
 | `task7.test_evaluator_call_count` | PASS | expected explicit test_evaluator_call_count=1, found 1 |
 | `task7.test_target_read_count` | PASS | expected explicit test_target_read_count=1, found 1 |
 | `task7.final_run_id` | PASS | expected non-empty run_id, found '7dd3942e-c2c0-4816-9466-efd32e486cc2' |
+| `task7.run_log_contains_final_run` | PASS | matching entries for run_id='7dd3942e-c2c0-4816-9466-efd32e486cc2': 1 |
+| `task7.run_log_matches_run_record` | PASS | mismatches={} |
+| `task7.run_log_output_directory` | PASS | logged_out_dir='data/processed/alibaba_gpu_v2020_final_test', expected_out_dir='data/processed/alibaba_gpu_v2020_final_test' |
+| `task7.run_log_precedes_run_record` | PASS | run_log='2026-11-10T23:14:33Z', run_record='2026-11-10T23:14:38Z' |
+| `task7.final_run_chronology` | PASS | lock='2026-11-10T22:50:19Z', run_log='2026-11-10T23:14:33Z', run_record='2026-11-10T23:14:38Z' |
+| `task7.run_history_documented` | PASS | matching_runs=1, unique_run_ids=True, documented_reruns=True |
+| `task7.final_run_code_commit_matches_lock` | PASS | decision_commit='b463d5d3239cd2a223045ee034f1ecb9ca89317a', run_commit='b463d5d3239cd2a223045ee034f1ecb9ca89317a' |
 | `task7.prediction_columns` | PASS | missing=[] |
 | `task7.prediction_units_scope` | PASS | expected CPU=percent_of_vcpu, memory=gb, scope=task_role_per_instance |
+
+## Explicit verification limitations
+
+- **UNVERIFIED:** Task 4 split isolation / history timing / target-value consistency on test rows — Task 8 deliberately does not reopen test target values. Test-side value-level checks are therefore inherited from the frozen Task 4 artifact checksums and metadata, not independently recomputed here.
+- **UNVERIFIED:** Task 7 model-prediction reproduction on the real test feature rows — The verifier checks the locked model checksums, feature-order lock, saved prediction artifact checksum and run provenance, but does not rerun model inference in Task 8.
 
 ## Interpretation
 
