@@ -1,0 +1,11 @@
+{
+  "code_commit": "74f544f109217787ea6c25c582a7ebee0d239d28",
+  "code_dirty": true,
+  "dataset_id": "alibaba_gpu_v2020",
+  "full_test_command": "python -m pytest -q",
+  "generated_utc": "2026-11-13T06:25:31Z",
+  "pandas_version": "3.0.2",
+  "python_version": "3.11.15",
+  "schema_version": "0.2.0",
+  "verification_command": "python scripts/verify_alibaba_gpu_2020_artifacts.py"
+}
