@@ -4,6 +4,7 @@ from .validation import AdapterValidationError, validate_adapter_output
 from .alibaba import Alibaba2018Adapter
 from .alibaba_gpu_2020 import AlibabaGPU2020Adapter
 from .azure_vm import AzureVMAdapter
+from .google_subset import GoogleSubsetAdapter, attach_google_precomputed_targets
 
 __all__ = [
     "AdapterResult",
@@ -13,4 +14,6 @@ __all__ = [
     "Alibaba2018Adapter",
     "AlibabaGPU2020Adapter",
     "AzureVMAdapter",
+    "GoogleSubsetAdapter",
+    "attach_google_precomputed_targets",
 ]

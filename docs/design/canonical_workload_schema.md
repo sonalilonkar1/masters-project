@@ -40,7 +40,7 @@ These hold everywhere and are not repeated in later sections.
 
 ## 2. Schema version and implementation status
 
-Version 0.2.0 **extends** 0.1.0: no existing field, flag, record level, unit or validation rule is removed or renamed. The design is frozen.
+Version 0.2.0 **extends** 0.1.0: no existing field, flag, record level, unit or validation rule is removed or renamed. The design is frozen and schema 0.2.0 is implemented (PR #86).
 
 | Component | Status |
 |---|---|
@@ -550,7 +550,7 @@ Dataset-level provenance and counts belong in the adapter result metadata, not o
 
 | # | Contract item | Section |
 |---|---|---|
-| 1 | Schema 0.2.0 frozen and implemented; target builder still to come | 2 |
+| 1 | Schema 0.2.0 frozen and implemented (PR #86); shared target builder implemented (Task 4) | 2 |
 | 2 | Google reference, Alibaba GPU 2020 required, Alibaba 2018 optional, Azure deferred (V1 data, `v2` identifier retained) | 3 |
 | 3 | New record level `role_occurrence`; Alibaba GPU 2020 `instance` audit rows | 4.1 |
 | 4 | Terms defined per dataset; Google full-workload and Alibaba role rows are different scopes | 4.2 |
