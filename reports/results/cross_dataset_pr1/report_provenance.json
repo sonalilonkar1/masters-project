@@ -1,0 +1,458 @@
+{
+  "configuration": {
+    "datasets": {
+      "alibaba_clustertrace2018": {
+        "completion": "deferred",
+        "evidence": [
+          "docs/planning/github_issues/task9_alibaba_2018_adapter_demonstration.md"
+        ],
+        "reason": "Task 9 demonstration outcome and validated sample metadata are not supplied. No next-occurrence or recommendation results are reported."
+      },
+      "alibaba_gpu_v2020": {
+        "completion": "pipeline_artifacts_available",
+        "evidence": [
+          "reports/results/alibaba_gpu_2020/final_test/run_record.json",
+          "reports/results/alibaba_gpu_2020/final_test/metadata.json",
+          "reports/results/alibaba_gpu_2020/final_test/SHA256SUMS",
+          "docs/data/alibaba_gpu_2020_evidence_and_limitations.md",
+          "docs/planning/github_issues/task8_alibaba_gpu_2020_final_verification.md"
+        ],
+        "metadata": "reports/results/alibaba_gpu_2020/ml/decision_manifest.json",
+        "reason": "These committed Alibaba results are an earlier provisional rendering, not final verified findings. The PR 1 comparison source SHA-256 is de560f38741a60d5e427a4c21c7444debcc8e4a558dc4382fded3a10590b4d27; the newer Task 8 report references c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8, decision manifest f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950, and final run 7dd3942e-c2c0-4816-9466-efd32e486cc2. These newer references are review-reported and are not accepted as authoritative inputs. The authoritative Task 7 artifact chain has not yet been reconciled with Task 8; this is a provenance discrepancy, not merely pending verification. Alibaba reporting outputs will be regenerated in Task 12 PR 2 after Task 7 and Task 8 provenance is reconciled. Results apply to successfully completed, resource-valid roles with complete telemetry: eligibility selection bias, low multi-instance sensor coverage, the shortened telemetry window and same-second targets limit generalization.",
+        "results": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
+        "sensitivity": "reports/results/alibaba_gpu_2020/final_test/final_test_sensitivity.csv"
+      },
+      "azure_public_vm_v2": {
+        "completion": "feasibility_only",
+        "evidence": [
+          "docs/data/azure_vm_traceadvisor_feasibility.md",
+          "docs/planning/github_issues/task11_azure_vm_dataset_integration.md"
+        ],
+        "reason": "Existing feasibility analysis supports deferring integration. Dataset V1/V2 identity needs reconciliation; observed memory and official recurrence are unavailable. No Task 11 Stage 2 result or formal completed outcome is supplied."
+      },
+      "google_clusterdata2019": {
+        "completion": "pipeline_artifacts_available",
+        "evidence": [
+          "reports/results/google_subset/final_test_run_metadata.json",
+          "reports/results/google_subset/decision_manifest.json",
+          "docs/data/google_subset_pipeline_analysis.md",
+          "docs/planning/github_issues/task10_google_subset_corrections_and_rerun.md"
+        ],
+        "metadata": "reports/results/google_subset/n04_metadata.json",
+        "reason": "Earlier Google test summary is available. Task 10 correction, before/after results and approval to retain earlier results are not supplied; provisional only. F3/F4 cross-split contamination is disclosed in the cited analysis. F7/F8 remain limitations.",
+        "results": "reports/results/google_subset/tables/final_test_policy_comparison.csv"
+      }
+    }
+  },
+  "environment": {
+    "matplotlib": "3.10.0",
+    "pandas": "3.0.2",
+    "python": "3.12.13"
+  },
+  "executable_code": {
+    "capability_registry": {
+      "configuration_source": "Python definitions; config/dataset_capabilities.json is not loaded",
+      "definition_module": "src.canonical.schema",
+      "definition_path": "src/canonical/schema.py",
+      "definition_path_base": "executing_checkout",
+      "effective_profiles": {
+        "alibaba_clustertrace2018": {
+          "allowed_exclusion_reasons": [],
+          "any_resource_metric_valid": true,
+          "cpu_target_semantics": null,
+          "cpu_unit": null,
+          "dataset_id": "alibaba_clustertrace2018",
+          "evaluation_mode": "instance_request_versus_observed",
+          "evaluation_record_level": "instance",
+          "has_cpu_average": true,
+          "has_cpu_peak": true,
+          "has_memory_average": true,
+          "has_memory_peak": true,
+          "instance_event_time_semantics": null,
+          "memory_target_semantics": null,
+          "memory_unit": "alibaba_memory_source_normalized",
+          "notes": "Recurrence/targets remain disabled until a derived rule is validated.",
+          "observed_cpu_semantics": "instance_average",
+          "observed_memory_semantics": "instance_average",
+          "peak_cpu_semantics": "instance_peak",
+          "peak_memory_semantics": "instance_peak",
+          "recurrence_key_origin": "none",
+          "supported_record_levels": [
+            "instance"
+          ],
+          "supports_allocated_cpu": false,
+          "supports_allocated_memory": false,
+          "supports_cpu": true,
+          "supports_memory": true,
+          "supports_ml": false,
+          "supports_observed_cpu": true,
+          "supports_observed_memory": true,
+          "supports_recurrence": false,
+          "supports_request": true,
+          "supports_targets": false,
+          "target_split_isolation": false,
+          "telemetry_window": "Full trace",
+          "time_semantics": "instance_start"
+        },
+        "alibaba_gpu_v2020": {
+          "allowed_exclusion_reasons": [
+            "no_recurrence_key",
+            "job_failed",
+            "job_incomplete",
+            "task_not_terminated",
+            "missing_or_invalid_request",
+            "instance_failed",
+            "instance_interrupted",
+            "instance_incomplete",
+            "missing_worker_name",
+            "multi_attempt_worker",
+            "missing_sensor",
+            "partial_sensor_coverage",
+            "invalid_memory_exceeds_capacity",
+            "invalid_resource"
+          ],
+          "any_resource_metric_valid": false,
+          "cpu_target_semantics": "next_occurrence_lifetime_average",
+          "cpu_unit": "percent_of_vcpu",
+          "dataset_id": "alibaba_gpu_v2020",
+          "evaluation_mode": "next_occurrence_memory_peak_cpu_average",
+          "evaluation_record_level": "role_occurrence",
+          "has_cpu_average": true,
+          "has_cpu_peak": false,
+          "has_memory_average": true,
+          "has_memory_peak": true,
+          "instance_event_time_semantics": "parent_job_submission",
+          "memory_target_semantics": "next_occurrence_lifetime_peak",
+          "memory_unit": "gb",
+          "notes": "Required second integration. Role-level next-occurrence evaluation; memory peak primary, CPU lifetime average only.",
+          "observed_cpu_semantics": "lifetime_average",
+          "observed_memory_semantics": "lifetime_average",
+          "peak_cpu_semantics": null,
+          "peak_memory_semantics": "lifetime_peak",
+          "recurrence_key_origin": "official_with_role",
+          "supported_record_levels": [
+            "role_occurrence",
+            "instance"
+          ],
+          "supports_allocated_cpu": false,
+          "supports_allocated_memory": false,
+          "supports_cpu": true,
+          "supports_memory": true,
+          "supports_ml": true,
+          "supports_observed_cpu": true,
+          "supports_observed_memory": true,
+          "supports_recurrence": true,
+          "supports_request": true,
+          "supports_targets": true,
+          "target_split_isolation": true,
+          "telemetry_window": "About day 19 to day 68.9",
+          "time_semantics": "job_submission"
+        },
+        "azure_public_vm_v2": {
+          "allowed_exclusion_reasons": [],
+          "any_resource_metric_valid": true,
+          "cpu_target_semantics": null,
+          "cpu_unit": null,
+          "dataset_id": "azure_public_vm_v2",
+          "evaluation_mode": null,
+          "evaluation_record_level": null,
+          "has_cpu_average": true,
+          "has_cpu_peak": true,
+          "has_memory_average": false,
+          "has_memory_peak": false,
+          "instance_event_time_semantics": null,
+          "memory_target_semantics": null,
+          "memory_unit": null,
+          "notes": "CPU telemetry and VM capacity supported; observed memory unavailable.",
+          "observed_cpu_semantics": null,
+          "observed_memory_semantics": null,
+          "peak_cpu_semantics": null,
+          "peak_memory_semantics": null,
+          "recurrence_key_origin": "none",
+          "supported_record_levels": null,
+          "supports_allocated_cpu": true,
+          "supports_allocated_memory": true,
+          "supports_cpu": true,
+          "supports_memory": true,
+          "supports_ml": false,
+          "supports_observed_cpu": true,
+          "supports_observed_memory": false,
+          "supports_recurrence": false,
+          "supports_request": false,
+          "supports_targets": false,
+          "target_split_isolation": false,
+          "telemetry_window": null,
+          "time_semantics": null
+        },
+        "google_clusterdata2019": {
+          "allowed_exclusion_reasons": [],
+          "any_resource_metric_valid": true,
+          "cpu_target_semantics": "next_occurrence_peak",
+          "cpu_unit": "ncu",
+          "dataset_id": "google_clusterdata2019",
+          "evaluation_mode": "full_next_occurrence",
+          "evaluation_record_level": "occurrence",
+          "has_cpu_average": false,
+          "has_cpu_peak": true,
+          "has_memory_average": false,
+          "has_memory_peak": true,
+          "instance_event_time_semantics": null,
+          "memory_target_semantics": "next_occurrence_peak",
+          "memory_unit": "normalized",
+          "notes": "Reference corrected Google occurrence pipeline.",
+          "observed_cpu_semantics": null,
+          "observed_memory_semantics": null,
+          "peak_cpu_semantics": "window_peak",
+          "peak_memory_semantics": "window_peak",
+          "recurrence_key_origin": "constructed",
+          "supported_record_levels": [
+            "occurrence"
+          ],
+          "supports_allocated_cpu": false,
+          "supports_allocated_memory": false,
+          "supports_cpu": true,
+          "supports_memory": true,
+          "supports_ml": true,
+          "supports_observed_cpu": true,
+          "supports_observed_memory": true,
+          "supports_recurrence": true,
+          "supports_request": true,
+          "supports_targets": true,
+          "target_split_isolation": false,
+          "telemetry_window": "Full 31-day subset",
+          "time_semantics": "first_execution_start"
+        }
+      },
+      "sha256": "db4f8cbf66f6dc2d822f700934fd28bd493bb10e69e09a7bcb0e6932ce368a0d"
+    },
+    "files": [
+      {
+        "path": "scripts/build_final_cross_dataset_report.py",
+        "path_base": "executing_checkout",
+        "role": "generator",
+        "sha256": "8ea13c42424ae396e63063d19b26add494242b608d53e3bcab3bdacb95b63c05"
+      },
+      {
+        "path": "src/canonical/schema.py",
+        "path_base": "executing_checkout",
+        "role": "schema_and_capability_definitions",
+        "sha256": "19dd1b4832eb1c550e6fe4458a2ab955347dda5cabac73bf2a0d95d09621e12d"
+      }
+    ],
+    "path_base_description": "executing_checkout is the checkout containing the running generator; it is independent of --root"
+  },
+  "kind": "PR1 reporting receipt; not the final release manifest",
+  "outputs": [
+    {
+      "path": "alibaba_gpu_v2020/01_memory.csv",
+      "sha256": "9fde656ff3ef7900c316748c586d4df8db5337d71fe29a90b8b7d0a5d82f66c5"
+    },
+    {
+      "path": "alibaba_gpu_v2020/01_memory.md",
+      "sha256": "19ae5e372c23187c81ba58090c468f51383383fd5e168bf81ca2f7a9afdf0598"
+    },
+    {
+      "path": "alibaba_gpu_v2020/01_memory.svg",
+      "sha256": "61f8fb4e5908b9ab7ae16cd36b41ce450cab184b315980debf8f86f0748b5faf"
+    },
+    {
+      "path": "alibaba_gpu_v2020/02_cpu.csv",
+      "sha256": "05108de0500b0321040e8400815dc12a8e913e5eae6750091aeb09552c8aa800"
+    },
+    {
+      "path": "alibaba_gpu_v2020/02_cpu.md",
+      "sha256": "f16a95fe2ec4e83389163927783e0147c649573536e8a71e7c988d9c4e648d71"
+    },
+    {
+      "path": "alibaba_gpu_v2020/02_cpu.svg",
+      "sha256": "1d79e5ec68ba20a8dbc32f14c5804fe070362d2cbe8810b5007767fc916cf6a4"
+    },
+    {
+      "path": "alibaba_gpu_v2020/results.csv",
+      "sha256": "2ff84cfd3b97015db8eacb130964fedcfb1e878e0bbf810d2b8af40c20d31fc0"
+    },
+    {
+      "path": "alibaba_gpu_v2020/results.md",
+      "sha256": "8b7bd382921153f3237b109333d208dc07b314abefc2a6a3ed446f80412c12fa"
+    },
+    {
+      "path": "alibaba_gpu_v2020/sensitivity.csv",
+      "sha256": "deab90102fbd1834082a4486f2d48075ed93fd98147ae9bf0a4e74359ab5b055"
+    },
+    {
+      "path": "alibaba_gpu_v2020/sensitivity.md",
+      "sha256": "a8a856d13fef50bd1d0c5e65923cd437374b377be193df0713668f75583c5d8b"
+    },
+    {
+      "path": "comparability.csv",
+      "sha256": "9773697694745929d454c6200d968c64bcf674a840fcad81288f7d56db77c242"
+    },
+    {
+      "path": "comparability.md",
+      "sha256": "bd56984e5f465a32f34a94585757546c6027c527b5c3d4ea996df781efd39222"
+    },
+    {
+      "path": "contract_comparison.csv",
+      "sha256": "c26a0a52e737c1178abee58208e0fd07f5c2c0cd9d6ffc81442cada84beab52f"
+    },
+    {
+      "path": "contract_comparison.md",
+      "sha256": "70449576c4dde8d2d799fec8fd6f83eef8a8bc92a68bf89a8288006c60a5a0b2"
+    },
+    {
+      "path": "dataset_status.csv",
+      "sha256": "0c94c34bf968a35438497c18225f81162fc6a2121ce0fc753d9e6669ccd0784c"
+    },
+    {
+      "path": "dataset_status.md",
+      "sha256": "536d3661ba1898a179823aad05b5b3e5679e8113b8c5f2ce2d665d64385152c5"
+    },
+    {
+      "path": "google_clusterdata2019/01_cpu.csv",
+      "sha256": "9f67f5ab7ec54ee3ce790f3877ec6d57ff1229c63d888a7dc14c8ca9c5f9193c"
+    },
+    {
+      "path": "google_clusterdata2019/01_cpu.md",
+      "sha256": "baec1c3fc0722a2ad7cda03b5a804c7c395ed5323e355594eea93f8d9def1786"
+    },
+    {
+      "path": "google_clusterdata2019/01_cpu.svg",
+      "sha256": "7868b385703abc2a50f40c0b7e4b986c4a012ad63a2fe10b0a0579eb393529cc"
+    },
+    {
+      "path": "google_clusterdata2019/02_memory.csv",
+      "sha256": "cc01fe76608161d8f101adee9fed4e7f97ac019062ed24f100d5028fa9f99830"
+    },
+    {
+      "path": "google_clusterdata2019/02_memory.md",
+      "sha256": "48a9c29d3802a9d79ea08a68114c1dfc2e638ba6eea82ec81c139d5a723d36c0"
+    },
+    {
+      "path": "google_clusterdata2019/02_memory.svg",
+      "sha256": "09c86ad052d95ab6df99b7040992803c2b468d8d33af2c603a06a194d0fd4930"
+    },
+    {
+      "path": "google_clusterdata2019/03_any_resource.csv",
+      "sha256": "328e5c8064943455d131528f08fe036a6722d6a1c8f17871008e8bf1cde928ca"
+    },
+    {
+      "path": "google_clusterdata2019/03_any_resource.md",
+      "sha256": "aff45f63c538830d58b2123e3e93504c0eb7ac2a20cff86e27344c0832593df3"
+    },
+    {
+      "path": "google_clusterdata2019/03_any_resource.svg",
+      "sha256": "c6f40b0be0e0e50ade3706d04846e6dfee25f69bbf0b4adc0720245e0743cff9"
+    },
+    {
+      "path": "google_clusterdata2019/results.csv",
+      "sha256": "d2562999d7f25ff8394a6a93ff331f78a2cb4ec7d99f899861fe5af8a7e9b8c4"
+    },
+    {
+      "path": "google_clusterdata2019/results.md",
+      "sha256": "f18aa30e26608f005c5e99d19549bbe1fc52a34eb86e591a4256d09caeb02aa8"
+    },
+    {
+      "path": "report.md",
+      "sha256": "cf563fd6cfa0eeb8c650c5035472ef74b9aa8b14c8c34bb5e0745157b36d03f9"
+    },
+    {
+      "path": "report_sources.csv",
+      "sha256": "c59e423e7fc3e841f7b3b944014d5eb38b736768dfbc72272b8623ccf11f3d79"
+    }
+  ],
+  "reference_documents": [
+    {
+      "path": "docs/design/canonical_workload_schema.md",
+      "path_base": "executing_checkout",
+      "role": "scope_aggregation_reference",
+      "sha256": "b6feeb06560cc9437b0cf29abe0c45c430bc2c97a28473b829385395bc62d561"
+    }
+  ],
+  "sources": [
+    {
+      "path": "docs/data/alibaba_gpu_2020_evidence_and_limitations.md",
+      "path_base": "input_artifact_root",
+      "sha256": "d298c08c6145a6f8a13bf8fcc81f1891193b55551bc6f7971354f5bdd7ff9f2c"
+    },
+    {
+      "path": "docs/data/azure_vm_traceadvisor_feasibility.md",
+      "path_base": "input_artifact_root",
+      "sha256": "eb35fb65a2e0080b3362a9b4c808203078216de337849e4e5e8c96981bceffd0"
+    },
+    {
+      "path": "docs/data/google_subset_pipeline_analysis.md",
+      "path_base": "input_artifact_root",
+      "sha256": "d688b206046422473c29f59145f4732eb595e2ad391ad2f5a4529448c25f15b6"
+    },
+    {
+      "path": "docs/planning/github_issues/task10_google_subset_corrections_and_rerun.md",
+      "path_base": "input_artifact_root",
+      "sha256": "3f9fda9941e3c4cb8d5f0fdc3ce6bc23891d8e7b45f1b1fca72c88cfabb06f08"
+    },
+    {
+      "path": "docs/planning/github_issues/task11_azure_vm_dataset_integration.md",
+      "path_base": "input_artifact_root",
+      "sha256": "65d599b04c66441147b14124d0a9da6613f6c59485a8084a742208febfd8c1cf"
+    },
+    {
+      "path": "docs/planning/github_issues/task8_alibaba_gpu_2020_final_verification.md",
+      "path_base": "input_artifact_root",
+      "sha256": "c2bb4d846522862d6a2623fa255b6f7df5551ed6bbb661d46cc721e30d32941a"
+    },
+    {
+      "path": "docs/planning/github_issues/task9_alibaba_2018_adapter_demonstration.md",
+      "path_base": "input_artifact_root",
+      "sha256": "1a65e32d9d441494f8369e7abc037a8c18924b52bb917d63b2246f7111c6f47e"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/final_test/SHA256SUMS",
+      "path_base": "input_artifact_root",
+      "sha256": "1152eedbd8cafbe56b8ed804b497652c4d9d1f1d4647565220793476a10b6546"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
+      "path_base": "input_artifact_root",
+      "sha256": "de560f38741a60d5e427a4c21c7444debcc8e4a558dc4382fded3a10590b4d27"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/final_test/final_test_sensitivity.csv",
+      "path_base": "input_artifact_root",
+      "sha256": "eca7305279a12f3beb53872ba6e4d4f4e6e2e37bd6096ac331a7e8e1b317dc00"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/final_test/metadata.json",
+      "path_base": "input_artifact_root",
+      "sha256": "3c05b7257837a6009cff5ef6a5dd16ee09f719fd12865fee11258558e9eb5706"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/final_test/run_record.json",
+      "path_base": "input_artifact_root",
+      "sha256": "5f5754af0741070efe5794f31e402aacc7f8162738901a334af7c582b4a887e6"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/ml/decision_manifest.json",
+      "path_base": "input_artifact_root",
+      "sha256": "dd6819bf7f04348ea5ad150c03249a0b952d2c8c07de971bfc76b92a9a3919ae"
+    },
+    {
+      "path": "reports/results/google_subset/decision_manifest.json",
+      "path_base": "input_artifact_root",
+      "sha256": "0669ca5c3cdec70a1013c886fbce4c0efc3746b936b7b0748f106523d40fa775"
+    },
+    {
+      "path": "reports/results/google_subset/final_test_run_metadata.json",
+      "path_base": "input_artifact_root",
+      "sha256": "a933ac23889c9229650b98da71f714532ce21ff52ec30ae2d1f6aa3da25c2c39"
+    },
+    {
+      "path": "reports/results/google_subset/n04_metadata.json",
+      "path_base": "input_artifact_root",
+      "sha256": "71961278053bcaa6ab1f47e8af7e789bb0bc58faf3b7dc37bb1e0ce011afbb5b"
+    },
+    {
+      "path": "reports/results/google_subset/tables/final_test_policy_comparison.csv",
+      "path_base": "input_artifact_root",
+      "sha256": "3a83f94ffc5e67675d85b7ff33ce6867e2067d0a6ca9231c825fffdd22c19219"
+    }
+  ]
+}

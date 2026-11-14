@@ -1,0 +1,43 @@
+{
+  "datasets": {
+    "google_clusterdata2019": {
+      "completion": "pipeline_artifacts_available",
+      "metadata": "reports/results/google_subset/n04_metadata.json",
+      "results": "reports/results/google_subset/tables/final_test_policy_comparison.csv",
+      "reason": "Earlier Google test summary is available. Task 10 correction, before/after results and approval to retain earlier results are not supplied; provisional only. F3/F4 cross-split contamination is disclosed in the cited analysis. F7/F8 remain limitations.",
+      "evidence": [
+        "reports/results/google_subset/final_test_run_metadata.json",
+        "reports/results/google_subset/decision_manifest.json",
+        "docs/data/google_subset_pipeline_analysis.md",
+        "docs/planning/github_issues/task10_google_subset_corrections_and_rerun.md"
+      ]
+    },
+    "alibaba_gpu_v2020": {
+      "completion": "pipeline_artifacts_available",
+      "metadata": "reports/results/alibaba_gpu_2020/ml/decision_manifest.json",
+      "results": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
+      "sensitivity": "reports/results/alibaba_gpu_2020/final_test/final_test_sensitivity.csv",
+      "reason": "These committed Alibaba results are an earlier provisional rendering, not final verified findings. The PR 1 comparison source SHA-256 is de560f38741a60d5e427a4c21c7444debcc8e4a558dc4382fded3a10590b4d27; the newer Task 8 report references c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8, decision manifest f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950, and final run 7dd3942e-c2c0-4816-9466-efd32e486cc2. These newer references are review-reported and are not accepted as authoritative inputs. The authoritative Task 7 artifact chain has not yet been reconciled with Task 8; this is a provenance discrepancy, not merely pending verification. Alibaba reporting outputs will be regenerated in Task 12 PR 2 after Task 7 and Task 8 provenance is reconciled. Results apply to successfully completed, resource-valid roles with complete telemetry: eligibility selection bias, low multi-instance sensor coverage, the shortened telemetry window and same-second targets limit generalization.",
+      "evidence": [
+        "reports/results/alibaba_gpu_2020/final_test/run_record.json",
+        "reports/results/alibaba_gpu_2020/final_test/metadata.json",
+        "reports/results/alibaba_gpu_2020/final_test/SHA256SUMS",
+        "docs/data/alibaba_gpu_2020_evidence_and_limitations.md",
+        "docs/planning/github_issues/task8_alibaba_gpu_2020_final_verification.md"
+      ]
+    },
+    "alibaba_clustertrace2018": {
+      "completion": "deferred",
+      "reason": "Task 9 demonstration outcome and validated sample metadata are not supplied. No next-occurrence or recommendation results are reported.",
+      "evidence": ["docs/planning/github_issues/task9_alibaba_2018_adapter_demonstration.md"]
+    },
+    "azure_public_vm_v2": {
+      "completion": "feasibility_only",
+      "reason": "Existing feasibility analysis supports deferring integration. Dataset V1/V2 identity needs reconciliation; observed memory and official recurrence are unavailable. No Task 11 Stage 2 result or formal completed outcome is supplied.",
+      "evidence": [
+        "docs/data/azure_vm_traceadvisor_feasibility.md",
+        "docs/planning/github_issues/task11_azure_vm_dataset_integration.md"
+      ]
+    }
+  }
+}
