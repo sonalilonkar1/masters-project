@@ -347,53 +347,79 @@ def test_pr1_then_pr2_end_to_end_runs_once(tmp_path, monkeypatch):
 
 
 
-def test_second_target_read_is_rejected_by_production_runner(tmp_path, monkeypatch):
+def test_direct_target_read_bypassing_helper_is_rejected_by_operation_guard(
+    tmp_path, monkeypatch
+):
     import test_run_alibaba_gpu_2020_ml as pr1
 
     commit = "b" * 40
-    monkeypatch.setattr(pr1.baselines_runner.canonical, "git_state", lambda repo: (commit, False))
+    monkeypatch.setattr(
+        pr1.baselines_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
     targets = pr1._task4_dir(tmp_path)
     baselines, ml = tmp_path / "baselines", tmp_path / "ml"
-    assert pr1.baselines_runner.run(targets, baselines) == pr1.baselines_runner.EXIT_OK
-    monkeypatch.setattr(pr1.ml_runner.canonical, "git_state", lambda repo: (commit, False))
+    assert (
+        pr1.baselines_runner.run(targets, baselines)
+        == pr1.baselines_runner.EXIT_OK
+    )
+    monkeypatch.setattr(
+        pr1.ml_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
     assert pr1.ml_runner.run(targets, baselines, ml) == pr1.ml_runner.EXIT_OK
-    monkeypatch.setattr(runner.canonical, "git_state", lambda repo: (commit, False))
+    monkeypatch.setattr(
+        runner.canonical, "git_state", lambda repo: (commit, False)
+    )
 
-    original = runner._read_test_targets
+    original_evaluate = runner.evaluate_final_test
 
-    def read_twice(path, tracker):
-        first = original(path, tracker)
-        original(path, tracker)
-        return first
+    def evaluate_after_direct_read(*args, **kwargs):
+        # This deliberately bypasses _read_test_targets(). The scoped production
+        # guard must still observe the second read at pd.read_parquet itself.
+        runner.pd.read_parquet(targets / "test.parquet")
+        return original_evaluate(*args, **kwargs)
 
-    monkeypatch.setattr(runner, "_read_test_targets", read_twice)
+    monkeypatch.setattr(runner, "evaluate_final_test", evaluate_after_direct_read)
     out = tmp_path / "final"
     assert runner.run(targets, baselines, ml, out) == runner.EXIT_FAILED
     assert not out.exists()
 
 
-def test_second_evaluator_call_is_rejected_by_production_runner(tmp_path, monkeypatch):
+def test_direct_evaluator_call_bypassing_helper_is_rejected_by_operation_guard(
+    tmp_path, monkeypatch
+):
     import test_run_alibaba_gpu_2020_ml as pr1
-    from models import alibaba_gpu_2020_final_test as ft
 
     commit = "b" * 40
-    monkeypatch.setattr(pr1.baselines_runner.canonical, "git_state", lambda repo: (commit, False))
+    monkeypatch.setattr(
+        pr1.baselines_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
     targets = pr1._task4_dir(tmp_path)
     baselines, ml = tmp_path / "baselines", tmp_path / "ml"
-    assert pr1.baselines_runner.run(targets, baselines) == pr1.baselines_runner.EXIT_OK
-    monkeypatch.setattr(pr1.ml_runner.canonical, "git_state", lambda repo: (commit, False))
+    assert (
+        pr1.baselines_runner.run(targets, baselines)
+        == pr1.baselines_runner.EXIT_OK
+    )
+    monkeypatch.setattr(
+        pr1.ml_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
     assert pr1.ml_runner.run(targets, baselines, ml) == pr1.ml_runner.EXIT_OK
-    monkeypatch.setattr(runner.canonical, "git_state", lambda repo: (commit, False))
+    monkeypatch.setattr(
+        runner.canonical, "git_state", lambda repo: (commit, False)
+    )
 
-    original = runner.evaluate_final_test
+    original_evaluate = runner.evaluate_final_test
 
-    def evaluate_twice(*args, **kwargs):
-        result = original(*args, **kwargs)
-        tracker = kwargs["execution_tracker"]
-        tracker.record_evaluator_call()
+    def evaluate_then_call_evaluator_directly(*args, **kwargs):
+        result = original_evaluate(*args, **kwargs)
+        # This bypasses _evaluate_all_policies_once(). The operation guard wraps
+        # RecommendationEvaluator.evaluate_canonical itself and must reject it.
+        evaluator = runner.RecommendationEvaluator(capabilities=runner.PROFILE)
+        evaluator.evaluate_canonical(pd.DataFrame())
         return result
 
-    monkeypatch.setattr(runner, "evaluate_final_test", evaluate_twice)
+    monkeypatch.setattr(
+        runner, "evaluate_final_test", evaluate_then_call_evaluator_directly
+    )
     out = tmp_path / "final"
     assert runner.run(targets, baselines, ml, out) == runner.EXIT_FAILED
     assert not out.exists()

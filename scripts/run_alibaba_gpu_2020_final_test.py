@@ -24,6 +24,7 @@ Exit codes: 0 success, 1 invalid input, 2 refused, 3 build/write failure.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -46,6 +47,7 @@ from scripts import build_alibaba_gpu_2020_targets as targets_build
 from scripts import run_alibaba_gpu_2020_baselines as baselines_run
 from scripts import run_alibaba_gpu_2020_ml as ml_run
 from canonical.schema import ALIBABA_GPU_2020_CAPABILITIES as PROFILE
+from evaluation.evaluator import RecommendationEvaluator
 from models.alibaba_gpu_2020_final_test import (
     FINAL_POLICIES,
     FinalTestExecutionTracker,
@@ -240,12 +242,48 @@ def _existing_fingerprint(out_dir: Path) -> str | None:
         return None
 
 
-def _read_test_targets(
-    path: Path,
+@contextmanager
+def _guard_final_test_operations(
+    test_path: Path,
     execution_tracker: FinalTestExecutionTracker,
-) -> pd.DataFrame:
-    """Read the locked final-test target table through the counted boundary."""
-    execution_tracker.record_test_target_read()
+):
+    """Count actual target reads and evaluator calls during one PR2 execution.
+
+    The guard instruments the operation boundaries themselves rather than only
+    TraceAdvisor helper wrappers. This means a direct ``pd.read_parquet`` of the
+    locked test target or a direct ``RecommendationEvaluator.evaluate_canonical``
+    call inside the guarded production path is still observed and rejected when
+    it would make execution occur more than once. Original callables are restored
+    in ``finally`` so the instrumentation is scoped to this run.
+    """
+    locked_test_path = Path(test_path).resolve()
+    original_read_parquet = pd.read_parquet
+    original_evaluate_canonical = RecommendationEvaluator.evaluate_canonical
+
+    def guarded_read_parquet(path, *args, **kwargs):
+        try:
+            candidate = Path(path).resolve()
+        except (TypeError, ValueError):
+            candidate = None
+        if candidate == locked_test_path:
+            execution_tracker.record_test_target_read()
+        return original_read_parquet(path, *args, **kwargs)
+
+    def guarded_evaluate_canonical(evaluator, *args, **kwargs):
+        execution_tracker.record_evaluator_call()
+        return original_evaluate_canonical(evaluator, *args, **kwargs)
+
+    pd.read_parquet = guarded_read_parquet
+    RecommendationEvaluator.evaluate_canonical = guarded_evaluate_canonical
+    try:
+        yield
+    finally:
+        pd.read_parquet = original_read_parquet
+        RecommendationEvaluator.evaluate_canonical = original_evaluate_canonical
+
+
+def _read_test_targets(path: Path) -> pd.DataFrame:
+    """Read the locked target table; the scoped operation guard counts it."""
     return pd.read_parquet(path)
 
 
@@ -358,41 +396,40 @@ def run(
             "prior_runs": len(prior_runs),
             "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         })
-        test = _read_test_targets(
-            targets_dir / "test.parquet",
-            execution_tracker,
-        )
+        locked_test_path = targets_dir / "test.parquet"
+        with _guard_final_test_operations(locked_test_path, execution_tracker):
+            test = _read_test_targets(locked_test_path)
 
-        history_statistics = pd.read_parquet(
-            baselines_dir / "history_statistics.parquet"
-        )
-        recommendations_test = pd.read_parquet(
-            baselines_dir / "recommendations_test.parquet"
-        )
-
-        models = {}
-        for resource in ("cpu", "memory"):
-            models[resource] = joblib.load(
-                ml_dir / manifest["model_artifacts"][resource]["file"]
+            history_statistics = pd.read_parquet(
+                baselines_dir / "history_statistics.parquet"
+            )
+            recommendations_test = pd.read_parquet(
+                baselines_dir / "recommendations_test.parquet"
             )
 
-        result = evaluate_final_test(
-            test,
-            history_statistics,
-            recommendations_test,
-            models,
-            manifest,
-            PROFILE,
-            execution_tracker=execution_tracker,
-        )
+            models = {}
+            for resource in ("cpu", "memory"):
+                models[resource] = joblib.load(
+                    ml_dir / manifest["model_artifacts"][resource]["file"]
+                )
 
-        execution_tracker.require_exactly_once()
-        if result.evaluator_call_count != execution_tracker.evaluator_call_count:
-            raise RuntimeError(
-                "Final-test evaluator count disagrees with execution tracker: "
-                f"result={result.evaluator_call_count}, "
-                f"observed={execution_tracker.evaluator_call_count}"
+            result = evaluate_final_test(
+                test,
+                history_statistics,
+                recommendations_test,
+                models,
+                manifest,
+                PROFILE,
+                execution_tracker=execution_tracker,
             )
+
+            execution_tracker.require_exactly_once()
+            if result.evaluator_call_count != execution_tracker.evaluator_call_count:
+                raise RuntimeError(
+                    "Final-test evaluator count disagrees with execution tracker: "
+                    f"result={result.evaluator_call_count}, "
+                    f"observed={execution_tracker.evaluator_call_count}"
+                )
 
         if list(result.comparison["policy"]) != list(FINAL_POLICIES):
             raise RuntimeError(

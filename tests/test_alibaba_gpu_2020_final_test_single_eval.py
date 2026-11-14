@@ -65,42 +65,6 @@ def test_all_final_policies_use_one_evaluator_call():
 
 
 
-def test_execution_tracker_measures_and_rejects_second_evaluator_call():
-    rows = pd.DataFrame({
-        "dataset_id": ["alibaba_gpu_v2020"],
-        "workload_id": ["w1"],
-        "role_key": ["r1"],
-        "occurrence_id": ["o1"],
-        "recurrence_key": ["k1"],
-        "actual_cpu": [10.0],
-        "actual_memory": [1.0],
-        "actual_cpu_unit": ["percent_of_vcpu"],
-        "actual_memory_unit": ["gb"],
-        "next_occurrence_same_second": [False],
-        "inst_num": [1],
-        "rec_cpu_request": [10.0],
-        "rec_memory_request": [1.0],
-        "rec_cpu_mean": [10.0],
-        "rec_memory_mean": [1.0],
-        "rec_cpu_p90": [10.0],
-        "rec_memory_p90": [1.0],
-        "rec_cpu_p95": [10.0],
-        "rec_memory_p95": [1.0],
-        "rec_cpu_p99": [10.0],
-        "rec_memory_p99": [1.0],
-        "ml_recommended_cpu": [10.0],
-        "ml_recommended_memory": [1.0],
-        "hybrid_recommended_cpu": [10.0],
-        "hybrid_recommended_memory": [1.0],
-    })
-    tracker = ft.FinalTestExecutionTracker()
-    evaluator = CountingEvaluator()
-    ft._evaluate_all_policies_once(rows, evaluator, execution_tracker=tracker)
-    assert tracker.evaluator_call_count == 1
-    with pytest.raises(RuntimeError, match="more than once"):
-        ft._evaluate_all_policies_once(rows, evaluator, execution_tracker=tracker)
-    assert evaluator.calls == 1
-
 
 def test_single_evaluation_preserves_policy_and_sensitivity_results():
     rows = pd.DataFrame({
@@ -132,12 +96,7 @@ def test_single_evaluation_preserves_policy_and_sensitivity_results():
     })
 
     evaluator = ft.RecommendationEvaluator(capabilities=PROFILE)
-    tracker = ft.FinalTestExecutionTracker()
-    evaluated = ft._evaluate_all_policies_once(
-        rows,
-        evaluator,
-        execution_tracker=tracker,
-    )
+    evaluated = ft._evaluate_all_policies_once(rows, evaluator)
     one_pass_comparison = ft.build_final_comparison_from_evaluated(
         evaluated,
         evaluator,
@@ -171,4 +130,3 @@ def test_single_evaluation_preserves_policy_and_sensitivity_results():
         rtol=1e-12,
         atol=1e-12,
     )
-    assert tracker.evaluator_call_count == 1

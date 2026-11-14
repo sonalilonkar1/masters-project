@@ -399,8 +399,8 @@ def _evaluate_all_policies_once(
         )
 
     combined = pd.concat(frames, ignore_index=True)
-    tracker = execution_tracker or FinalTestExecutionTracker()
-    tracker.record_evaluator_call()
+    # Production execution counting happens at the evaluator method boundary in
+    # the runner's scoped operation guard, so even direct invocations are seen.
     evaluated = evaluator.evaluate_canonical(combined)
 
     expected_rows = len(rows) * len(FINAL_POLICIES)
