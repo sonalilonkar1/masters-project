@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+
+import pandas as pd
 from pathlib import Path
 
 
@@ -300,9 +302,39 @@ def test_pr1_then_pr2_end_to_end_runs_once(tmp_path, monkeypatch):
     out = tmp_path / "final"
     assert runner.run(targets, baselines, ml, out) == runner.EXIT_OK
     record = json.loads((out / "run_record.json").read_text())
+    metadata = json.loads((out / "metadata.json").read_text())
+    log_entries = _log_entries(ml)
+
     assert record["pr1_build"]["code_commit"] == commit
     assert record["prior_runs"] == 0
-    assert len(_log_entries(ml)) == 1
+    assert record["test_target_read_count"] == 1
+    assert record["test_evaluator_call_count"] == 1
+    assert metadata["test_target_read_count"] == 1
+    assert metadata["test_evaluator_call_count"] == 1
+    assert metadata["run_id"] == record["run_id"]
+    assert metadata["decision_manifest_sha256"] == record["decision_manifest_sha256"]
+    assert len(log_entries) == 1
+    assert log_entries[0]["run_id"] == record["run_id"]
+    assert (
+        log_entries[0]["decision_manifest_sha256"]
+        == record["decision_manifest_sha256"]
+    )
+
+    sensitivity = pd.read_csv(out / "final_test_sensitivity.csv")
+    assert set(sensitivity["sensitivity"]) == {
+        "occurrence_weighted",
+        "same_second_excluded",
+        "same_second_only",
+        "multi_instance",
+        "group_weighted",
+    }
+    assert len(sensitivity) == 5 * len(runner.FINAL_POLICIES)
+    assert not sensitivity.duplicated(["sensitivity", "policy"]).any()
+    for label in sensitivity["sensitivity"].unique():
+        policies = tuple(
+            sensitivity.loc[sensitivity["sensitivity"].eq(label), "policy"]
+        )
+        assert policies == runner.FINAL_POLICIES
 
     # A second run to a new folder, or a re-lock of the tested PR1 folder, is refused.
     assert runner.run(targets, baselines, ml, tmp_path / "again") == runner.EXIT_REFUSED
@@ -312,3 +344,56 @@ def test_pr1_then_pr2_end_to_end_runs_once(tmp_path, monkeypatch):
     # A PR2 run at a later commit than the PR1 lock is refused before reading test.
     monkeypatch.setattr(runner.canonical, "git_state", lambda repo: ("e" * 40, False))
     assert runner.run(targets, baselines, ml, tmp_path / "later") == runner.EXIT_INVALID
+
+
+
+def test_second_target_read_is_rejected_by_production_runner(tmp_path, monkeypatch):
+    import test_run_alibaba_gpu_2020_ml as pr1
+
+    commit = "b" * 40
+    monkeypatch.setattr(pr1.baselines_runner.canonical, "git_state", lambda repo: (commit, False))
+    targets = pr1._task4_dir(tmp_path)
+    baselines, ml = tmp_path / "baselines", tmp_path / "ml"
+    assert pr1.baselines_runner.run(targets, baselines) == pr1.baselines_runner.EXIT_OK
+    monkeypatch.setattr(pr1.ml_runner.canonical, "git_state", lambda repo: (commit, False))
+    assert pr1.ml_runner.run(targets, baselines, ml) == pr1.ml_runner.EXIT_OK
+    monkeypatch.setattr(runner.canonical, "git_state", lambda repo: (commit, False))
+
+    original = runner._read_test_targets
+
+    def read_twice(path, tracker):
+        first = original(path, tracker)
+        original(path, tracker)
+        return first
+
+    monkeypatch.setattr(runner, "_read_test_targets", read_twice)
+    out = tmp_path / "final"
+    assert runner.run(targets, baselines, ml, out) == runner.EXIT_FAILED
+    assert not out.exists()
+
+
+def test_second_evaluator_call_is_rejected_by_production_runner(tmp_path, monkeypatch):
+    import test_run_alibaba_gpu_2020_ml as pr1
+    from models import alibaba_gpu_2020_final_test as ft
+
+    commit = "b" * 40
+    monkeypatch.setattr(pr1.baselines_runner.canonical, "git_state", lambda repo: (commit, False))
+    targets = pr1._task4_dir(tmp_path)
+    baselines, ml = tmp_path / "baselines", tmp_path / "ml"
+    assert pr1.baselines_runner.run(targets, baselines) == pr1.baselines_runner.EXIT_OK
+    monkeypatch.setattr(pr1.ml_runner.canonical, "git_state", lambda repo: (commit, False))
+    assert pr1.ml_runner.run(targets, baselines, ml) == pr1.ml_runner.EXIT_OK
+    monkeypatch.setattr(runner.canonical, "git_state", lambda repo: (commit, False))
+
+    original = runner.evaluate_final_test
+
+    def evaluate_twice(*args, **kwargs):
+        result = original(*args, **kwargs)
+        tracker = kwargs["execution_tracker"]
+        tracker.record_evaluator_call()
+        return result
+
+    monkeypatch.setattr(runner, "evaluate_final_test", evaluate_twice)
+    out = tmp_path / "final"
+    assert runner.run(targets, baselines, ml, out) == runner.EXIT_FAILED
+    assert not out.exists()

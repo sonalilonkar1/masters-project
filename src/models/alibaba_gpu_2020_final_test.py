@@ -42,6 +42,42 @@ _FINAL_SUMMARY_KEYS: tuple[str, ...] = (
 )
 
 
+@dataclass
+class FinalTestExecutionTracker:
+    """Observed final-test operations used for exactly-once provenance."""
+
+    test_target_read_count: int = 0
+    evaluator_call_count: int = 0
+
+    def record_test_target_read(self) -> None:
+        self.test_target_read_count += 1
+        if self.test_target_read_count > 1:
+            raise RuntimeError(
+                "Final test targets were read more than once: "
+                f"observed {self.test_target_read_count} reads"
+            )
+
+    def record_evaluator_call(self) -> None:
+        self.evaluator_call_count += 1
+        if self.evaluator_call_count > 1:
+            raise RuntimeError(
+                "Final-test evaluator was called more than once: "
+                f"observed {self.evaluator_call_count} calls"
+            )
+
+    def require_exactly_once(self) -> None:
+        if self.test_target_read_count != 1:
+            raise RuntimeError(
+                "Final test targets must be read exactly once; "
+                f"observed {self.test_target_read_count} reads"
+            )
+        if self.evaluator_call_count != 1:
+            raise RuntimeError(
+                "Final-test evaluator must be called exactly once; "
+                f"observed {self.evaluator_call_count} calls"
+            )
+
+
 @dataclass(frozen=True)
 class FinalTestResult:
     comparison: pd.DataFrame
@@ -342,6 +378,7 @@ def build_final_sensitivity(
 def _evaluate_all_policies_once(
     rows: pd.DataFrame,
     evaluator: RecommendationEvaluator,
+    execution_tracker: FinalTestExecutionTracker | None = None,
 ) -> pd.DataFrame:
     """Evaluate all seven policies in one shared evaluator call.
 
@@ -362,6 +399,8 @@ def _evaluate_all_policies_once(
         )
 
     combined = pd.concat(frames, ignore_index=True)
+    tracker = execution_tracker or FinalTestExecutionTracker()
+    tracker.record_evaluator_call()
     evaluated = evaluator.evaluate_canonical(combined)
 
     expected_rows = len(rows) * len(FINAL_POLICIES)
@@ -458,6 +497,8 @@ def evaluate_final_test(
     models: Mapping[str, object],
     manifest: Mapping[str, object],
     profile: DatasetCapabilities,
+    *,
+    execution_tracker: FinalTestExecutionTracker | None = None,
 ) -> FinalTestResult:
     validate_locked_manifest(manifest)
     if set(models) != {"cpu", "memory"}:
@@ -504,11 +545,16 @@ def evaluate_final_test(
 
     population = _final_population(rows)
     evaluator = RecommendationEvaluator(capabilities=profile)
+    tracker = execution_tracker or FinalTestExecutionTracker()
 
     # The final-test outcomes are passed through RecommendationEvaluator exactly
     # once. All seven policies are concatenated into one canonical frame before
     # that call; comparison and sensitivity tables summarize its returned rows.
-    evaluated = _evaluate_all_policies_once(population, evaluator)
+    evaluated = _evaluate_all_policies_once(
+        population,
+        evaluator,
+        execution_tracker=tracker,
+    )
     comparison = build_final_comparison_from_evaluated(
         evaluated,
         evaluator,
@@ -545,5 +591,5 @@ def evaluate_final_test(
         n_clipped=n_clipped,
         safeguard_missing=safeguard_missing,
         final_population_size=int(len(population)),
-        evaluator_call_count=1,
+        evaluator_call_count=tracker.evaluator_call_count,
     )
