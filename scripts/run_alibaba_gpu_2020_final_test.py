@@ -24,9 +24,11 @@ Exit codes: 0 success, 1 invalid input, 2 refused, 3 build/write failure.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+from uuid import uuid4
 import shutil
 import sys
 import tempfile
@@ -45,8 +47,10 @@ from scripts import build_alibaba_gpu_2020_targets as targets_build
 from scripts import run_alibaba_gpu_2020_baselines as baselines_run
 from scripts import run_alibaba_gpu_2020_ml as ml_run
 from canonical.schema import ALIBABA_GPU_2020_CAPABILITIES as PROFILE
+from evaluation.evaluator import RecommendationEvaluator
 from models.alibaba_gpu_2020_final_test import (
     FINAL_POLICIES,
+    FinalTestExecutionTracker,
     evaluate_final_test,
     validate_locked_manifest,
 )
@@ -55,6 +59,7 @@ DEFAULT_TARGETS_DIR = targets_build.DEFAULT_OUT_DIR
 DEFAULT_BASELINES_DIR = baselines_run.DEFAULT_OUT_DIR
 DEFAULT_ML_DIR = ml_run.DEFAULT_OUT_DIR
 DEFAULT_OUT_DIR = REPO_ROOT / "data/processed/alibaba_gpu_v2020_final_test"
+SCHEMA_VERSION = "0.2.0"
 
 OUTPUT_FILES = (
     "final_test_policy_comparison.csv",
@@ -237,6 +242,59 @@ def _existing_fingerprint(out_dir: Path) -> str | None:
         return None
 
 
+@contextmanager
+def _guard_final_test_operations(
+    test_path: Path,
+    execution_tracker: FinalTestExecutionTracker,
+):
+    """Count actual target reads and evaluator calls during one PR2 execution.
+
+    The guard instruments the operation boundaries themselves rather than only
+    TraceAdvisor helper wrappers. This means a direct ``pd.read_parquet`` of the
+    locked test target or a direct ``RecommendationEvaluator.evaluate_canonical``
+    call inside the guarded production path is still observed and rejected when
+    it would make execution occur more than once. Original callables are restored
+    in ``finally`` so the instrumentation is scoped to this run.
+    """
+    locked_test_path = Path(test_path).resolve()
+    original_read_parquet = pd.read_parquet
+    original_evaluate_canonical = RecommendationEvaluator.evaluate_canonical
+
+    def parquet_source_path(source) -> Path | None:
+        """Resolve path-like parquet sources, including named open file handles."""
+        candidate = source
+        if not isinstance(candidate, (str, os.PathLike)):
+            candidate = getattr(candidate, "name", None)
+        if candidate is None:
+            return None
+        try:
+            return Path(candidate).resolve()
+        except (TypeError, ValueError, OSError):
+            return None
+
+    def guarded_read_parquet(source, *args, **kwargs):
+        if parquet_source_path(source) == locked_test_path:
+            execution_tracker.record_test_target_read()
+        return original_read_parquet(source, *args, **kwargs)
+
+    def guarded_evaluate_canonical(evaluator, *args, **kwargs):
+        execution_tracker.record_evaluator_call()
+        return original_evaluate_canonical(evaluator, *args, **kwargs)
+
+    pd.read_parquet = guarded_read_parquet
+    RecommendationEvaluator.evaluate_canonical = guarded_evaluate_canonical
+    try:
+        yield
+    finally:
+        pd.read_parquet = original_read_parquet
+        RecommendationEvaluator.evaluate_canonical = original_evaluate_canonical
+
+
+def _read_test_targets(path: Path) -> pd.DataFrame:
+    """Read the locked target table; the scoped operation guard counts it."""
+    return pd.read_parquet(path)
+
+
 def run(
     targets_dir: Path = DEFAULT_TARGETS_DIR,
     baselines_dir: Path = DEFAULT_BASELINES_DIR,
@@ -331,10 +389,13 @@ def run(
         return EXIT_REFUSED
 
     staging = None
+    run_id = str(uuid4())
+    execution_tracker = FinalTestExecutionTracker()
     try:
         # All integrity/duplicate checks above happen before test is opened.
         # Log the run first, so a run that fails after reading test still counts.
         _append_run_log(run_log, {
+            "run_id": run_id,
             "decision_manifest_sha256": decision_sha,
             "code_commit": commit,
             "code_dirty": dirty,
@@ -343,28 +404,40 @@ def run(
             "prior_runs": len(prior_runs),
             "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         })
-        test = pd.read_parquet(targets_dir / "test.parquet")
-        history_statistics = pd.read_parquet(
-            baselines_dir / "history_statistics.parquet"
-        )
-        recommendations_test = pd.read_parquet(
-            baselines_dir / "recommendations_test.parquet"
-        )
+        locked_test_path = targets_dir / "test.parquet"
+        with _guard_final_test_operations(locked_test_path, execution_tracker):
+            test = _read_test_targets(locked_test_path)
 
-        models = {}
-        for resource in ("cpu", "memory"):
-            models[resource] = joblib.load(
-                ml_dir / manifest["model_artifacts"][resource]["file"]
+            history_statistics = pd.read_parquet(
+                baselines_dir / "history_statistics.parquet"
+            )
+            recommendations_test = pd.read_parquet(
+                baselines_dir / "recommendations_test.parquet"
             )
 
-        result = evaluate_final_test(
-            test,
-            history_statistics,
-            recommendations_test,
-            models,
-            manifest,
-            PROFILE,
-        )
+            models = {}
+            for resource in ("cpu", "memory"):
+                models[resource] = joblib.load(
+                    ml_dir / manifest["model_artifacts"][resource]["file"]
+                )
+
+            result = evaluate_final_test(
+                test,
+                history_statistics,
+                recommendations_test,
+                models,
+                manifest,
+                PROFILE,
+                execution_tracker=execution_tracker,
+            )
+
+            execution_tracker.require_exactly_once()
+            if result.evaluator_call_count != execution_tracker.evaluator_call_count:
+                raise RuntimeError(
+                    "Final-test evaluator count disagrees with execution tracker: "
+                    f"result={result.evaluator_call_count}, "
+                    f"observed={execution_tracker.evaluator_call_count}"
+                )
 
         if list(result.comparison["policy"]) != list(FINAL_POLICIES):
             raise RuntimeError(
@@ -408,9 +481,14 @@ def run(
         )
 
         run_record = {
+            "dataset_id": PROFILE.dataset_id,
+            "schema_version": SCHEMA_VERSION,
             "task": "task7_alibaba_gpu_2020_ml_hybrid",
             "phase": "pr2_final_test",
+            "run_id": run_id,
             "run_fingerprint": fingerprint,
+            "test_target_read_count": execution_tracker.test_target_read_count,
+            "test_evaluator_call_count": execution_tracker.evaluator_call_count,
             "decision_manifest_sha256": decision_sha,
             "code_commit": commit,
             "code_dirty": dirty,
@@ -454,9 +532,15 @@ def run(
         )
 
         metadata = {
+            "dataset_id": PROFILE.dataset_id,
+            "schema_version": SCHEMA_VERSION,
             "task": "task7_alibaba_gpu_2020_ml_hybrid",
             "phase": "pr2_final_test",
+            "run_id": run_id,
+            "decision_manifest_sha256": decision_sha,
             "reads_test": True,
+            "test_target_read_count": execution_tracker.test_target_read_count,
+            "test_evaluator_call_count": execution_tracker.evaluator_call_count,
             "trains_models": False,
             "changes_selection": False,
             "changes_manifest": False,
