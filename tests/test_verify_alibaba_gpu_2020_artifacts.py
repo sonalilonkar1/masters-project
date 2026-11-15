@@ -181,6 +181,66 @@ def test_render_report_marks_failures_and_limitations():
     assert "Explicit verification limitations" in report
     assert "UNVERIFIED" in report
 
+def test_run_captures_reproduction_metadata_before_writing_outputs(
+    tmp_path, monkeypatch
+):
+    out_dir = tmp_path / "verification"
+    observed = {}
+
+    def fake_reproduction_metadata(repo):
+        observed["files_exist_when_called"] = list(out_dir.glob("*"))
+        return {
+            "dataset_id": v.DATASET_ID,
+            "schema_version": v.SCHEMA_VERSION,
+            "python_version": "test",
+            "pandas_version": "test",
+            "code_commit": "abc",
+            "code_dirty": False,
+            "verification_command": "test",
+            "full_test_command": "test",
+            "generated_utc": "2026-11-15T00:00:00Z",
+        }
+
+    monkeypatch.setattr(
+        v,
+        "reproduction_metadata",
+        fake_reproduction_metadata,
+    )
+
+    monkeypatch.setattr(
+        v,
+        "verify_pipeline",
+        lambda *args: (
+            [],
+            {
+                "verified": True,
+                "verification_timestamp_utc": "2026-11-15T00:00:00Z",
+                "dataset_id": v.DATASET_ID,
+                "schema_version": v.SCHEMA_VERSION,
+                "decision_manifest_sha256": "d" * 64,
+                "final_run_identity": {
+                    "run_id": "test-run-id",
+                    "code_commit": "abc",
+                    "decision_manifest_sha256": "d" * 64,
+                    "timestamp_utc": "2026-11-15T00:00:00Z",
+                },
+                "unverified_items": [],
+            },
+        ),
+    )
+
+    args = v.argparse.Namespace(
+        canonical_dir=tmp_path / "canonical",
+        targets_dir=tmp_path / "targets",
+        baselines_dir=tmp_path / "baselines",
+        ml_dir=tmp_path / "ml",
+        final_dir=tmp_path / "final",
+        out_dir=out_dir,
+        force=True,
+    )
+
+    assert v.run(args) == v.EXIT_OK
+    assert observed["files_exist_when_called"] == []
 
 def test_final_policy_order_is_frozen():
     assert v.FINAL_POLICIES == (

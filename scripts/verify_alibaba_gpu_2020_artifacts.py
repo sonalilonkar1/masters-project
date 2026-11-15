@@ -36,6 +36,7 @@ from typing import Any
 
 import pandas as pd
 import pyarrow.parquet as pq
+from scripts.build_alibaba_gpu_2020_targets import EXIT_INVALID
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 for path in (REPO_ROOT, REPO_ROOT / "src"):
@@ -854,6 +855,8 @@ def run(args: argparse.Namespace) -> int:
         return EXIT_REFUSED
 
     try:
+        repro_metadata = reproduction_metadata(REPO_ROOT)
+
         checks, manifest = verify_pipeline(
             Path(args.canonical_dir).resolve(),
             Path(args.targets_dir).resolve(),
@@ -861,30 +864,35 @@ def run(args: argparse.Namespace) -> int:
             Path(args.ml_dir).resolve(),
             Path(args.final_dir).resolve(),
         )
+
         out_dir.mkdir(parents=True, exist_ok=True)
+
         (out_dir / "artifact_manifest.json").write_text(
             json.dumps(manifest, indent=2, sort_keys=True, default=str) + "\n",
             encoding="utf-8",
         )
+
         (out_dir / "verification_report.md").write_text(
             render_report(checks, manifest) + "\n",
             encoding="utf-8",
         )
+
         (out_dir / "reproduction_metadata.json").write_text(
-            json.dumps(reproduction_metadata(REPO_ROOT), indent=2, sort_keys=True) + "\n",
+            json.dumps(repro_metadata, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+
     except Exception as exc:
         print(f"VERIFY FAILED: {type(exc).__name__}: {exc}")
         return EXIT_FAILED
 
-    failed = [c for c in checks if not c.ok]
-    print(f"Verification checks: {len(checks) - len(failed)} passed, {len(failed)} failed")
-    for check in failed:
-        print(f"FAIL: {check.name}: {check.detail}")
-    print(f"Wrote {out_dir}")
-    return EXIT_OK if not failed else EXIT_FAILED
+    passed = sum(1 for check in checks if check["ok"])
+    failed = len(checks) - passed
 
+    print(f"Verification checks: {passed} passed, {failed} failed")
+    print(f"Wrote {out_dir}")
+
+    return EXIT_OK if failed == 0 else EXIT_INVALID
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
