@@ -260,14 +260,22 @@ def _guard_final_test_operations(
     original_read_parquet = pd.read_parquet
     original_evaluate_canonical = RecommendationEvaluator.evaluate_canonical
 
-    def guarded_read_parquet(path, *args, **kwargs):
+    def parquet_source_path(source) -> Path | None:
+        """Resolve path-like parquet sources, including named open file handles."""
+        candidate = source
+        if not isinstance(candidate, (str, os.PathLike)):
+            candidate = getattr(candidate, "name", None)
+        if candidate is None:
+            return None
         try:
-            candidate = Path(path).resolve()
-        except (TypeError, ValueError):
-            candidate = None
-        if candidate == locked_test_path:
+            return Path(candidate).resolve()
+        except (TypeError, ValueError, OSError):
+            return None
+
+    def guarded_read_parquet(source, *args, **kwargs):
+        if parquet_source_path(source) == locked_test_path:
             execution_tracker.record_test_target_read()
-        return original_read_parquet(path, *args, **kwargs)
+        return original_read_parquet(source, *args, **kwargs)
 
     def guarded_evaluate_canonical(evaluator, *args, **kwargs):
         execution_tracker.record_evaluator_call()

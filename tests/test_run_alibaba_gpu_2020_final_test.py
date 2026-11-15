@@ -348,7 +348,7 @@ def test_pr1_then_pr2_end_to_end_runs_once(tmp_path, monkeypatch):
 
 
 def test_direct_target_read_bypassing_helper_is_rejected_by_operation_guard(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, capsys
 ):
     import test_run_alibaba_gpu_2020_ml as pr1
 
@@ -373,19 +373,19 @@ def test_direct_target_read_bypassing_helper_is_rejected_by_operation_guard(
     original_evaluate = runner.evaluate_final_test
 
     def evaluate_after_direct_read(*args, **kwargs):
-        # This deliberately bypasses _read_test_targets(). The scoped production
-        # guard must still observe the second read at pd.read_parquet itself.
         runner.pd.read_parquet(targets / "test.parquet")
         return original_evaluate(*args, **kwargs)
 
     monkeypatch.setattr(runner, "evaluate_final_test", evaluate_after_direct_read)
     out = tmp_path / "final"
     assert runner.run(targets, baselines, ml, out) == runner.EXIT_FAILED
+    captured = capsys.readouterr()
+    assert "Final test targets were read more than once" in captured.out
     assert not out.exists()
 
 
-def test_direct_evaluator_call_bypassing_helper_is_rejected_by_operation_guard(
-    tmp_path, monkeypatch
+def test_open_file_handle_target_read_is_rejected_by_operation_guard(
+    tmp_path, monkeypatch, capsys
 ):
     import test_run_alibaba_gpu_2020_ml as pr1
 
@@ -409,12 +409,62 @@ def test_direct_evaluator_call_bypassing_helper_is_rejected_by_operation_guard(
 
     original_evaluate = runner.evaluate_final_test
 
+    def evaluate_after_handle_read(*args, **kwargs):
+        with (targets / "test.parquet").open("rb") as handle:
+            runner.pd.read_parquet(handle)
+        return original_evaluate(*args, **kwargs)
+
+    monkeypatch.setattr(runner, "evaluate_final_test", evaluate_after_handle_read)
+    out = tmp_path / "final"
+    assert runner.run(targets, baselines, ml, out) == runner.EXIT_FAILED
+    captured = capsys.readouterr()
+    assert "Final test targets were read more than once" in captured.out
+    assert not out.exists()
+
+
+def test_direct_evaluator_call_bypassing_helper_is_rejected_by_operation_guard(
+    tmp_path, monkeypatch, capsys
+):
+    import test_run_alibaba_gpu_2020_ml as pr1
+
+    commit = "b" * 40
+    monkeypatch.setattr(
+        pr1.baselines_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+    targets = pr1._task4_dir(tmp_path)
+    baselines, ml = tmp_path / "baselines", tmp_path / "ml"
+    assert (
+        pr1.baselines_runner.run(targets, baselines)
+        == pr1.baselines_runner.EXIT_OK
+    )
+    monkeypatch.setattr(
+        pr1.ml_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+    assert pr1.ml_runner.run(targets, baselines, ml) == pr1.ml_runner.EXIT_OK
+    monkeypatch.setattr(
+        runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+
+    original_evaluate_final_test = runner.evaluate_final_test
+    original_class_method = runner.RecommendationEvaluator.evaluate_canonical
+    captured_frame = {}
+
+    def capture_first_valid_frame(self, frame, *args, **kwargs):
+        if "frame" not in captured_frame:
+            captured_frame["frame"] = frame.copy(deep=True)
+        return original_class_method(self, frame, *args, **kwargs)
+
+    monkeypatch.setattr(
+        runner.RecommendationEvaluator,
+        "evaluate_canonical",
+        capture_first_valid_frame,
+    )
+
     def evaluate_then_call_evaluator_directly(*args, **kwargs):
-        result = original_evaluate(*args, **kwargs)
-        # This bypasses _evaluate_all_policies_once(). The operation guard wraps
-        # RecommendationEvaluator.evaluate_canonical itself and must reject it.
+        result = original_evaluate_final_test(*args, **kwargs)
+        assert "frame" in captured_frame
         evaluator = runner.RecommendationEvaluator(capabilities=runner.PROFILE)
-        evaluator.evaluate_canonical(pd.DataFrame())
+        evaluator.evaluate_canonical(captured_frame["frame"].copy(deep=True))
         return result
 
     monkeypatch.setattr(
@@ -422,4 +472,6 @@ def test_direct_evaluator_call_bypassing_helper_is_rejected_by_operation_guard(
     )
     out = tmp_path / "final"
     assert runner.run(targets, baselines, ml, out) == runner.EXIT_FAILED
+    captured = capsys.readouterr()
+    assert "Final-test evaluator was called more than once" in captured.out
     assert not out.exists()
