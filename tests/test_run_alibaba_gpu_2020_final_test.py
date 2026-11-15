@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+
+import pandas as pd
 from pathlib import Path
 
 
@@ -300,9 +302,39 @@ def test_pr1_then_pr2_end_to_end_runs_once(tmp_path, monkeypatch):
     out = tmp_path / "final"
     assert runner.run(targets, baselines, ml, out) == runner.EXIT_OK
     record = json.loads((out / "run_record.json").read_text())
+    metadata = json.loads((out / "metadata.json").read_text())
+    log_entries = _log_entries(ml)
+
     assert record["pr1_build"]["code_commit"] == commit
     assert record["prior_runs"] == 0
-    assert len(_log_entries(ml)) == 1
+    assert record["test_target_read_count"] == 1
+    assert record["test_evaluator_call_count"] == 1
+    assert metadata["test_target_read_count"] == 1
+    assert metadata["test_evaluator_call_count"] == 1
+    assert metadata["run_id"] == record["run_id"]
+    assert metadata["decision_manifest_sha256"] == record["decision_manifest_sha256"]
+    assert len(log_entries) == 1
+    assert log_entries[0]["run_id"] == record["run_id"]
+    assert (
+        log_entries[0]["decision_manifest_sha256"]
+        == record["decision_manifest_sha256"]
+    )
+
+    sensitivity = pd.read_csv(out / "final_test_sensitivity.csv")
+    assert set(sensitivity["sensitivity"]) == {
+        "occurrence_weighted",
+        "same_second_excluded",
+        "same_second_only",
+        "multi_instance",
+        "group_weighted",
+    }
+    assert len(sensitivity) == 5 * len(runner.FINAL_POLICIES)
+    assert not sensitivity.duplicated(["sensitivity", "policy"]).any()
+    for label in sensitivity["sensitivity"].unique():
+        policies = tuple(
+            sensitivity.loc[sensitivity["sensitivity"].eq(label), "policy"]
+        )
+        assert policies == runner.FINAL_POLICIES
 
     # A second run to a new folder, or a re-lock of the tested PR1 folder, is refused.
     assert runner.run(targets, baselines, ml, tmp_path / "again") == runner.EXIT_REFUSED
@@ -312,3 +344,134 @@ def test_pr1_then_pr2_end_to_end_runs_once(tmp_path, monkeypatch):
     # A PR2 run at a later commit than the PR1 lock is refused before reading test.
     monkeypatch.setattr(runner.canonical, "git_state", lambda repo: ("e" * 40, False))
     assert runner.run(targets, baselines, ml, tmp_path / "later") == runner.EXIT_INVALID
+
+
+
+def test_direct_target_read_bypassing_helper_is_rejected_by_operation_guard(
+    tmp_path, monkeypatch, capsys
+):
+    import test_run_alibaba_gpu_2020_ml as pr1
+
+    commit = "b" * 40
+    monkeypatch.setattr(
+        pr1.baselines_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+    targets = pr1._task4_dir(tmp_path)
+    baselines, ml = tmp_path / "baselines", tmp_path / "ml"
+    assert (
+        pr1.baselines_runner.run(targets, baselines)
+        == pr1.baselines_runner.EXIT_OK
+    )
+    monkeypatch.setattr(
+        pr1.ml_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+    assert pr1.ml_runner.run(targets, baselines, ml) == pr1.ml_runner.EXIT_OK
+    monkeypatch.setattr(
+        runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+
+    original_evaluate = runner.evaluate_final_test
+
+    def evaluate_after_direct_read(*args, **kwargs):
+        runner.pd.read_parquet(targets / "test.parquet")
+        return original_evaluate(*args, **kwargs)
+
+    monkeypatch.setattr(runner, "evaluate_final_test", evaluate_after_direct_read)
+    out = tmp_path / "final"
+    assert runner.run(targets, baselines, ml, out) == runner.EXIT_FAILED
+    captured = capsys.readouterr()
+    assert "Final test targets were read more than once" in captured.out
+    assert not out.exists()
+
+
+def test_open_file_handle_target_read_is_rejected_by_operation_guard(
+    tmp_path, monkeypatch, capsys
+):
+    import test_run_alibaba_gpu_2020_ml as pr1
+
+    commit = "b" * 40
+    monkeypatch.setattr(
+        pr1.baselines_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+    targets = pr1._task4_dir(tmp_path)
+    baselines, ml = tmp_path / "baselines", tmp_path / "ml"
+    assert (
+        pr1.baselines_runner.run(targets, baselines)
+        == pr1.baselines_runner.EXIT_OK
+    )
+    monkeypatch.setattr(
+        pr1.ml_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+    assert pr1.ml_runner.run(targets, baselines, ml) == pr1.ml_runner.EXIT_OK
+    monkeypatch.setattr(
+        runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+
+    original_evaluate = runner.evaluate_final_test
+
+    def evaluate_after_handle_read(*args, **kwargs):
+        with (targets / "test.parquet").open("rb") as handle:
+            runner.pd.read_parquet(handle)
+        return original_evaluate(*args, **kwargs)
+
+    monkeypatch.setattr(runner, "evaluate_final_test", evaluate_after_handle_read)
+    out = tmp_path / "final"
+    assert runner.run(targets, baselines, ml, out) == runner.EXIT_FAILED
+    captured = capsys.readouterr()
+    assert "Final test targets were read more than once" in captured.out
+    assert not out.exists()
+
+
+def test_direct_evaluator_call_bypassing_helper_is_rejected_by_operation_guard(
+    tmp_path, monkeypatch, capsys
+):
+    import test_run_alibaba_gpu_2020_ml as pr1
+
+    commit = "b" * 40
+    monkeypatch.setattr(
+        pr1.baselines_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+    targets = pr1._task4_dir(tmp_path)
+    baselines, ml = tmp_path / "baselines", tmp_path / "ml"
+    assert (
+        pr1.baselines_runner.run(targets, baselines)
+        == pr1.baselines_runner.EXIT_OK
+    )
+    monkeypatch.setattr(
+        pr1.ml_runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+    assert pr1.ml_runner.run(targets, baselines, ml) == pr1.ml_runner.EXIT_OK
+    monkeypatch.setattr(
+        runner.canonical, "git_state", lambda repo: (commit, False)
+    )
+
+    original_evaluate_final_test = runner.evaluate_final_test
+    original_class_method = runner.RecommendationEvaluator.evaluate_canonical
+    captured_frame = {}
+
+    def capture_first_valid_frame(self, frame, *args, **kwargs):
+        if "frame" not in captured_frame:
+            captured_frame["frame"] = frame.copy(deep=True)
+        return original_class_method(self, frame, *args, **kwargs)
+
+    monkeypatch.setattr(
+        runner.RecommendationEvaluator,
+        "evaluate_canonical",
+        capture_first_valid_frame,
+    )
+
+    def evaluate_then_call_evaluator_directly(*args, **kwargs):
+        result = original_evaluate_final_test(*args, **kwargs)
+        assert "frame" in captured_frame
+        evaluator = runner.RecommendationEvaluator(capabilities=runner.PROFILE)
+        evaluator.evaluate_canonical(captured_frame["frame"].copy(deep=True))
+        return result
+
+    monkeypatch.setattr(
+        runner, "evaluate_final_test", evaluate_then_call_evaluator_directly
+    )
+    out = tmp_path / "final"
+    assert runner.run(targets, baselines, ml, out) == runner.EXIT_FAILED
+    captured = capsys.readouterr()
+    assert "Final-test evaluator was called more than once" in captured.out
+    assert not out.exists()

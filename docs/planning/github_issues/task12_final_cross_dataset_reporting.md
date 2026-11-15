@@ -28,8 +28,10 @@ Produce the final project-level report from frozen, verified artifacts: per-data
 
 ## Current Project State
 
+- **PR 1 (#123) is provisional reporting infrastructure.** The committed Alibaba rendering uses the earlier comparison artifact SHA-256 `de560f38741a60d5e427a4c21c7444debcc8e4a558dc4382fded3a10590b4d27`. The newer Task 8 report references a different comparison (`c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8`), decision manifest `f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950`, and run `7dd3942e-c2c0-4816-9466-efd32e486cc2`. These are review-reported references, not replacement PR 1 inputs or accepted authoritative evidence. Task 7/8 provenance remains unreconciled; the current rendering is not a final verified finding. PR 2 will regenerate Alibaba outputs after that reconciliation.
+- **Verification status:** PR 1 can check a supplied manifest for consistency but keeps all pipeline results provisional. PR 2 must establish authoritative upstream verification, artifact-chain linkage and the limits of upstream execution evidence before introducing verified reporting status; matching checksums and self-reported passing checks alone are insufficient. Google additionally retains its Task 10 dependency.
 - `scripts/report_summary.py` reads `reports/eval/GoogleCluster2019/summary_<split>.csv` and prints legacy columns (`vr_any`, `vr_cpu`, `vr_mem`, slack reduction); it does not read the current Google or Alibaba GPU 2020 artifacts.
-- Alibaba GPU 2020 verified results come from Task 8.
+- Alibaba GPU 2020 final verified reporting depends on reconciled Task 7/8 artifacts; PR 1's current copies remain provisional.
 - Google leakage-safe results come from Task 10, or the earlier results with their contamination disclosed (F3, F4).
 - Alibaba 2018 (Task 9) and Azure (Task 11) produce scope statements or feasibility decisions.
 

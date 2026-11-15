@@ -12,7 +12,7 @@
 
 Make the Google subset enter TraceAdvisor through the same shared adapter contract as every other dataset, without changing the Google pipeline.
 
-A thin `GoogleSubsetAdapter` maps the existing corrected Google occurrence artifacts to a validated canonical `occurrence` view through `BaseDatasetAdapter.adapt()`. Google's precomputed next-occurrence targets are attached afterwards by a small helper outside the adapter, as framework §3 requires: *"Google's precomputed targets are referenced from the existing artifacts, not computed by an adapter."*
+A thin `GoogleSubsetAdapter` maps the existing Google occurrence artifacts to a validated canonical `occurrence` view through `BaseDatasetAdapter.adapt()`. Google's precomputed next-occurrence targets are attached afterwards by a small helper outside the adapter, as framework §3 requires: *"Google's precomputed targets are referenced from the existing artifacts, not computed by an adapter."*
 
 After this task, Google, Alibaba GPU 2020, Alibaba 2018 and Azure all produce an `AdapterResult` validated against their own capability profile. The project can then claim one common adapter contract with no exceptions.
 
@@ -39,7 +39,7 @@ After this task, Google, Alibaba GPU 2020, Alibaba 2018 and Azure all produce an
 ## Current Project State
 
 - **No Google adapter exists.** `docs/design/adapter_framework.md` §1 and §9.1 say *"No production adapter is needed."*
-- **The mapping already exists, but only in a test.** `tests/test_google_canonical_contract.py` has `build_google_canonical_contract_view()`. It maps the corrected N04 artifacts:
+- **The mapping already exists, but only in a test.** `tests/test_google_canonical_contract.py` has `build_google_canonical_contract_view()`. It maps the existing Google occurrence artifacts from N04:
   - `recurrence_key` → `workload_id`, `recurrence_key`;
   - `occurrence_key` → `occurrence_id`;
   - `execution_start_time_us` → `start_time_us`;
@@ -84,7 +84,7 @@ attach_google_precomputed_targets(view, occurrences)
 |---|---|
 | Task 1 (PR #91) | Uses only the existing single-view `adapt()` and `AdapterResult`. Works before or after Task 1 merges. If Task 1 makes `views` the same on every path, the Google result gets `views = {"canonical": ...}` like the other single-view adapters |
 | Task 4 | Not used. Google targets remain the precomputed reference targets |
-| Task 10 | Task 10 regenerates the Google artifacts. Re-run this adapter's tests on the corrected artifacts afterwards. If Task 10 renames source columns, update the mapping here |
+| Task 10 | Task 10 owns the Google corrections and rerun, including regenerating the artifacts. Re-run this adapter's tests on the corrected artifacts afterwards. If Task 10 renames source columns, update the mapping here |
 | Task 12 | Can state that every dataset enters through the shared adapter contract |
 
 ## Dependencies
@@ -120,7 +120,7 @@ attach_google_precomputed_targets(view, occurrences)
 
 ### 3. Design doc
 
-- [ ] `docs/design/adapter_framework.md` §1 and §9.1: change "No production adapter is needed" to "A thin `GoogleSubsetAdapter` maps the corrected artifacts. Precomputed targets are attached outside the adapter."
+- [ ] `docs/design/adapter_framework.md` §1 and §9.1: change "No production adapter is needed" to "A thin `GoogleSubsetAdapter` maps the current Google occurrence artifacts. Precomputed targets are attached outside the adapter."
 - [ ] While editing `adapter_framework.md`, update the outdated status lines (found in the Task 1 review):
   - `adapter_framework.md` §1–§2: "the Python implementation is still 0.1.0" → implemented in 0.2.0 (PR #86).
   - `adapter_framework.md` §11: change the "Issue 3 / Issue 4" boundaries to Task 1 / Task 3.
@@ -161,7 +161,7 @@ Regression:
 ## Data Leakage Controls
 
 - The adapter reads only current-occurrence fields. Targets are copied from the existing artifacts and not recomputed.
-- Google's known cross-split target behavior (`target_split_isolation = false`) is unchanged here. It is corrected separately in Task 10.
+- Google's known cross-split target behavior (`target_split_isolation = false`) is unchanged here. The adapter does not recompute targets or chronological splits. Task 10 owns the corrections to that behavior and the Google rerun.
 
 ## Schema and Adapter Boundaries
 
