@@ -214,6 +214,16 @@
       "ok": true
     },
     {
+      "detail": "8 published files match",
+      "name": "task7_pr1.published_evidence",
+      "ok": true
+    },
+    {
+      "detail": "5 published files match",
+      "name": "task7_pr2.published_evidence",
+      "ok": true
+    },
+    {
       "detail": "expected 'alibaba_gpu_v2020', found 'alibaba_gpu_v2020'",
       "name": "task3.dataset_id",
       "ok": true
@@ -299,6 +309,11 @@
       "ok": true
     },
     {
+      "detail": "locked=['requested_cpu', 'requested_memory', 'requested_gpu', 'inst_num', 'cpu_history_count', 'memory_history_count', 'hist_cpu_mean', 'hist_cpu_p90', 'hist_cpu_p95', 'hist_cpu_p99', 'hist_memory_mean', 'hist_memory_p90', 'hist_memory_p95', 'hist_memory_p99', 'hist_cpu_mean_missing', 'hist_cpu_p90_missing', 'hist_cpu_p95_missing', 'hist_cpu_p99_missing', 'hist_memory_mean_missing', 'hist_memory_p90_missing', 'hist_memory_p95_missing', 'hist_memory_p99_missing', 'gpu_type_MISC', 'gpu_type_P100', 'gpu_type_T4', 'gpu_type_V100', 'gpu_type_V100M32', 'gpu_type__NA_', 'gpu_type_spec_P100', 'gpu_type_spec_T4', 'gpu_type_spec_V100', 'gpu_type_spec_V100M32', 'gpu_type_spec__NA_', 'workload_bert', 'workload_ctr', 'workload_graphlearn', 'workload_inception', 'workload_nmt', 'workload_resnet', 'workload_rl', 'workload_vgg', 'workload_xlnet', 'workload__NA_'], artifact=['requested_cpu', 'requested_memory', 'requested_gpu', 'inst_num', 'cpu_history_count', 'memory_history_count', 'hist_cpu_mean', 'hist_cpu_p90', 'hist_cpu_p95', 'hist_cpu_p99', 'hist_memory_mean', 'hist_memory_p90', 'hist_memory_p95', 'hist_memory_p99', 'hist_cpu_mean_missing', 'hist_cpu_p90_missing', 'hist_cpu_p95_missing', 'hist_cpu_p99_missing', 'hist_memory_mean_missing', 'hist_memory_p90_missing', 'hist_memory_p95_missing', 'hist_memory_p99_missing', 'gpu_type_MISC', 'gpu_type_P100', 'gpu_type_T4', 'gpu_type_V100', 'gpu_type_V100M32', 'gpu_type__NA_', 'gpu_type_spec_P100', 'gpu_type_spec_T4', 'gpu_type_spec_V100', 'gpu_type_spec_V100M32', 'gpu_type_spec__NA_', 'workload_bert', 'workload_ctr', 'workload_graphlearn', 'workload_inception', 'workload_nmt', 'workload_resnet', 'workload_rl', 'workload_vgg', 'workload_xlnet', 'workload__NA_']",
+      "name": "task7_pr1.feature_order_matches_lock",
+      "ok": true
+    },
+    {
       "detail": "policies=('Request', 'Mean', 'P90', 'P95', 'P99', 'ML', 'Hybrid')",
       "name": "task7_pr2.seven_policies",
       "ok": true
@@ -324,7 +339,42 @@
       "ok": true
     },
     {
-      "detail": "lock='2026-11-15T09:16:50Z', final_run='2026-11-15T09:26:29Z'",
+      "detail": "numeric cells must be finite and non-null",
+      "name": "task7_pr2.comparison.numeric_finite",
+      "ok": true
+    },
+    {
+      "detail": "numeric bounds valid",
+      "name": "task7_pr2.comparison.numeric_bounds",
+      "ok": true
+    },
+    {
+      "detail": "expected 35 rows (5 sensitivities x 7 policies), found 35",
+      "name": "task7_pr2.sensitivity_row_count",
+      "ok": true
+    },
+    {
+      "detail": "policy_counts={'Request': 5, 'Mean': 5, 'P90': 5, 'P95': 5, 'P99': 5, 'ML': 5, 'Hybrid': 5}",
+      "name": "task7_pr2.sensitivity_policy_coverage",
+      "ok": true
+    },
+    {
+      "detail": "candidate_columns=['sensitivity', 'n_groups'], chosen_columns=['sensitivity'], groups=5",
+      "name": "task7_pr2.sensitivity_exact_groups",
+      "ok": true
+    },
+    {
+      "detail": "always_finite=True, group_counts_null=True, group_n_groups_valid=True, non_group_counts_valid=True, non_group_n_groups_null=True",
+      "name": "task7_pr2.sensitivity.numeric_finite",
+      "ok": "True"
+    },
+    {
+      "detail": "numeric bounds valid",
+      "name": "task7_pr2.sensitivity.numeric_bounds",
+      "ok": true
+    },
+    {
+      "detail": "earlier='2026-11-15T09:16:50Z', later='2026-11-15T09:26:29Z'",
       "name": "task7.lock_before_final_test",
       "ok": true
     },
@@ -346,6 +396,26 @@
     {
       "detail": "expected non-empty run_id, found '4fdc7e96-789b-43a9-990f-20f189e9598b'",
       "name": "task7.final_run_id",
+      "ok": true
+    },
+    {
+      "detail": "9 bound checksums match",
+      "name": "task7.pr1_checksum_binding",
+      "ok": true
+    },
+    {
+      "detail": "8 bound checksums match",
+      "name": "task7.task6_checksum_binding",
+      "ok": true
+    },
+    {
+      "detail": "expected='daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f', actual='daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f'",
+      "name": "task7.task4_test_checksum_binding",
+      "ok": true
+    },
+    {
+      "detail": "compared=8, mismatches={}",
+      "name": "task7.final_metadata_matches_run_record",
       "ok": true
     },
     {
@@ -413,6 +483,6 @@
       "reason": "The verifier checks the locked model checksums, feature-order lock, saved prediction artifact checksum and run provenance, but does not rerun model inference in Task 8."
     }
   ],
-  "verification_timestamp_utc": "2026-11-15T19:50:58Z",
+  "verification_timestamp_utc": "2026-11-15T21:34:42Z",
   "verified": true
 }

@@ -31,17 +31,20 @@ import sys
 import time
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import numpy as np
 import pyarrow.parquet as pq
-from scripts.build_alibaba_gpu_2020_targets import EXIT_INVALID
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 for path in (REPO_ROOT, REPO_ROOT / "src"):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
+
+from scripts.build_alibaba_gpu_2020_targets import EXIT_INVALID
 
 DATASET_ID = "alibaba_gpu_v2020"
 SCHEMA_VERSION = "0.2.0"
@@ -84,6 +87,25 @@ TASK7_FINAL_REQUIRED_FILES = {
     "run_record.json",
     "metadata.json",
 }
+
+PUBLISHED_ML_REQUIRED_FILES = {
+    "SHA256SUMS",
+    "candidate_models.csv",
+    "decision_manifest.json",
+    "feature_order.json",
+    "final_test_runs.jsonl",
+    "metadata.json",
+    "model_selection.json",
+    "validation_policy_comparison.csv",
+}
+PUBLISHED_FINAL_REQUIRED_FILES = {
+    "SHA256SUMS",
+    "final_test_policy_comparison.csv",
+    "final_test_sensitivity.csv",
+    "metadata.json",
+    "run_record.json",
+}
+REPORT_ROOT = REPO_ROOT / "reports/results/alibaba_gpu_2020"
 
 UNVERIFIED_ITEMS = [
     {
@@ -195,13 +217,33 @@ def verify_sha256sums(
     return True, f"{len(recorded)} checksums match", recorded
 
 def _parse_utc_timestamp(value: str | None) -> datetime:
-    if not isinstance(value, str) or not value:
+    if not isinstance(value, str) or not value.strip():
         raise ValueError(f"missing or invalid UTC timestamp: {value!r}")
+    text = value.strip()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"invalid UTC timestamp: {value!r}") from exc
+    if parsed.tzinfo is None:
+        raise ValueError(f"UTC timestamp lacks timezone: {value!r}")
+    return parsed.astimezone(timezone.utc)
 
-    return datetime.fromisoformat(
-        value.replace("Z", "+00:00")
-    ).astimezone(timezone.utc)
-    
+
+def _timestamp_order_check(
+    name: str,
+    earlier: str | None,
+    later: str | None,
+) -> Check:
+    try:
+        earlier_dt = _parse_utc_timestamp(earlier)
+        later_dt = _parse_utc_timestamp(later)
+        ok = earlier_dt <= later_dt
+        detail = f"earlier={earlier!r}, later={later!r}"
+    except (TypeError, ValueError) as exc:
+        ok = False
+        detail = f"invalid timestamps: earlier={earlier!r}, later={later!r}; {exc}"
+    return Check(name, ok, detail)
+
 def artifact_row_count(path: Path) -> int | None:
     """Return row count without reading Parquet row data.
 
@@ -384,48 +426,31 @@ def _check_run_history(
             )
         )
 
-        # Verify complete chronology:
-        # PR1 lock <= run log <= final run record.
-        lock_timestamp = decision.get(
-            "lock_timestamp_utc"
-        )
-
+        # Verify complete chronology independently so malformed log/record
+        # timestamps become a failed check rather than an internal exception.
+        lock_timestamp = decision.get("lock_timestamp_utc")
         try:
-            lock_time = _parse_utc_timestamp(
-                lock_timestamp
-            )
-
-            chronology_ok = (
-                lock_time
-                <= log_time
-                <= record_time
-            )
-
+            lock_time = _parse_utc_timestamp(lock_timestamp)
+            chronology_log_time = _parse_utc_timestamp(log_timestamp)
+            chronology_record_time = _parse_utc_timestamp(record_timestamp)
+            chronology_ok = lock_time <= chronology_log_time <= chronology_record_time
             chronology_detail = (
-                f"lock={lock_timestamp!r}, "
-                f"run_log={log_timestamp!r}, "
-                f"run_record="
-                f"{record_timestamp!r}"
+                f"lock={lock_timestamp!r}, run_log={log_timestamp!r}, "
+                f"run_record={record_timestamp!r}"
             )
-
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as exc:
             chronology_ok = False
-
             chronology_detail = (
                 "invalid chronology timestamps: "
-                f"lock={lock_timestamp!r}, "
-                f"run_log={log_timestamp!r}, "
-                f"run_record="
-                f"{record_timestamp!r}"
+                f"lock={lock_timestamp!r}, run_log={log_timestamp!r}, "
+                f"run_record={record_timestamp!r}; {exc}"
             )
 
-        checks.append(
-            Check(
-                "task7.final_run_chronology",
-                chronology_ok,
-                chronology_detail,
-            )
-        )
+        checks.append(Check(
+            "task7.final_run_chronology",
+            chronology_ok,
+            chronology_detail,
+        ))
 
     ids = [
         entry.get("run_id")
@@ -556,6 +581,417 @@ def _artifact_entries(stage: str, directory: Path, recorded: dict[str, str]) -> 
     return entries
 
 
+def _checksum_binding_check(
+    label: str,
+    directory: Path,
+    expected: Any,
+    *,
+    required_names: set[str] | None = None,
+) -> Check:
+    if not isinstance(expected, dict) or not expected:
+        return Check(label, False, f"missing checksum binding: {expected!r}")
+
+    failures: list[str] = []
+    if required_names:
+        missing = sorted(required_names - set(expected))
+        if missing:
+            failures.append(f"missing expected checksum entries={missing}")
+
+    for name, digest in sorted(expected.items()):
+        if not isinstance(name, str) or not isinstance(digest, str):
+            failures.append(f"invalid checksum entry {name!r}={digest!r}")
+            continue
+        path = directory / name
+        if not path.is_file():
+            failures.append(f"missing {name}")
+            continue
+        actual = sha256(path)
+        if actual != digest:
+            failures.append(f"{name}: expected {digest}, got {actual}")
+
+    return Check(
+        label,
+        not failures,
+        "; ".join(failures) if failures else f"{len(expected)} bound checksums match",
+    )
+
+
+def _overlap_consistency_check(
+    label: str,
+    left: dict[str, Any],
+    right: dict[str, Any],
+    fields: tuple[str, ...],
+) -> Check:
+    mismatches: dict[str, tuple[Any, Any]] = {}
+    compared = 0
+    for field in fields:
+        if field in left and field in right:
+            compared += 1
+            if left.get(field) != right.get(field):
+                mismatches[field] = (left.get(field), right.get(field))
+    return Check(
+        label,
+        compared > 0 and not mismatches,
+        f"compared={compared}, mismatches={mismatches}",
+    )
+
+
+def _numeric_integrity_checks(
+    frame: pd.DataFrame,
+    label: str,
+) -> list[Check]:
+    checks: list[Check] = []
+    numeric = frame.select_dtypes(include="number")
+    finite_ok = True
+    if not numeric.empty:
+        finite_ok = bool(numeric.notna().all().all())
+        if finite_ok:
+            import numpy as np
+            finite_ok = bool(np.isfinite(numeric.to_numpy()).all())
+    checks.append(Check(f"{label}.numeric_finite", finite_ok, "numeric cells must be finite and non-null"))
+
+    bounded_failures: list[str] = []
+    for column in numeric.columns:
+        series = numeric[column]
+        low = column.lower()
+        if any(token in low for token in ("count", "shortfall", "rmse", "mae", "recommend", "request")):
+            if (series < 0).any():
+                bounded_failures.append(f"{column} contains negative values")
+        if "pct" in low or "percent" in low or "rate" in low:
+            if ((series < 0) | (series > 100)).any():
+                bounded_failures.append(f"{column} outside [0, 100]")
+    checks.append(Check(
+        f"{label}.numeric_bounds",
+        not bounded_failures,
+        "; ".join(bounded_failures) if bounded_failures else "numeric bounds valid",
+    ))
+    return checks
+
+
+def _validate_policy_comparison(frame: pd.DataFrame) -> list[Check]:
+    checks: list[Check] = []
+    policies = tuple(frame["policy"].tolist()) if "policy" in frame else ()
+    checks.append(Check(
+        "task7_pr2.seven_policies",
+        policies == FINAL_POLICIES,
+        f"policies={policies}",
+    ))
+    required_denominators = {"valid_cpu_violation_count", "valid_memory_violation_count"}
+    checks.append(Check(
+        "task7_pr2.separate_denominators",
+        required_denominators.issubset(frame.columns),
+        f"required={sorted(required_denominators)}, columns={list(frame.columns)}",
+    ))
+    cpu_ok = (
+        "cpu_result_semantics" in frame
+        and set(frame["cpu_result_semantics"].dropna()) == {"average_usage"}
+        and len(frame["cpu_result_semantics"].dropna()) == len(frame)
+    )
+    checks.append(Check(
+        "task7_pr2.cpu_semantics",
+        cpu_ok,
+        "all rows must carry cpu_result_semantics=average_usage",
+    ))
+    memory_ok = (
+        "primary_resource" in frame
+        and set(frame["primary_resource"].dropna()) == {"memory"}
+        and len(frame["primary_resource"].dropna()) == len(frame)
+    )
+    checks.append(Check(
+        "task7_pr2.memory_primary",
+        memory_ok,
+        "all rows must carry primary_resource=memory",
+    ))
+    forbidden = _forbidden_eval_columns(list(frame.columns))
+    checks.append(Check(
+        "task7_pr2.no_gpu_or_any_resource_metrics",
+        not forbidden,
+        f"forbidden columns={forbidden}",
+    ))
+    checks.extend(_numeric_integrity_checks(frame, "task7_pr2.comparison"))
+    return checks
+
+
+def _sensitivity_group_columns(frame: pd.DataFrame) -> list[str]:
+    tokens = (
+        "sensitivity", "scenario", "variant", "mode", "aggregation",
+        "weight", "group", "instance", "second", "config",
+    )
+    return [
+        column for column in frame.columns
+        if column != "policy" and any(token in column.lower() for token in tokens)
+    ]
+
+def _validate_sensitivity(frame: pd.DataFrame) -> list[Check]:
+    checks: list[Check] = []
+
+    checks.append(Check(
+        "task7_pr2.sensitivity_row_count",
+        len(frame) == 35,
+        f"expected 35 rows (5 sensitivities x 7 policies), found {len(frame)}",
+    ))
+
+    if "policy" not in frame:
+        checks.append(Check(
+            "task7_pr2.sensitivity_policy_coverage",
+            False,
+            "missing policy column",
+        ))
+        return checks
+
+    counts = frame["policy"].value_counts(dropna=False).to_dict()
+    expected_counts = {policy: 5 for policy in FINAL_POLICIES}
+
+    checks.append(Check(
+        "task7_pr2.sensitivity_policy_coverage",
+        counts == expected_counts,
+        f"policy_counts={counts}",
+    ))
+
+    candidate_columns = _sensitivity_group_columns(frame)
+    group_ok = False
+    chosen_columns: tuple[str, ...] = ()
+    group_count = 0
+
+    # Find the smallest sensitivity-key combination that yields exactly five
+    # configurations with exactly the seven frozen policies in each one.
+    for size in range(1, min(3, len(candidate_columns)) + 1):
+        for group_columns in combinations(candidate_columns, size):
+            groups = frame.groupby(
+                list(group_columns),
+                dropna=False,
+                sort=False,
+            )
+
+            policy_sets = [
+                tuple(group["policy"].tolist())
+                for _, group in groups
+            ]
+
+            if len(policy_sets) == 5 and all(
+                set(values) == set(FINAL_POLICIES)
+                and len(values) == 7
+                for values in policy_sets
+            ):
+                group_ok = True
+                chosen_columns = group_columns
+                group_count = len(policy_sets)
+                break
+
+        if group_ok:
+            break
+
+    detail = (
+        f"candidate_columns={candidate_columns}, "
+        f"chosen_columns={list(chosen_columns)}, "
+        f"groups={group_count}"
+    )
+
+    checks.append(Check(
+        "task7_pr2.sensitivity_exact_groups",
+        group_ok,
+        detail,
+    ))
+
+    # Sensitivity artifacts intentionally contain structural nulls:
+    #
+    # - n_groups is populated only for group_weighted rows.
+    # - valid_*_count columns are populated for occurrence/subset-based
+    #   sensitivities, but are not applicable to group_weighted aggregation.
+    #
+    # Evaluation metrics themselves must always be finite.
+    always_required_numeric = [
+        "row_count",
+        "cpu_violation_pct",
+        "memory_violation_pct",
+        "average_cpu_utilization",
+        "average_memory_utilization",
+        "average_cpu_waste",
+        "average_memory_waste",
+        "average_cpu_shortfall",
+        "average_memory_shortfall",
+    ]
+
+    count_columns = [
+        "valid_cpu_violation_count",
+        "valid_memory_violation_count",
+        "valid_cpu_utilization_count",
+        "valid_memory_utilization_count",
+    ]
+
+    required_columns = (
+        ["sensitivity", "n_groups"]
+        + always_required_numeric
+        + count_columns
+    )
+
+    missing_numeric_contract_columns = [
+        name
+        for name in required_columns
+        if name not in frame.columns
+    ]
+
+    if missing_numeric_contract_columns:
+        checks.append(Check(
+            "task7_pr2.sensitivity.numeric_finite",
+            False,
+            (
+                "missing required sensitivity numeric-contract columns: "
+                f"{missing_numeric_contract_columns}"
+            ),
+        ))
+    else:
+        required_values = frame[always_required_numeric]
+
+        always_finite = (
+            required_values.notna().all().all()
+            and np.isfinite(
+                required_values.to_numpy(dtype=float)
+            ).all()
+        )
+
+        group_mask = frame["sensitivity"] == "group_weighted"
+        non_group_mask = ~group_mask
+
+        group_counts_null = (
+            frame.loc[group_mask, count_columns]
+            .isna()
+            .all()
+            .all()
+        )
+
+        group_n_groups = frame.loc[group_mask, "n_groups"]
+
+        group_n_groups_valid = (
+            len(group_n_groups) == len(FINAL_POLICIES)
+            and group_n_groups.notna().all()
+            and np.isfinite(
+                group_n_groups.to_numpy(dtype=float)
+            ).all()
+            and (group_n_groups > 0).all()
+        )
+
+        non_group_counts = frame.loc[
+            non_group_mask,
+            count_columns,
+        ]
+
+        non_group_counts_valid = (
+            non_group_counts.notna().all().all()
+            and np.isfinite(
+                non_group_counts.to_numpy(dtype=float)
+            ).all()
+        )
+
+        non_group_n_groups_null = (
+            frame.loc[non_group_mask, "n_groups"]
+            .isna()
+            .all()
+        )
+
+        sensitivity_numeric_finite = (
+            always_finite
+            and group_counts_null
+            and group_n_groups_valid
+            and non_group_counts_valid
+            and non_group_n_groups_null
+        )
+
+        checks.append(Check(
+            "task7_pr2.sensitivity.numeric_finite",
+            sensitivity_numeric_finite,
+            (
+                f"always_finite={always_finite}, "
+                f"group_counts_null={group_counts_null}, "
+                f"group_n_groups_valid={group_n_groups_valid}, "
+                f"non_group_counts_valid={non_group_counts_valid}, "
+                f"non_group_n_groups_null={non_group_n_groups_null}"
+            ),
+        ))
+
+    # Keep the generic numeric-bounds validation, but replace its overly
+    # strict all-numeric-cells-finite check with the sensitivity-specific
+    # contract above.
+    generic_numeric_checks = _numeric_integrity_checks(
+        frame,
+        "task7_pr2.sensitivity",
+    )
+
+    checks.extend(
+        check
+        for check in generic_numeric_checks
+        if check.name != "task7_pr2.sensitivity.numeric_finite"
+    )
+
+    return checks
+
+
+def _prediction_schema_checks(path: Path) -> list[Check]:
+    required = {
+        "role_key",
+        "recurrence_key",
+        "recommended_cpu_unit",
+        "recommended_memory_unit",
+        "recommended_resource_scope",
+    }
+    try:
+        columns = set(pq.ParquetFile(path).schema_arrow.names)
+    except Exception as exc:
+        return [Check("task7.prediction_columns", False, f"cannot inspect parquet schema: {exc}")]
+
+    missing = sorted(required - columns)
+    checks = [Check("task7.prediction_columns", not missing, f"missing={missing}")]
+    if missing:
+        return checks
+
+    # Read only the three non-target metadata columns needed for unit/scope checks.
+    inspect_columns = [
+        "recommended_cpu_unit",
+        "recommended_memory_unit",
+        "recommended_resource_scope",
+    ]
+    try:
+        pred_meta = pd.read_parquet(path, columns=inspect_columns)
+        units_ok = (
+            set(pred_meta["recommended_cpu_unit"].dropna()) == {"percent_of_vcpu"}
+            and set(pred_meta["recommended_memory_unit"].dropna()) == {"gb"}
+            and set(pred_meta["recommended_resource_scope"].dropna()) == {"task_role_per_instance"}
+        )
+    except Exception as exc:
+        checks.append(Check("task7.prediction_units_scope", False, f"metadata-column read failed: {exc}"))
+    else:
+        checks.append(Check(
+            "task7.prediction_units_scope",
+            units_ok,
+            "expected CPU=percent_of_vcpu, memory=gb, scope=task_role_per_instance",
+        ))
+    return checks
+
+
+def _published_evidence_checks(ml_dir: Path, final_dir: Path) -> list[Check]:
+    # Published evidence is required for the default authoritative pipeline so a
+    # reviewer can verify the run without access to ignored data/processed files.
+    if ml_dir.resolve() != DEFAULT_ML_DIR.resolve() or final_dir.resolve() != DEFAULT_FINAL_DIR.resolve():
+        return []
+
+    checks: list[Check] = []
+    for label, source_dir, report_dir, required in (
+        ("task7_pr1.published_evidence", ml_dir, REPORT_ROOT / "ml", PUBLISHED_ML_REQUIRED_FILES),
+        ("task7_pr2.published_evidence", final_dir, REPORT_ROOT / "final_test", PUBLISHED_FINAL_REQUIRED_FILES),
+    ):
+        failures: list[str] = []
+        for name in sorted(required):
+            report_path = report_dir / name
+            if not report_path.is_file():
+                failures.append(f"missing published {name}")
+                continue
+            source_path = source_dir / name
+            if source_path.is_file() and sha256(report_path) != sha256(source_path):
+                failures.append(f"published {name} differs from authoritative artifact")
+        checks.append(Check(label, not failures, "; ".join(failures) if failures else f"{len(required)} published files match"))
+    return checks
+
+
 def verify_pipeline(
     canonical_dir: Path,
     targets_dir: Path,
@@ -587,7 +1023,10 @@ def verify_pipeline(
         if recorded:
             manifest["artifacts"].extend(_artifact_entries(stage, directory, recorded))
 
+    checks.extend(_published_evidence_checks(ml_dir, final_dir))
+
     # Metadata contract: derived artifacts must identify dataset and schema.
+    loaded_metadata: dict[str, dict[str, Any]] = {}
     for label, path in (
         ("task3", canonical_dir / "metadata.json"),
         ("task4", targets_dir / "metadata.json"),
@@ -599,6 +1038,7 @@ def verify_pipeline(
             checks.append(Check(f"{label}.metadata_exists", False, f"missing {path}"))
             continue
         metadata = load_json(path)
+        loaded_metadata[label] = metadata
         checks.extend(_metadata_contract(metadata, label))
 
     # Task 6 lock.
@@ -616,6 +1056,15 @@ def verify_pipeline(
             "task6.selected_min_runs",
             min_runs in (1, 3, 5, 10),
             f"selected_min_runs={min_runs!r}",
+        ))
+
+    task6_metadata = loaded_metadata.get("task6", {})
+    task4_checksums = task6_metadata.get("task4_checksums")
+    if task4_checksums is not None:
+        checks.append(_checksum_binding_check(
+            "task6.task4_checksum_binding",
+            targets_dir,
+            task4_checksums,
         ))
 
     # PR1 locked manifest.
@@ -652,46 +1101,72 @@ def verify_pipeline(
             f"selected_models={models!r}",
         ))
 
+        model_selection_path = ml_dir / "model_selection.json"
+        if model_selection_path.exists():
+            model_selection = load_json(model_selection_path)
+            selection_models = model_selection.get("selected_models")
+            if not isinstance(selection_models, dict):
+                cpu_selected = _first_present(
+                    model_selection, "selected_cpu_model", "cpu_model"
+                )
+                memory_selected = _first_present(
+                    model_selection, "selected_memory_model", "memory_model"
+                )
+                if isinstance(cpu_selected, str) and isinstance(memory_selected, str):
+                    selection_models = {
+                        "cpu": cpu_selected,
+                        "memory": memory_selected,
+                    }
+                else:
+                    selection_models = None
+            if selection_models is not None:
+                checks.append(Check(
+                    "task7_pr1.model_selection_matches_lock",
+                    selection_models == models,
+                    f"decision={models!r}, model_selection={selection_models!r}",
+                ))
+
+        feature_order_path = ml_dir / "feature_order.json"
+        if feature_order_path.exists():
+            feature_order = load_json(feature_order_path)
+            locked_feature_order = _first_present(decision, "feature_order", "feature_names")
+            if locked_feature_order is None:
+                locked_feature_order = _first_present(loaded_metadata.get("task7_pr1", {}), "feature_order", "feature_names")
+            if locked_feature_order is not None:
+                actual_feature_order = feature_order.get("feature_order") if isinstance(feature_order, dict) else feature_order
+                if actual_feature_order is None and isinstance(feature_order, dict):
+                    actual_feature_order = feature_order.get("features")
+                checks.append(Check(
+                    "task7_pr1.feature_order_matches_lock",
+                    actual_feature_order == locked_feature_order,
+                    f"locked={locked_feature_order!r}, artifact={actual_feature_order!r}",
+                ))
+
+        decision_task4 = decision.get("task4_checksums")
+        if decision_task4 is not None:
+            checks.append(_checksum_binding_check(
+                "task7_pr1.task4_checksum_binding",
+                targets_dir,
+                decision_task4,
+            ))
+        decision_task6 = decision.get("task6_checksums")
+        if decision_task6 is not None:
+            checks.append(_checksum_binding_check(
+                "task7_pr1.task6_checksum_binding",
+                baselines_dir,
+                decision_task6,
+            ))
+
     # Final-test table.
     comparison_path = final_dir / "final_test_policy_comparison.csv"
     if comparison_path.exists():
         comparison = pd.read_csv(comparison_path)
-        policies = tuple(comparison["policy"].tolist()) if "policy" in comparison else ()
-        checks.append(Check(
-            "task7_pr2.seven_policies",
-            policies == FINAL_POLICIES,
-            f"policies={policies}",
-        ))
-        required_denominators = {"valid_cpu_violation_count", "valid_memory_violation_count"}
-        checks.append(Check(
-            "task7_pr2.separate_denominators",
-            required_denominators.issubset(comparison.columns),
-            f"required={sorted(required_denominators)}, columns={list(comparison.columns)}",
-        ))
-        if "cpu_result_semantics" in comparison:
-            cpu_ok = set(comparison["cpu_result_semantics"].dropna()) == {"average_usage"}
-        else:
-            cpu_ok = False
-        checks.append(Check(
-            "task7_pr2.cpu_semantics",
-            cpu_ok,
-            "all rows must carry cpu_result_semantics=average_usage",
-        ))
-        if "primary_resource" in comparison:
-            memory_ok = set(comparison["primary_resource"].dropna()) == {"memory"}
-        else:
-            memory_ok = False
-        checks.append(Check(
-            "task7_pr2.memory_primary",
-            memory_ok,
-            "all rows must carry primary_resource=memory",
-        ))
-        forbidden = _forbidden_eval_columns(list(comparison.columns))
-        checks.append(Check(
-            "task7_pr2.no_gpu_or_any_resource_metrics",
-            not forbidden,
-            f"forbidden columns={forbidden}",
-        ))
+        checks.extend(_validate_policy_comparison(comparison))
+
+    sensitivity_path = final_dir / "final_test_sensitivity.csv"
+    if sensitivity_path.exists():
+        sensitivity = pd.read_csv(sensitivity_path)
+        checks.extend(_validate_sensitivity(sensitivity))
 
     # PR1 lock must predate PR2 final run.
     run_record_path = final_dir / "run_record.json"
@@ -700,10 +1175,10 @@ def verify_pipeline(
         run_record = load_json(run_record_path)
         lock_ts = decision.get("lock_timestamp_utc")
         run_ts = run_record.get("timestamp_utc")
-        checks.append(Check(
+        checks.append(_timestamp_order_check(
             "task7.lock_before_final_test",
-            bool(lock_ts and run_ts and lock_ts < run_ts),
-            f"lock={lock_ts!r}, final_run={run_ts!r}",
+            lock_ts,
+            run_ts,
         ))
         checks.append(Check(
             "task7.final_run_traces_manifest",
@@ -731,6 +1206,41 @@ def verify_pipeline(
             f"expected non-empty run_id, found {run_id!r}",
         ))
 
+        checks.append(_checksum_binding_check(
+            "task7.pr1_checksum_binding",
+            ml_dir,
+            run_record.get("pr1_checksums"),
+            required_names=TASK7_PR1_REQUIRED_FILES,
+        ))
+        checks.append(_checksum_binding_check(
+            "task7.task6_checksum_binding",
+            baselines_dir,
+            run_record.get("task6_checksums"),
+            required_names=TASK6_REQUIRED_FILES,
+        ))
+
+        task4_test_digest = run_record.get("task4_test_sha256")
+        actual_task4_test_digest = sha256(targets_dir / "test.parquet") if (targets_dir / "test.parquet").is_file() else None
+        checks.append(Check(
+            "task7.task4_test_checksum_binding",
+            isinstance(task4_test_digest, str) and task4_test_digest == actual_task4_test_digest,
+            f"expected={task4_test_digest!r}, actual={actual_task4_test_digest!r}",
+        ))
+
+        final_metadata = loaded_metadata.get("task7_pr2", {})
+        if final_metadata:
+            checks.append(_overlap_consistency_check(
+                "task7.final_metadata_matches_run_record",
+                final_metadata,
+                run_record,
+                (
+                    "dataset_id", "schema_version", "phase", "run_id", "code_commit",
+                    "decision_manifest_sha256", "final_population_size",
+                    "selected_baseline_policy", "selected_min_runs", "selected_models",
+                    "test_evaluator_call_count", "test_target_read_count",
+                ),
+            ))
+
         run_log_value = run_record.get("run_log")
         run_log_path = (
             REPO_ROOT / run_log_value
@@ -751,27 +1261,7 @@ def verify_pipeline(
     # Prediction artifact traceability and expected units/scope.
     pred_path = final_dir / "final_test_predictions.parquet"
     if pred_path.exists():
-        pred = pd.read_parquet(pred_path)
-        required = {
-            "role_key",
-            "recurrence_key",
-            "recommended_cpu_unit",
-            "recommended_memory_unit",
-            "recommended_resource_scope",
-        }
-        checks.append(Check(
-            "task7.prediction_columns",
-            required.issubset(pred.columns),
-            f"missing={sorted(required - set(pred.columns))}",
-        ))
-        if required.issubset(pred.columns):
-            checks.append(Check(
-                "task7.prediction_units_scope",
-                set(pred["recommended_cpu_unit"].dropna()) == {"percent_of_vcpu"}
-                and set(pred["recommended_memory_unit"].dropna()) == {"gb"}
-                and set(pred["recommended_resource_scope"].dropna()) == {"task_role_per_instance"},
-                "expected CPU=percent_of_vcpu, memory=gb, scope=task_role_per_instance",
-            ))
+        checks.extend(_prediction_schema_checks(pred_path))
 
     manifest["verification_timestamp_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     manifest["decision_manifest_sha256"] = decision_sha

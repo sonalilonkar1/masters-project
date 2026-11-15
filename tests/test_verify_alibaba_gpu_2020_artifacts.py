@@ -163,6 +163,62 @@ def test_run_history_fails_when_run_id_not_in_log(tmp_path):
         for check in checks
     )
 
+def test_sensitivity_numeric_contract_allows_structural_nulls():
+    rows = []
+
+    sensitivities = (
+        "occurrence_weighted",
+        "same_second_excluded",
+        "same_second_only",
+        "multi_instance",
+        "group_weighted",
+    )
+
+    for sensitivity_name in sensitivities:
+        for policy in v.FINAL_POLICIES:
+            group_weighted = sensitivity_name == "group_weighted"
+
+            rows.append({
+                "sensitivity": sensitivity_name,
+                "policy": policy,
+                "row_count": 100,
+                "valid_cpu_violation_count": (
+                    None if group_weighted else 99
+                ),
+                "valid_memory_violation_count": (
+                    None if group_weighted else 100
+                ),
+                "valid_cpu_utilization_count": (
+                    None if group_weighted else 99
+                ),
+                "valid_memory_utilization_count": (
+                    None if group_weighted else 100
+                ),
+                "cpu_violation_pct": 1.0,
+                "memory_violation_pct": 2.0,
+                "average_cpu_utilization": 0.5,
+                "average_memory_utilization": 0.6,
+                "average_cpu_waste": 10.0,
+                "average_memory_waste": 2.0,
+                "average_cpu_shortfall": 1.0,
+                "average_memory_shortfall": 0.2,
+                "cpu_result_semantics": "average_usage",
+                "primary_resource": "memory",
+                "any_resource_metric_reported": False,
+                "n_groups": 25 if group_weighted else None,
+            })
+
+    frame = pd.DataFrame(rows)
+
+    checks = v._validate_sensitivity(frame)
+
+    finite_check = next(
+        check
+        for check in checks
+        if check.name == "task7_pr2.sensitivity.numeric_finite"
+    )
+
+    assert finite_check.ok, finite_check.detail
 
 def test_render_report_marks_failures_and_limitations():
     checks = [
@@ -246,3 +302,168 @@ def test_final_policy_order_is_frozen():
     assert v.FINAL_POLICIES == (
         "Request", "Mean", "P90", "P95", "P99", "ML", "Hybrid"
     )
+
+
+def test_checksum_binding_rejects_rechecksummed_inconsistent_artifact(tmp_path):
+    d = tmp_path / "stage"
+    d.mkdir()
+    artifact = d / "feature_order.json"
+    artifact.write_text('{"features":["a"]}\n')
+    locked = {"feature_order.json": v.sha256(artifact)}
+
+    artifact.write_text('{"features":["b"]}\n')
+    _write_sha(d, ["feature_order.json"])
+
+    check = v._checksum_binding_check("x", d, locked)
+    assert not check.ok
+    assert "expected" in check.detail
+
+
+def test_policy_comparison_rejects_invalid_numeric_data():
+    frame = pd.DataFrame({
+        "policy": list(v.FINAL_POLICIES),
+        "valid_cpu_violation_count": [10] * 7,
+        "valid_memory_violation_count": [10] * 7,
+        "cpu_result_semantics": ["average_usage"] * 7,
+        "primary_resource": ["memory"] * 7,
+        "cpu_violation_pct": [0, 1, 2, 3, 4, 5, 101],
+    })
+    checks = v._validate_policy_comparison(frame)
+    assert any(c.name == "task7_pr2.comparison.numeric_bounds" and not c.ok for c in checks)
+
+
+def test_sensitivity_requires_exact_five_by_seven_contract():
+    rows = []
+
+    for scenario in range(5):
+        for policy in v.FINAL_POLICIES:
+            rows.append({
+                "scenario": f"s{scenario}",
+                "policy": policy,
+            })
+
+    frame = pd.DataFrame(rows)
+
+    checks = v._validate_sensitivity(frame)
+
+    row_count_check = next(
+        check
+        for check in checks
+        if check.name == "task7_pr2.sensitivity_row_count"
+    )
+
+    policy_coverage_check = next(
+        check
+        for check in checks
+        if check.name == "task7_pr2.sensitivity_policy_coverage"
+    )
+
+    exact_groups_check = next(
+        check
+        for check in checks
+        if check.name == "task7_pr2.sensitivity_exact_groups"
+    )
+
+    assert row_count_check.ok, row_count_check.detail
+    assert policy_coverage_check.ok, policy_coverage_check.detail
+    assert exact_groups_check.ok, exact_groups_check.detail
+
+
+def test_prediction_inspection_reads_only_non_target_metadata_columns(tmp_path, monkeypatch):
+    path = tmp_path / "predictions.parquet"
+    pd.DataFrame({
+        "role_key": ["r"],
+        "recurrence_key": ["x"],
+        "recommended_cpu_unit": ["percent_of_vcpu"],
+        "recommended_memory_unit": ["gb"],
+        "recommended_resource_scope": ["task_role_per_instance"],
+        "secret_target": [999.0],
+    }).to_parquet(path, index=False)
+
+    real_read = pd.read_parquet
+    observed = {}
+
+    def guarded_read(path_arg, *args, **kwargs):
+        observed["columns"] = kwargs.get("columns")
+        return real_read(path_arg, *args, **kwargs)
+
+    monkeypatch.setattr(v.pd, "read_parquet", guarded_read)
+    checks = v._prediction_schema_checks(path)
+    assert all(c.ok for c in checks)
+    assert observed["columns"] == [
+        "recommended_cpu_unit",
+        "recommended_memory_unit",
+        "recommended_resource_scope",
+    ]
+    assert "secret_target" not in observed["columns"]
+
+
+def test_malformed_timestamps_become_failed_checks_not_exceptions(tmp_path):
+    log = tmp_path / "final_test_runs.jsonl"
+    decision_sha = "d" * 64
+    run_id = "run-1"
+    entry = {
+        "decision_manifest_sha256": decision_sha,
+        "code_commit": "c" * 40,
+        "run_id": run_id,
+        "timestamp_utc": "not-a-time",
+        "defect_rerun_reason": None,
+        "out_dir": str((tmp_path / "final_test").resolve()),
+    }
+    log.write_text(json.dumps(entry) + "\n")
+
+    checks = v._check_run_history(
+        run_record=entry,
+        decision={
+            "build": {"code_commit": "c" * 40},
+            "lock_timestamp_utc": "2026-11-10T23:10:00Z",
+        },
+        decision_sha=decision_sha,
+        run_log_path=log,
+        final_dir=tmp_path / "final_test",
+    )
+    assert any(c.name == "task7.run_log_precedes_run_record" and not c.ok for c in checks)
+    assert any(c.name == "task7.final_run_chronology" and not c.ok for c in checks)
+
+
+def test_final_metadata_overlap_detects_inconsistency():
+    check = v._overlap_consistency_check(
+        "x",
+        {"run_id": "a", "selected_min_runs": 10},
+        {"run_id": "b", "selected_min_runs": 10},
+        ("run_id", "selected_min_runs"),
+    )
+    assert not check.ok
+    assert "run_id" in check.detail
+
+
+def test_published_evidence_is_required_and_must_match(tmp_path, monkeypatch):
+    ml_dir = tmp_path / "ml"
+    final_dir = tmp_path / "final"
+    report_root = tmp_path / "reports"
+    report_ml = report_root / "ml"
+    report_final = report_root / "final_test"
+    for d in (ml_dir, final_dir, report_ml, report_final):
+        d.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(v, "DEFAULT_ML_DIR", ml_dir)
+    monkeypatch.setattr(v, "DEFAULT_FINAL_DIR", final_dir)
+    monkeypatch.setattr(v, "REPORT_ROOT", report_root)
+    monkeypatch.setattr(v, "PUBLISHED_ML_REQUIRED_FILES", {"decision_manifest.json"})
+    monkeypatch.setattr(v, "PUBLISHED_FINAL_REQUIRED_FILES", {"run_record.json"})
+
+    (ml_dir / "decision_manifest.json").write_text('{"x":1}\n')
+    (final_dir / "run_record.json").write_text('{"x":1}\n')
+    (report_ml / "decision_manifest.json").write_text('{"x":1}\n')
+    (report_final / "run_record.json").write_text('{"x":2}\n')
+
+    checks = v._published_evidence_checks(ml_dir, final_dir)
+    assert checks[0].ok
+    assert not checks[1].ok
+
+
+def test_standalone_script_import_bootstraps_repo_before_scripts_import():
+    source = (Path(__file__).resolve().parents[1] / "scripts" / "verify_alibaba_gpu_2020_artifacts.py").read_text()
+    bootstrap = source.index('REPO_ROOT = Path(__file__).resolve().parents[1]')
+    scripts_import = source.index('from scripts.build_alibaba_gpu_2020_targets import EXIT_INVALID')
+    assert bootstrap < scripts_import
