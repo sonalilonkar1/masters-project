@@ -886,7 +886,7 @@ def run(args: argparse.Namespace) -> int:
         print(f"VERIFY FAILED: {type(exc).__name__}: {exc}")
         return EXIT_FAILED
 
-    passed = sum(1 for check in checks if check["ok"])
+    passed = sum(1 for check in checks if check.ok)
     failed = len(checks) - passed
 
     print(f"Verification checks: {passed} passed, {failed} failed")
