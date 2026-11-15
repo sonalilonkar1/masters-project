@@ -4,10 +4,10 @@
 - Schema: `0.2.0`
 - Result: **PASS**
 - Checks: 41 passed, 0 failed
-- Generated: `2026-11-13T06:25:31Z`
-- Decision manifest SHA-256: `f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950`
-- Final run ID: `7dd3942e-c2c0-4816-9466-efd32e486cc2`
-- Final run code commit: `b463d5d3239cd2a223045ee034f1ecb9ca89317a`
+- Generated: `2026-11-15T19:50:58Z`
+- Decision manifest SHA-256: `d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac`
+- Final run ID: `4fdc7e96-789b-43a9-990f-20f189e9598b`
+- Final run code commit: `ea6aa08458aace364cd33529ce77de894bcd76ad`
 
 ## Verification checks
 
@@ -40,18 +40,18 @@
 | `task7_pr2.cpu_semantics` | PASS | all rows must carry cpu_result_semantics=average_usage |
 | `task7_pr2.memory_primary` | PASS | all rows must carry primary_resource=memory |
 | `task7_pr2.no_gpu_or_any_resource_metrics` | PASS | forbidden columns=[] |
-| `task7.lock_before_final_test` | PASS | lock='2026-11-10T22:50:19Z', final_run='2026-11-10T23:14:38Z' |
-| `task7.final_run_traces_manifest` | PASS | expected manifest sha='f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950', run_record='f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950' |
+| `task7.lock_before_final_test` | PASS | lock='2026-11-15T09:16:50Z', final_run='2026-11-15T09:26:29Z' |
+| `task7.final_run_traces_manifest` | PASS | expected manifest sha='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', run_record='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac' |
 | `task7.test_evaluator_call_count` | PASS | expected explicit test_evaluator_call_count=1, found 1 |
 | `task7.test_target_read_count` | PASS | expected explicit test_target_read_count=1, found 1 |
-| `task7.final_run_id` | PASS | expected non-empty run_id, found '7dd3942e-c2c0-4816-9466-efd32e486cc2' |
-| `task7.run_log_contains_final_run` | PASS | matching entries for run_id='7dd3942e-c2c0-4816-9466-efd32e486cc2': 1 |
+| `task7.final_run_id` | PASS | expected non-empty run_id, found '4fdc7e96-789b-43a9-990f-20f189e9598b' |
+| `task7.run_log_contains_final_run` | PASS | matching entries for run_id='4fdc7e96-789b-43a9-990f-20f189e9598b': 1 |
 | `task7.run_log_matches_run_record` | PASS | mismatches={} |
 | `task7.run_log_output_directory` | PASS | logged_out_dir='data/processed/alibaba_gpu_v2020_final_test', expected_out_dir='data/processed/alibaba_gpu_v2020_final_test' |
-| `task7.run_log_precedes_run_record` | PASS | run_log='2026-11-10T23:14:33Z', run_record='2026-11-10T23:14:38Z' |
-| `task7.final_run_chronology` | PASS | lock='2026-11-10T22:50:19Z', run_log='2026-11-10T23:14:33Z', run_record='2026-11-10T23:14:38Z' |
+| `task7.run_log_precedes_run_record` | PASS | run_log='2026-11-15T09:26:24Z', run_record='2026-11-15T09:26:29Z' |
+| `task7.final_run_chronology` | PASS | lock='2026-11-15T09:16:50Z', run_log='2026-11-15T09:26:24Z', run_record='2026-11-15T09:26:29Z' |
 | `task7.run_history_documented` | PASS | matching_runs=1, unique_run_ids=True, documented_reruns=True |
-| `task7.final_run_code_commit_matches_lock` | PASS | decision_commit='b463d5d3239cd2a223045ee034f1ecb9ca89317a', run_commit='b463d5d3239cd2a223045ee034f1ecb9ca89317a' |
+| `task7.final_run_code_commit_matches_lock` | PASS | decision_commit='ea6aa08458aace364cd33529ce77de894bcd76ad', run_commit='ea6aa08458aace364cd33529ce77de894bcd76ad' |
 | `task7.prediction_columns` | PASS | missing=[] |
 | `task7.prediction_units_scope` | PASS | expected CPU=percent_of_vcpu, memory=gb, scope=task_role_per_instance |
 

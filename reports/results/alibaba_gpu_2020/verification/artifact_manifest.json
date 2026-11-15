@@ -117,7 +117,7 @@
     {
       "path": "data/processed/alibaba_gpu_v2020_ml/decision_manifest.json",
       "row_count": null,
-      "sha256": "f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950",
+      "sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
       "stage": "task7_pr1_ml"
     },
     {
@@ -135,7 +135,7 @@
     {
       "path": "data/processed/alibaba_gpu_v2020_ml/metadata.json",
       "row_count": null,
-      "sha256": "b9a2fa94a27f3989fbfef4f9c6a847c9640d30b458e870ba5afa9b0f31fdea54",
+      "sha256": "7136748103537e4531df8c34563b594e9ee9d1fe75c005e75412a2d5870dcf80",
       "stage": "task7_pr1_ml"
     },
     {
@@ -177,13 +177,13 @@
     {
       "path": "data/processed/alibaba_gpu_v2020_final_test/metadata.json",
       "row_count": null,
-      "sha256": "110a72b592eacdc4fc6c581b40ccb7372e0bdae48596f2edd8913583aa193ae8",
+      "sha256": "94360125c1d6b241565457f93d6775af49bf285f498677919f8812c7d2010835",
       "stage": "task7_pr2_final_test"
     },
     {
       "path": "data/processed/alibaba_gpu_v2020_final_test/run_record.json",
       "row_count": null,
-      "sha256": "993454a044bc7f1bac861eae2c782ee077ea3ba232050387f9e1b2cd83d5b31e",
+      "sha256": "9221362f1cf51aa2eaea3958b1bbc234eb3f9019667067ea8ba43210ef21b6eb",
       "stage": "task7_pr2_final_test"
     }
   ],
@@ -324,12 +324,12 @@
       "ok": true
     },
     {
-      "detail": "lock='2026-11-10T22:50:19Z', final_run='2026-11-10T23:14:38Z'",
+      "detail": "lock='2026-11-15T09:16:50Z', final_run='2026-11-15T09:26:29Z'",
       "name": "task7.lock_before_final_test",
       "ok": true
     },
     {
-      "detail": "expected manifest sha='f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950', run_record='f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950'",
+      "detail": "expected manifest sha='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', run_record='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac'",
       "name": "task7.final_run_traces_manifest",
       "ok": true
     },
@@ -344,12 +344,12 @@
       "ok": true
     },
     {
-      "detail": "expected non-empty run_id, found '7dd3942e-c2c0-4816-9466-efd32e486cc2'",
+      "detail": "expected non-empty run_id, found '4fdc7e96-789b-43a9-990f-20f189e9598b'",
       "name": "task7.final_run_id",
       "ok": true
     },
     {
-      "detail": "matching entries for run_id='7dd3942e-c2c0-4816-9466-efd32e486cc2': 1",
+      "detail": "matching entries for run_id='4fdc7e96-789b-43a9-990f-20f189e9598b': 1",
       "name": "task7.run_log_contains_final_run",
       "ok": true
     },
@@ -364,12 +364,12 @@
       "ok": true
     },
     {
-      "detail": "run_log='2026-11-10T23:14:33Z', run_record='2026-11-10T23:14:38Z'",
+      "detail": "run_log='2026-11-15T09:26:24Z', run_record='2026-11-15T09:26:29Z'",
       "name": "task7.run_log_precedes_run_record",
       "ok": true
     },
     {
-      "detail": "lock='2026-11-10T22:50:19Z', run_log='2026-11-10T23:14:33Z', run_record='2026-11-10T23:14:38Z'",
+      "detail": "lock='2026-11-15T09:16:50Z', run_log='2026-11-15T09:26:24Z', run_record='2026-11-15T09:26:29Z'",
       "name": "task7.final_run_chronology",
       "ok": true
     },
@@ -379,7 +379,7 @@
       "ok": true
     },
     {
-      "detail": "decision_commit='b463d5d3239cd2a223045ee034f1ecb9ca89317a', run_commit='b463d5d3239cd2a223045ee034f1ecb9ca89317a'",
+      "detail": "decision_commit='ea6aa08458aace364cd33529ce77de894bcd76ad', run_commit='ea6aa08458aace364cd33529ce77de894bcd76ad'",
       "name": "task7.final_run_code_commit_matches_lock",
       "ok": true
     },
@@ -395,12 +395,12 @@
     }
   ],
   "dataset_id": "alibaba_gpu_v2020",
-  "decision_manifest_sha256": "f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950",
+  "decision_manifest_sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
   "final_run_identity": {
-    "code_commit": "b463d5d3239cd2a223045ee034f1ecb9ca89317a",
-    "decision_manifest_sha256": "f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950",
-    "run_id": "7dd3942e-c2c0-4816-9466-efd32e486cc2",
-    "timestamp_utc": "2026-11-10T23:14:38Z"
+    "code_commit": "ea6aa08458aace364cd33529ce77de894bcd76ad",
+    "decision_manifest_sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
+    "run_id": "4fdc7e96-789b-43a9-990f-20f189e9598b",
+    "timestamp_utc": "2026-11-15T09:26:29Z"
   },
   "schema_version": "0.2.0",
   "unverified_items": [
@@ -413,6 +413,6 @@
       "reason": "The verifier checks the locked model checksums, feature-order lock, saved prediction artifact checksum and run provenance, but does not rerun model inference in Task 8."
     }
   ],
-  "verification_timestamp_utc": "2026-11-13T06:25:31Z",
+  "verification_timestamp_utc": "2026-11-15T19:50:58Z",
   "verified": true
 }

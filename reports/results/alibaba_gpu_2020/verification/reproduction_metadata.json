@@ -1,9 +1,9 @@
 {
-  "code_commit": "74f544f109217787ea6c25c582a7ebee0d239d28",
-  "code_dirty": true,
+  "code_commit": "aaf6ec03323ae0b9f273e88f953cdf3462597571",
+  "code_dirty": false,
   "dataset_id": "alibaba_gpu_v2020",
   "full_test_command": "python -m pytest -q",
-  "generated_utc": "2026-11-13T06:25:31Z",
+  "generated_utc": "2026-11-15T19:50:52Z",
   "pandas_version": "3.0.2",
   "python_version": "3.11.15",
   "schema_version": "0.2.0",
