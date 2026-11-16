@@ -43,6 +43,8 @@ The results are subject to several limitations.
 \item
   \textbf{ML tuning was limited.} On Google, models are trained on a log scale, whose back-transformation biases predictions towards the median and therefore low. On Alibaba, each model family used one fixed configuration. Both choices may understate what a stronger model could achieve alone, although the Hybrid safeguard limits the effect of a low prediction.
 \item
+  \textbf{Short histories fall back to the request.} History-based recommendations need at least \texttt{min\_runs} earlier runs of the same workload; below that, TraceAdvisor keeps the developer's request. One-off and new workloads, which are most workloads although a minority of runs, are therefore not improved (Section~\ref{sec:7.5}).
+\item
   \textbf{GPU usage was not evaluated.} The Alibaba trace records GPU requests and usage, and GPUs are the scarcest resource in an AI cluster, but recommendations were limited to CPU and memory. GPU sizing would need its own target definition and safeguard.
 \item
   \textbf{The evaluation is offline.} Replay assumes that each run would have used the same resources under any recommendation. In a live cluster, an under-sized job may be killed and rerun, changing the history that later recommendations use, and saved capacity is only realized if the scheduler can place other work in it. The results therefore show the potential of each policy, not measured effects on job failures, utilization or cost.
@@ -54,6 +56,8 @@ These limitations suggest the following directions for further work.
 \tightlist
 \item
   \textbf{Direct quantile modelling with calibration.} Predicting a high quantile of next-run usage directly, with calibrated coverage, could replace the combination of a point forecast and a separate safeguard (Section~\ref{sec:4.2.2}).
+\item
+  \textbf{Cold-start recommendations.} Workloads without enough history could be sized from similar workloads, for example those of the same workload type, user or GPU type, with the prior and the threshold selected on validation in the same way as the current baselines.
 \item
   \textbf{Further datasets and resources.} Through the adapter framework, further traces can be added, such as the Azure VM traces as a CPU-only portability check, and GPU sizing can be evaluated on Alibaba, where GPU usage is recorded.
 \item
