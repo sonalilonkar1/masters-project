@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Task 12 PR 1: render existing summaries, never execute a pipeline.
+"""Task 12: render existing summaries, never execute a pipeline.
 
 Input paths in the JSON configuration are relative to --root (repository by
 default). Executable provenance always identifies the running checkout.
@@ -15,16 +15,19 @@ from importlib.metadata import version
 import inspect
 import io
 import json
-import math
+import os
 from pathlib import Path
 import platform
+import shutil
 import sys
+import tempfile
 
 import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 from src.canonical import schema as capability_schema
+from src.reporting import artifact_provenance, summary_validation, metadata_schema
 
 # The Python module constructs these profiles; no capability JSON is loaded.
 DEFAULT_CAPABILITY_REGISTRY = capability_schema.DEFAULT_CAPABILITY_REGISTRY
@@ -37,6 +40,8 @@ CUTS = ("occurrence_weighted", "same_second_excluded", "same_second_only",
         "multi_instance", "group_weighted")
 CPU_LABEL = "average-usage sizing, not peak safety"
 RECEIPT_KIND = "PR1 reporting receipt; not the final release manifest"
+FINAL_RECEIPT_KIND = "Task 12 final reporting receipt v2"
+FINAL_MANIFEST_KIND = "Task 12 reporting artifact manifest v2"
 NONCOMPARABILITY = (
     "Raw violation, utilization, accuracy and CPU percentages must not be "
     "compared or ranked across datasets: units, workload scope and targets differ."
@@ -94,11 +99,15 @@ def executing_provenance():
     generator = record(__file__, "generator")
     # Inspect the imported module itself, not an assumed file below --root.
     schema = record(inspect.getsourcefile(capability_schema), "schema_and_capability_definitions")
+    record(inspect.getsourcefile(artifact_provenance), "published_evidence_validator")
+    record(inspect.getsourcefile(summary_validation), "scientific_summary_validator")
+    record(inspect.getsourcefile(metadata_schema), "report_metadata_schema")
+    record(inspect.getsourcefile(summary_validation.task8), "audited_task8_csv_contract")
     profiles = {key: value.to_dict() for key, value in DEFAULT_CAPABILITY_REGISTRY.items()}
     encoded = json.dumps(profiles, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     code = {
         "path_base_description": "executing_checkout is the checkout containing the running generator; it is independent of --root",
-        "files": [generator, schema],
+        "files": [ref for _, ref in backing_files],
         "capability_registry": {
             "definition_module": capability_schema.__name__,
             "definition_path": schema["path"],
@@ -128,58 +137,13 @@ def markdown(frame: pd.DataFrame) -> str:
     return "\n".join(rows) + "\n"
 
 
-def validate_summary(frame: pd.DataFrame, dataset: str, sensitivity=False):
-    if frame.empty:
-        raise ReportError(f"{dataset}: empty result table")
-    forbidden = [c for c in frame if "gpu" in c.lower() or (
-        dataset == ALIBABA and "any_resource" in c.lower()
-        and c != "any_resource_metric_reported")]
-    if forbidden:
-        raise ReportError(f"{dataset}: unsupported metrics {forbidden}")
-    required = {"policy", "row_count"}
-    for r in ("cpu", "memory"):
-        required.update({f"{r}_violation_pct", f"valid_{r}_violation_count",
-                         f"average_{r}_utilization", f"valid_{r}_utilization_count"})
-    if sensitivity:
-        required.add("sensitivity")
-    if "any_resource_violation_pct" in frame:
-        required.add("valid_any_resource_violation_count")
-    if not required.issubset(frame.columns):
-        raise ReportError(f"{dataset}: missing columns {sorted(required - set(frame.columns))}")
-    keys = ["sensitivity", "policy"] if sensitivity else ["policy"]
-    if frame[keys].isna().any().any() or frame.duplicated(keys).any():
-        raise ReportError(f"{dataset}: null or duplicate policy/cut")
-    groups = frame.groupby("sensitivity", sort=False) if sensitivity else [("all", frame)]
-    for cut, group in groups:
-        if set(group.policy) != set(POLICIES):
-            raise ReportError(f"{dataset}: {cut} must contain exactly seven policies")
-    if sensitivity and set(frame.sensitivity) != set(CUTS):
-        raise ReportError(f"{dataset}: incomplete or unknown sensitivity cuts")
-    for col in frame:
-        if col == "row_count" or col.startswith("valid_") or col.endswith("_pct") or col.startswith("average_"):
-            values = pd.to_numeric(frame[col], errors="raise")
-            if ((values.notna() & ~values.map(lambda x: pd.isna(x) or math.isfinite(x)))
-                    | (values < 0)).any():
-                raise ReportError(f"{dataset}: invalid numeric values in {col}")
-            if col == "row_count" or col.startswith("valid_"):
-                if (values.dropna() % 1 != 0).any():
-                    raise ReportError(f"{dataset}: noninteger count in {col}")
-                if col.startswith("valid_") and (values > frame.row_count).any():
-                    raise ReportError(f"{dataset}: denominator exceeds row_count")
-            if col.endswith("_pct") and (values > 100).any():
-                raise ReportError(f"{dataset}: percentage exceeds 100")
-    if frame.row_count.isna().any():
-        raise ReportError(f"{dataset}: missing row_count")
-    if dataset == ALIBABA:
-        for col, expected in (("cpu_result_semantics", "average_usage"),
-                              ("primary_resource", "memory")):
-            # Empty sensitivity cuts have no metadata or metrics.
-            populated = frame.loc[frame.row_count.gt(0)]
-            if col not in frame or not populated[col].eq(expected).all():
-                raise ReportError(f"Alibaba requires {col}={expected}")
-        if "any_resource_metric_reported" in frame:
-            if not frame.any_resource_metric_reported.dropna().eq(False).all():
-                raise ReportError("Alibaba any-resource reporting must be false")
+def validate_summary(frame: pd.DataFrame, dataset: str, sensitivity=False,
+                     comparison=None, final_population=None):
+    from src.reporting.summary_validation import validate_summary as validate
+    try:
+        validate(frame, dataset, sensitivity, comparison, final_population)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise ReportError(str(exc)) from exc
 
 
 def result_rows(frame, dataset, source, status, sensitivity=False):
@@ -249,7 +213,7 @@ def figure(table, resource, dataset, status):
         return "\n".join(line.rstrip() for line in stream.getvalue().splitlines()) + "\n"
 
 
-def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
+def build_report(config: dict, root: Path, out_dir: Path, *, strict=False, require_complete=False, _validation_only=False):
     if not isinstance(config, dict):
         raise ReportError("Configuration must be a JSON object")
     datasets = config.get("datasets")
@@ -260,12 +224,26 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
     for dataset, spec in datasets.items():
         if not isinstance(spec, dict):
             raise ReportError(f"{dataset}: dataset specification must be a JSON object")
+    if "report_version" in config and config["report_version"] != 2:
+        raise ReportError("unsupported report version")
+    final_mode = config.get("report_version") == 2
+    if final_mode:
+        try:
+            artifact_provenance.validate_final_configuration(config)
+        except (ValueError, TypeError) as exc:
+            raise ReportError(str(exc)) from exc
+    elif require_complete:
+        raise ReportError("Final completion requires a version 2 configuration")
     root, out_dir = root.resolve(), out_dir.resolve()
     if out_dir.exists() and any(out_dir.iterdir()):
         raise ReportError("Output directory must be new or empty")
     code, references, backing_files = executing_provenance()
     sources, contents, statuses, contracts = {}, {}, [], []
     source_bindings = {}
+    upstream_evidence = {}
+    evidence_rows = []
+    decision_rows = []
+    conclusion_rows = []
 
     def check_digest(ref, actual):
         if actual != ref["sha256"]:
@@ -305,7 +283,7 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
 
     def read_json(path):
         raw, receipt = read_input(path)
-        return json.loads(raw), receipt
+        return metadata_schema.loads(raw), receipt
 
     def read_csv(path):
         raw, receipt = read_input(path)
@@ -332,6 +310,15 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
                 "```text", "python scripts/build_final_cross_dataset_report.py "
                 "--config <report>/report_provenance.json --root <artifact-root> --out-dir <new-directory>",
                 "```", ""]
+    if final_mode:
+        sections = ["# Cross-dataset reporting — Task 12 PR 2", "", NONCOMPARABILITY, "",
+                    "Reporting validation is separate from experimental verification. Published bytes and metadata "
+                    "are checked; external physical artifacts and historical execution are not independently reproduced.", "",
+                    artifact_provenance.completion_statement(all(s["decision_status"] != "decision_pending" for s in datasets.values())), "",
+                    "[Dataset status](dataset_status.md) · [Contract comparison](contract_comparison.md) · "
+                    "[Comparability](comparability.md) · [Evidence](evidence_status.md) · "
+                    "[Limitations](limitations.md) · [Conclusions](conclusions.md) · "
+                    "[Artifact manifest](artifact_manifest.json)", ""]
     for dataset in ORDER:
         spec = datasets[dataset]
         profile = DEFAULT_CAPABILITY_REGISTRY[dataset]
@@ -344,15 +331,36 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
             raise ReportError(f"{dataset}: metadata profile disagrees with registry")
         for evidence in spec.get("evidence", []):
             source(evidence)
+        if final_mode:
+            for evidence in spec.get("decision_evidence", []):
+                source(evidence)
+            decision_rows.append(artifact_provenance.validate_decision(dataset, spec, read_json, read_input))
+            try:
+                if dataset == ALIBABA:
+                    upstream_evidence[dataset] = artifact_provenance.validate_alibaba_evidence(spec, read_json, read_input)
+                elif dataset == GOOGLE:
+                    upstream_evidence[dataset] = artifact_provenance.validate_google_evidence(spec, read_json, read_input)
+            except (ValueError, KeyError, TypeError) as exc:
+                raise ReportError(str(exc)) from exc
         mode = spec.get("completion", "not_attempted")
         if mode not in {"pipeline_artifacts_available", "adapter_demonstration", "feasibility_only",
                         "not_attempted", "deferred"}:
             raise ReportError(f"{dataset}: unsupported completion status")
-        status, reason = "provisional", spec.get("reason", "Verification not supplied")
+        status, reason = "provisional", (artifact_provenance.reporting_context(dataset) if final_mode else
+                                         spec.get("reason", "Verification not supplied"))
+        if final_mode:
+            status = "published_evidence_validated" if dataset == ALIBABA else spec["decision_status"]
+            for claim in ("published_metadata_consistency", "published_artifact_bytes", "external_physical_artifact_bytes",
+                          "historical_exactly_once_execution", "scientific_inference_reproduction"):
+                evidence_rows.append({"dataset_id": dataset, "claim": claim,
+                                      "status": upstream_evidence.get(dataset, {}).get(claim, "not applicable: no scientific results")})
         sections += [f"## {dataset}", "", reason, ""]
         if dataset == GOOGLE:
-            sections += ["Task 10 before/after comparison: **pending approved artifacts**. "
-                         "Earlier results may contain cross-split targets and contaminated validation "
+            google_decision = ("Task 10 before/after comparison: **pending approved artifacts**. "
+                               if not final_mode or decision_rows[-1]["decision_status"] == "decision_pending" else
+                               "Task 10 before/after comparison: not supplied. Documented reporting outcome: "
+                               + decision_rows[-1]["outcome"] + ". ")
+            sections += [google_decision + "Earlier results may contain cross-split targets and contaminated validation "
                          "(F3/F4); they are not leakage-safe final results.", ""]
         contracts.append({
             "dataset_id": dataset, "modeling_unit": metadata.get("canonical_modeling_unit", profile.evaluation_record_level),
@@ -388,10 +396,19 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
             if mode != "pipeline_artifacts_available" or metadata_ref is None:
                 raise ReportError(f"{dataset}: results require pipeline status and metadata")
             frame, result_ref = read_csv(result_path)
-            validate_summary(frame, dataset)
+            validate_summary(frame, dataset, final_population=upstream_evidence.get(dataset, {}).get("final_population_size"))
+            if final_mode:
+                for resource in (("memory", "cpu") if dataset == ALIBABA else ("cpu", "memory")):
+                    indexed = frame.set_index("policy")
+                    column = f"{resource}_violation_pct"
+                    conclusion_rows.append({"dataset_id": dataset, "resource": resource,
+                                            "request_violation_pct": indexed.loc["Request", column],
+                                            "hybrid_violation_pct": indexed.loc["Hybrid", column],
+                                            "source_path": result_ref["path"], "source_sha256": result_ref["sha256"],
+                                            "source_column": column})
             # Validate supplied manifest consistency only. Self-reported checks and
             # matching hashes cannot establish authoritative upstream verification.
-            if spec.get("verification_manifest"):
+            if spec.get("verification_manifest") and not final_mode:
                 manifest, _ = read_json(spec["verification_manifest"])
                 if manifest.get("verified") is not True or manifest.get("dataset_id") != dataset:
                     raise ReportError(f"{dataset}: upstream verification did not pass")
@@ -421,12 +438,15 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
                 if dataset != ALIBABA:
                     raise ReportError("Only Alibaba sensitivity tables are supported in PR 1")
                 sensitivity, ref = read_csv(spec["sensitivity"])
-                validate_summary(sensitivity, dataset, sensitivity=True)
+                validate_summary(sensitivity, dataset, sensitivity=True, comparison=frame)
                 table(f"{dataset}/sensitivity", result_rows(sensitivity, dataset, ref, status, True))
                 sections += [f"[Sensitivity results]({dataset}/sensitivity.md): same-second, "
                              "multi-instance and group-weighted source summaries.", ""]
             elif dataset == ALIBABA:
                 sections += ["Sensitivity results: **pending supplied artifact**.", ""]
+        if final_mode and spec["decision_status"] == "decision_pending" and dataset not in (GOOGLE, ALIBABA):
+            mode = "decision_pending"
+            status = "decision_pending"
         statuses.append({"dataset_id": dataset, "completion": mode, "report_status": status,
                          "reason": reason, "metadata_source": metadata_ref["path"] if metadata_ref else None})
     table("dataset_status", pd.DataFrame(statuses))
@@ -436,20 +456,70 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
         {"item": "Policy ordering", "comparison": "Within each dataset and evaluation population only"},
         {"item": "Raw accuracy, violation, utilization and CPU percentages", "comparison": "No cross-dataset numeric comparison or ranking"},
     ]))
-    contents["report.md"] = "\n".join(sections)
+    reporting_complete = final_mode and artifact_provenance.decisions_complete(decision_rows)
+    if require_complete and not reporting_complete:
+        raise ReportError("Final completion blocked: dataset decision_pending")
+    if final_mode:
+        table("evidence_status", pd.DataFrame(evidence_rows))
+        table("reporting_decisions", pd.DataFrame(decision_rows))
+        table("conclusion_evidence", pd.DataFrame(conclusion_rows))
+        contents["limitations.md"] = artifact_provenance.limitations_text(config, upstream_evidence, ORDER, decision_rows)
+        contents["conclusions.md"] = ("# Reporting conclusions\n\n"
+            "Alibaba reports the authoritative published November 15 run, with memory peak outcomes first "
+            "and CPU average-usage sizing, not peak safety. This is evidence-linked reporting, not reproduced inference.\n\n"
+            "Google results remain subject to the recorded reporting decision and F3/F4/F7/F8 limitations. "
+            "Azure and Alibaba 2018 have no recommendation scores in this bundle.\n\n"
+            "No dataset-wide numeric ranking or claim of common resource units is supported. "
+            "Coverage and legacy slack-reduction metrics are not inferred from these summaries.\n\n"
+            "[Within-dataset Request and Hybrid source values](conclusion_evidence.md) provide "
+            "descriptive evidence only, without causal claims, new metrics or cross-dataset ranking.\n\n"
+            + (artifact_provenance.completion_statement(reporting_complete) + "\n"))
+    contents["report.md"] = "\n".join(sections).rstrip() + "\n"
     inventory = [{"category": "input_artifact", "role": "artifact", **ref}
                  for ref in sorted(sources.values(), key=lambda s: s["path"])]
     inventory.extend({"category": "executable_code", **ref} for ref in code["files"])
     inventory.extend({"category": "reference_document", **ref} for ref in references)
     contents["report_sources.csv"] = pd.DataFrame(inventory).to_csv(index=False, lineterminator="\n")
-    provenance = {"kind": RECEIPT_KIND,
+    if _validation_only:
+        if not final_mode:
+            raise ReportError("Canonical final documents require a version 2 configuration")
+        return {"contents": contents, "sources": sorted(sources.values(), key=lambda s: s["path"])}
+    provenance = {"kind": FINAL_RECEIPT_KIND if final_mode else RECEIPT_KIND,
                   "environment": {"python": platform.python_version(), "pandas": pd.__version__,
-                                  "matplotlib": version("matplotlib")},
+                                  "matplotlib": version("matplotlib"), "numpy": version("numpy"),
+                                  "pyarrow": version("pyarrow")},
                   "executable_code": code, "reference_documents": references,
                   "configuration": config, "sources": sorted(sources.values(), key=lambda s: s["path"]),
                   "outputs": [{"path": name, "sha256": hashlib.sha256(data.encode()).hexdigest()}
                               for name, data in sorted(contents.items())]}
+    if final_mode:
+        provenance["metric_traceability"] = artifact_provenance.trace_metric_cells(contents, config, read_input)
+        provenance["verification_scope"] = artifact_provenance.VERIFICATION_SCOPE
+        provenance["dataset_decisions"] = decision_rows
+        provenance["upstream_evidence"] = upstream_evidence
+        provenance["reporting_status"] = "COMPLETE" if reporting_complete else "DECISION_PENDING"
+        provenance["project_completion"] = reporting_complete
+    if final_mode:
+        if "unverified_annotations" in config:
+            provenance["unverified_annotations"] = config["unverified_annotations"]
+        metadata_schema.validate_metadata(provenance, "receipt")
     contents["report_provenance.json"] = json.dumps(provenance, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    if final_mode:
+        # No self-hash cycle: the final manifest covers every other output.
+        manifest = {"kind": FINAL_MANIFEST_KIND, "schema_version": 2,
+                    "reporting_validation": "PASS", "project_completion": reporting_complete,
+                    "reporting_status": provenance["reporting_status"],
+                    "verification_scope": artifact_provenance.VERIFICATION_SCOPE,
+                    "metric_traceability": provenance["metric_traceability"],
+                    "configuration": config, "environment": provenance["environment"],
+                    "executable_code": code, "upstream_evidence": upstream_evidence,
+                    "dataset_decisions": decision_rows, "sources": provenance["sources"],
+                    "outputs": [{"path": name, "sha256": hashlib.sha256(data.encode()).hexdigest()}
+                                for name, data in sorted(contents.items())]}
+        if "unverified_annotations" in config:
+            manifest["unverified_annotations"] = config["unverified_annotations"]
+        metadata_schema.validate_metadata(manifest, "manifest")
+        contents["artifact_manifest.json"] = json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False) + "\n"
     # Recheck inputs before writing; never let a report silently describe changed bytes.
     for requested, physical in source_bindings.items():
         if requested.resolve() != physical:
@@ -460,27 +530,52 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False):
         raise ReportError("Executable code or contract reference changed while reporting")
     if {key: value.to_dict() for key, value in DEFAULT_CAPABILITY_REGISTRY.items()} != code["capability_registry"]["effective_profiles"]:
         raise ReportError("Effective capability registry changed while reporting")
-    for name, data in sorted(contents.items()):
-        path = out_dir / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(data, encoding="utf-8")
+    if final_mode:
+        # Build the entire bundle on the destination filesystem, then publish a
+        # directory atomically. A failed write never exposes a successful manifest.
+        out_dir.parent.mkdir(parents=True, exist_ok=True)
+        staging = Path(tempfile.mkdtemp(prefix=f".{out_dir.name}.", dir=out_dir.parent))
+        try:
+            for name, data in sorted(contents.items()):
+                path = staging / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(data, encoding="utf-8")
+            os.replace(staging, out_dir)
+        finally:
+            if staging.exists():
+                shutil.rmtree(staging)
+    else:
+        for name, data in sorted(contents.items()):
+            path = out_dir / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(data, encoding="utf-8")
     return provenance
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, required=True, help="Input configuration JSON or an existing report receipt")
+    parser.add_argument("--config", type=Path, help="Input configuration JSON or an existing report receipt")
+    parser.add_argument("--validate-bundle", type=Path, help="Validate a final bundle and its accessible sources")
     parser.add_argument("--root", type=Path, default=REPO_ROOT, help="Input artifact root; does not select executable code")
-    parser.add_argument("--out-dir", type=Path, required=True)
+    parser.add_argument("--out-dir", type=Path)
+    parser.add_argument("--require-complete", action="store_true", help="Refuse final completion while decisions are pending")
     parser.add_argument("--strict", action="store_true", help="Fail if either pipeline result table is missing")
     args = parser.parse_args(argv)
     try:
-        config = json.loads(args.config.read_text())
+        if args.validate_bundle:
+            validated = artifact_provenance.validate_bundle(args.validate_bundle, args.root, REPO_ROOT)
+            if args.require_complete and not validated["project_completion"]:
+                raise ReportError("Final completion blocked: dataset decision_pending")
+            print(f"Reporting bundle valid: {validated['reporting_status']}; project_completion={validated['project_completion']}")
+            return 0
+        if args.config is None or args.out_dir is None:
+            raise ReportError("--config and --out-dir are required for generation")
+        config = metadata_schema.loads(args.config.read_text())
         if not isinstance(config, dict):
             raise ReportError("Configuration must be a JSON object")
-        if config.get("kind") == RECEIPT_KIND:
+        if config.get("kind") in (RECEIPT_KIND, FINAL_RECEIPT_KIND, FINAL_MANIFEST_KIND):
             config = config["configuration"]
-        build_report(config, args.root, args.out_dir, strict=args.strict)
+        build_report(config, args.root, args.out_dir, strict=args.strict, require_complete=args.require_complete)
     except (ReportError, OSError, ValueError, KeyError, TypeError) as exc:
         print(f"REPORT FAILED: {exc}", file=sys.stderr)
         return 1

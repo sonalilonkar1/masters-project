@@ -32,16 +32,19 @@ def inputs(tmp_path):
                 "valid_memory_utilization_count": [8] * 7,
                 "cpu_violation_pct": [25.0] * 7,
                 "memory_violation_pct": [100 / 9] * 7,
-                "average_cpu_utilization": [None, .4, .3, .4, .5, .6, .7],
+                "average_cpu_utilization": [.5, .4, .3, .4, .5, .6, .7],
                 "average_memory_utilization": [.5] * 7,
                 "average_cpu_waste": [.1] * 7,
                 "average_memory_waste": [.2] * 7,
+                "average_cpu_shortfall": [.05] * 7,
+                "average_memory_shortfall": [.02] * 7,
             })
             if dataset == report.ALIBABA:
                 frame["cpu_result_semantics"] = "average_usage"
                 frame["primary_resource"] = "memory"
                 frame["any_resource_metric_reported"] = False
             else:
+                frame["n_common_occurrences"] = 10
                 frame["any_resource_violation_pct"] = 30.0
                 frame["valid_any_resource_violation_count"] = 8
             result = tmp_path / f"{dataset}.csv"
@@ -49,6 +52,26 @@ def inputs(tmp_path):
             spec.update(completion="pipeline_artifacts_available", metadata=str(metadata), results=str(result))
         datasets[dataset] = spec
     return {"datasets": datasets}
+
+
+def valid_sensitivity(frame):
+    rows = []
+    for cut in report.CUTS:
+        part = frame.copy().astype(object)
+        part["sensitivity"] = cut
+        part["n_groups"] = None
+        if cut == "same_second_only":
+            for col in part.columns:
+                if col not in {"policy", "sensitivity", "row_count"}:
+                    part[col] = None
+            part["row_count"] = 0
+        if cut == "group_weighted":
+            part["n_groups"] = 2
+            for col in part.columns:
+                if col.startswith("valid_"):
+                    part[col] = None
+        rows.append(part)
+    return pd.concat(rows, ignore_index=True)
 
 
 def build(config, out, **kwargs):
@@ -89,7 +112,7 @@ def test_labels_units_denominators_and_memory_first(inputs, tmp_path):
     google = pd.read_csv(out / report.GOOGLE / "results.csv")
     waste = google.loc[google.metric.eq("average_waste")]
     assert set(waste.unit) == {"ncu", "normalized"}
-    assert google.loc[google.resource.eq("cpu") & google.metric.eq("average_utilization"), "value"].isna().sum() == 1
+    assert google.loc[google.resource.eq("cpu") & google.metric.eq("average_utilization"), "value"].isna().sum() == 0
     assert waste.denominator.isna().all()
     assert waste.denominator_status.eq("not reported by source").all()
 
@@ -170,14 +193,15 @@ def test_incomplete_or_invalid_summaries_fail(inputs, tmp_path, defect):
 def test_sensitivity_cuts_and_group_counts_preserved(inputs, tmp_path):
     spec = inputs["datasets"][report.ALIBABA]
     frame = pd.read_csv(spec["results"])
-    sensitivity = pd.concat([frame.assign(sensitivity=cut, n_groups=2) for cut in report.CUTS])
+    sensitivity = valid_sensitivity(frame)
     path = tmp_path / "sensitivity.csv"
     sensitivity.to_csv(path, index=False)
     spec["sensitivity"] = str(path)
     build(inputs, tmp_path / "out")
     result = pd.read_csv(tmp_path / "out" / report.ALIBABA / "sensitivity.csv")
     assert set(result.sensitivity) == set(report.CUTS)
-    assert result.source_n_groups.eq(2).all()
+    assert result.loc[result.sensitivity.eq("group_weighted"), "source_n_groups"].eq(2).all()
+    assert result.loc[~result.sensitivity.eq("group_weighted"), "source_n_groups"].isna().all()
     assert result.loc[result.resource.eq("cpu"), "semantics"].eq(report.CPU_LABEL).all()
     assert Counter(Path(name).suffix for name in snapshot(tmp_path / "out")) == {
         ".csv": 12, ".md": 12, ".svg": 5, ".json": 1,
@@ -212,16 +236,10 @@ def test_committed_inputs_disclose_provenance_and_trace_all_399_metric_cells(tmp
     text = (out / "report.md").read_text()
     reason = config["datasets"][report.ALIBABA]["reason"]
     assert reason in text
-    assert report.sha256(report.REPO_ROOT / config["datasets"][report.ALIBABA]["results"]) in reason
-    for detail in (
-        "earlier provisional rendering", "not final verified findings",
-        "de560f38741a60d5e427a4c21c7444debcc8e4a558dc4382fded3a10590b4d27",
-        "c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8",
-        "f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950",
-        "7dd3942e-c2c0-4816-9466-efd32e486cc2",
-        "not accepted as authoritative inputs", "Task 12 PR 2",
-    ):
-        assert detail in reason
+    assert config["historical_snapshot_commit"] == "853744027dcd42ea0d6b1b72b7eba42ceafa48d1"
+    assert "Historical PR 1 outputs" in reason
+    assert "authoritative November 15 run" in reason
+    assert "config/cross_dataset_report_final.json" in config["usage"]
     sources = {s["path"]: s["sha256"] for s in receipt["sources"]}
     cells = 0
     for dataset, name in ((report.GOOGLE, "results"), (report.ALIBABA, "results"),
@@ -387,7 +405,8 @@ def test_artifact_root_does_not_require_schema_or_generator_files(inputs, tmp_pa
     assert not (root / "src").exists()
     receipt = report.build_report(config, root, tmp_path / "out")
     assert {entry["role"] for entry in receipt["executable_code"]["files"]} == {
-        "generator", "schema_and_capability_definitions",
+        "generator", "schema_and_capability_definitions", "published_evidence_validator",
+        "scientific_summary_validator", "audited_task8_csv_contract", "report_metadata_schema",
     }
     assert all(entry["path"].startswith("artifacts/") for entry in receipt["sources"])
 
@@ -396,7 +415,7 @@ def manifest_checked_alibaba_inputs(inputs, tmp_path):
     spec = inputs["datasets"][report.ALIBABA]
     frame = pd.read_csv(spec["results"])
     sensitivity = tmp_path / "sensitivity.csv"
-    pd.concat([frame.assign(sensitivity=cut, n_groups=2) for cut in report.CUTS]).to_csv(
+    valid_sensitivity(frame).to_csv(
         sensitivity, index=False,
     )
     spec["sensitivity"] = str(sensitivity)

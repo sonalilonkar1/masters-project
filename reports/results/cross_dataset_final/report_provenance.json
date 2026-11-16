@@ -1,0 +1,859 @@
+{
+  "configuration": {
+    "datasets": {
+      "alibaba_clustertrace2018": {
+        "completion": "deferred",
+        "decision_evidence": [
+          "config/reporting_decisions/alibaba_clustertrace2018.evidence.json"
+        ],
+        "decision_outcome": "pending",
+        "decision_record": "config/reporting_decisions/alibaba_clustertrace2018.json",
+        "decision_status": "decision_pending",
+        "evidence": [
+          "docs/planning/github_issues/task9_alibaba_2018_adapter_demonstration.md"
+        ],
+        "reason": "Task 9 demonstration outcome and validated sample metadata are not supplied. No next-occurrence or recommendation results are reported."
+      },
+      "alibaba_gpu_v2020": {
+        "artifact_bindings": [
+          {
+            "dataset_id": "alibaba_gpu_v2020",
+            "logical_artifact": "metadata",
+            "manifest_path": "data/processed/alibaba_gpu_v2020_ml/decision_manifest.json",
+            "published_path": "reports/results/alibaba_gpu_2020/ml/decision_manifest.json",
+            "sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
+            "stage": "task7_pr1_ml"
+          },
+          {
+            "dataset_id": "alibaba_gpu_v2020",
+            "logical_artifact": "results",
+            "manifest_path": "data/processed/alibaba_gpu_v2020_final_test/final_test_policy_comparison.csv",
+            "published_path": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
+            "sha256": "c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8",
+            "stage": "task7_pr2_final_test"
+          },
+          {
+            "dataset_id": "alibaba_gpu_v2020",
+            "logical_artifact": "sensitivity",
+            "manifest_path": "data/processed/alibaba_gpu_v2020_final_test/final_test_sensitivity.csv",
+            "published_path": "reports/results/alibaba_gpu_2020/final_test/final_test_sensitivity.csv",
+            "sha256": "e7f25120d954ec54341b10082142b254893c16ecdb4f670a8b839f0b90433fc1",
+            "stage": "task7_pr2_final_test"
+          },
+          {
+            "dataset_id": "alibaba_gpu_v2020",
+            "logical_artifact": "run_record",
+            "manifest_path": "data/processed/alibaba_gpu_v2020_final_test/run_record.json",
+            "published_path": "reports/results/alibaba_gpu_2020/final_test/run_record.json",
+            "sha256": "9221362f1cf51aa2eaea3958b1bbc234eb3f9019667067ea8ba43210ef21b6eb",
+            "stage": "task7_pr2_final_test"
+          },
+          {
+            "dataset_id": "alibaba_gpu_v2020",
+            "logical_artifact": "final_metadata",
+            "manifest_path": "data/processed/alibaba_gpu_v2020_final_test/metadata.json",
+            "published_path": "reports/results/alibaba_gpu_2020/final_test/metadata.json",
+            "sha256": "94360125c1d6b241565457f93d6775af49bf285f498677919f8812c7d2010835",
+            "stage": "task7_pr2_final_test"
+          }
+        ],
+        "completion": "pipeline_artifacts_available",
+        "decision_evidence": [
+          "config/reporting_decisions/alibaba_gpu_v2020.evidence.json"
+        ],
+        "decision_outcome": "accepted_published_run",
+        "decision_record": "config/reporting_decisions/alibaba_gpu_v2020.json",
+        "decision_status": "accepted_published_run",
+        "evidence": [
+          "reports/results/alibaba_gpu_2020/final_test/run_record.json",
+          "reports/results/alibaba_gpu_2020/final_test/metadata.json",
+          "reports/results/alibaba_gpu_2020/final_test/SHA256SUMS",
+          "docs/data/alibaba_gpu_2020_evidence_and_limitations.md",
+          "docs/planning/github_issues/task8_alibaba_gpu_2020_final_verification.md",
+          "docs/design/discussion_summary_2026-11-16.md",
+          "docs/planning/github_issues/current_status.md"
+        ],
+        "expected_identity": {
+          "code_commit": "ea6aa08458aace364cd33529ce77de894bcd76ad",
+          "decision_manifest_sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
+          "run_id": "4fdc7e96-789b-43a9-990f-20f189e9598b"
+        },
+        "final_metadata": "reports/results/alibaba_gpu_2020/final_test/metadata.json",
+        "followup_evidence": [
+          "docs/design/discussion_summary_2026-11-16.md",
+          "docs/planning/github_issues/current_status.md"
+        ],
+        "metadata": "reports/results/alibaba_gpu_2020/ml/decision_manifest.json",
+        "reason": "Authoritative published November 15 Alibaba run. Published reporting bytes and metadata are validated; unavailable physical artifacts, inference reproduction and historical execution are not independently reproduced.",
+        "results": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
+        "run_log": "reports/results/alibaba_gpu_2020/ml/final_test_runs.jsonl",
+        "run_log_sha256": "dfb98d2e6807ce4d444218e13a238e723ac510acf857ed5cb8779386b7678f33",
+        "run_record": "reports/results/alibaba_gpu_2020/final_test/run_record.json",
+        "sensitivity": "reports/results/alibaba_gpu_2020/final_test/final_test_sensitivity.csv",
+        "verification_manifest": "reports/results/alibaba_gpu_2020/verification/artifact_manifest.json",
+        "verification_manifest_sha256": "d9987e9f774c3556e7f5b8670747ae16abd66a9862879fe6cecb617a1b3a6d34"
+      },
+      "azure_public_vm_v2": {
+        "completion": "feasibility_only",
+        "decision_evidence": [
+          "config/reporting_decisions/azure_public_vm_v2.evidence.json"
+        ],
+        "decision_outcome": "pending",
+        "decision_record": "config/reporting_decisions/azure_public_vm_v2.json",
+        "decision_status": "decision_pending",
+        "evidence": [
+          "docs/data/azure_vm_traceadvisor_feasibility.md",
+          "docs/planning/github_issues/task11_azure_vm_dataset_integration.md"
+        ],
+        "reason": "Existing feasibility analysis supports deferring integration. Dataset V1/V2 identity needs reconciliation; observed memory and official recurrence are unavailable. No Task 11 Stage 2 results are reported."
+      },
+      "google_clusterdata2019": {
+        "completion": "pipeline_artifacts_available",
+        "decision_evidence": [
+          "config/reporting_decisions/google_clusterdata2019.evidence.json"
+        ],
+        "decision_manifest": "reports/results/google_subset/decision_manifest.json",
+        "decision_outcome": "pending",
+        "decision_record": "config/reporting_decisions/google_clusterdata2019.json",
+        "decision_status": "decision_pending",
+        "evidence": [
+          "reports/results/google_subset/final_test_run_metadata.json",
+          "reports/results/google_subset/decision_manifest.json",
+          "docs/data/google_subset_pipeline_analysis.md",
+          "docs/planning/github_issues/task10_google_subset_corrections_and_rerun.md",
+          "reports/results/google_subset/n05_ml_metadata.json",
+          "reports/results/google_subset/ml_feature_manifest.json"
+        ],
+        "expected_artifacts": {
+          "decision_manifest": "0669ca5c3cdec70a1013c886fbce4c0efc3746b936b7b0748f106523d40fa775",
+          "metadata": "71961278053bcaa6ab1f47e8af7e789bb0bc58faf3b7dc37bb1e0ce011afbb5b",
+          "results": "3a83f94ffc5e67675d85b7ff33ce6867e2067d0a6ca9231c825fffdd22c19219",
+          "run_record": "a933ac23889c9229650b98da71f714532ce21ff52ec30ae2d1f6aa3da25c2c39"
+        },
+        "metadata": "reports/results/google_subset/n04_metadata.json",
+        "producer_dataset_id": "google_subset_v1",
+        "reason": "Existing frozen Google results are displayed with F3/F4 contamination and F7/F8 limitations. Reporting treatment is governed by the validated dataset decision record.",
+        "results": "reports/results/google_subset/tables/final_test_policy_comparison.csv",
+        "run_record": "reports/results/google_subset/final_test_run_metadata.json"
+      }
+    },
+    "historical_report": "reports/results/cross_dataset_pr1",
+    "report_name": "Task 12 PR 2",
+    "report_version": 2
+  },
+  "dataset_decisions": [
+    {
+      "dataset_id": "google_clusterdata2019",
+      "decision_status": "decision_pending",
+      "decision_summary": "No documented team approval supplied. Decision remains pending.",
+      "evidence_sha256": "b209a7b45ca0abb0e64906a956b79c6ff7f766f4cc52ca8b323d787c7492de9c",
+      "outcome": "pending",
+      "record_sha256": "faf588d30596d7cde04f7922e69c58cd59f47825e4160da2614c9a282cfb390b"
+    },
+    {
+      "dataset_id": "alibaba_gpu_v2020",
+      "decision_status": "accepted_published_run",
+      "decision_summary": "Published Task 8 acceptance only; no new scientific verification.",
+      "evidence_sha256": "9df0f48489fb6877c93551612887ac771fb09b8e308468268ea26706b02d266b",
+      "outcome": "accepted_published_run",
+      "record_sha256": "dda147381b533bc1e62112853c84b72c0bf9901d376d64db52e3627f11147f38"
+    },
+    {
+      "dataset_id": "alibaba_clustertrace2018",
+      "decision_status": "decision_pending",
+      "decision_summary": "No documented team approval supplied. Decision remains pending.",
+      "evidence_sha256": "5c4398f338823550411e9dab447a03f6fe632bed6b9d4811ef22b589bde26c5f",
+      "outcome": "pending",
+      "record_sha256": "765bb96decbd3c5387c1b0e0fce527c26b585d5970c9a2c86fc75cf55fa903e1"
+    },
+    {
+      "dataset_id": "azure_public_vm_v2",
+      "decision_status": "decision_pending",
+      "decision_summary": "No documented team approval supplied. Decision remains pending.",
+      "evidence_sha256": "239148b5892c9c96e2ef975edb548d3a3423e62314c64f4b0667061c1cc8418a",
+      "outcome": "pending",
+      "record_sha256": "9b0a6ad5e7bce05c585c38e2a5aac82fd587d37c3c3e3cbc4c2546790949106c"
+    }
+  ],
+  "environment": {
+    "matplotlib": "3.10.0",
+    "numpy": "2.4.4",
+    "pandas": "3.0.2",
+    "pyarrow": "23.0.1",
+    "python": "3.12.13"
+  },
+  "executable_code": {
+    "capability_registry": {
+      "configuration_source": "Python definitions; config/dataset_capabilities.json is not loaded",
+      "definition_module": "src.canonical.schema",
+      "definition_path": "src/canonical/schema.py",
+      "definition_path_base": "executing_checkout",
+      "effective_profiles": {
+        "alibaba_clustertrace2018": {
+          "allowed_exclusion_reasons": [],
+          "any_resource_metric_valid": true,
+          "cpu_target_semantics": null,
+          "cpu_unit": null,
+          "dataset_id": "alibaba_clustertrace2018",
+          "evaluation_mode": "instance_request_versus_observed",
+          "evaluation_record_level": "instance",
+          "has_cpu_average": true,
+          "has_cpu_peak": true,
+          "has_memory_average": true,
+          "has_memory_peak": true,
+          "instance_event_time_semantics": null,
+          "memory_target_semantics": null,
+          "memory_unit": "alibaba_memory_source_normalized",
+          "notes": "Recurrence/targets remain disabled until a derived rule is validated.",
+          "observed_cpu_semantics": "instance_average",
+          "observed_memory_semantics": "instance_average",
+          "peak_cpu_semantics": "instance_peak",
+          "peak_memory_semantics": "instance_peak",
+          "recurrence_key_origin": "none",
+          "supported_record_levels": [
+            "instance"
+          ],
+          "supports_allocated_cpu": false,
+          "supports_allocated_memory": false,
+          "supports_cpu": true,
+          "supports_memory": true,
+          "supports_ml": false,
+          "supports_observed_cpu": true,
+          "supports_observed_memory": true,
+          "supports_recurrence": false,
+          "supports_request": true,
+          "supports_targets": false,
+          "target_split_isolation": false,
+          "telemetry_window": "Full trace",
+          "time_semantics": "instance_start"
+        },
+        "alibaba_gpu_v2020": {
+          "allowed_exclusion_reasons": [
+            "no_recurrence_key",
+            "job_failed",
+            "job_incomplete",
+            "task_not_terminated",
+            "missing_or_invalid_request",
+            "instance_failed",
+            "instance_interrupted",
+            "instance_incomplete",
+            "missing_worker_name",
+            "multi_attempt_worker",
+            "missing_sensor",
+            "partial_sensor_coverage",
+            "invalid_memory_exceeds_capacity",
+            "invalid_resource"
+          ],
+          "any_resource_metric_valid": false,
+          "cpu_target_semantics": "next_occurrence_lifetime_average",
+          "cpu_unit": "percent_of_vcpu",
+          "dataset_id": "alibaba_gpu_v2020",
+          "evaluation_mode": "next_occurrence_memory_peak_cpu_average",
+          "evaluation_record_level": "role_occurrence",
+          "has_cpu_average": true,
+          "has_cpu_peak": false,
+          "has_memory_average": true,
+          "has_memory_peak": true,
+          "instance_event_time_semantics": "parent_job_submission",
+          "memory_target_semantics": "next_occurrence_lifetime_peak",
+          "memory_unit": "gb",
+          "notes": "Required second integration. Role-level next-occurrence evaluation; memory peak primary, CPU lifetime average only.",
+          "observed_cpu_semantics": "lifetime_average",
+          "observed_memory_semantics": "lifetime_average",
+          "peak_cpu_semantics": null,
+          "peak_memory_semantics": "lifetime_peak",
+          "recurrence_key_origin": "official_with_role",
+          "supported_record_levels": [
+            "role_occurrence",
+            "instance"
+          ],
+          "supports_allocated_cpu": false,
+          "supports_allocated_memory": false,
+          "supports_cpu": true,
+          "supports_memory": true,
+          "supports_ml": true,
+          "supports_observed_cpu": true,
+          "supports_observed_memory": true,
+          "supports_recurrence": true,
+          "supports_request": true,
+          "supports_targets": true,
+          "target_split_isolation": true,
+          "telemetry_window": "About day 19 to day 68.9",
+          "time_semantics": "job_submission"
+        },
+        "azure_public_vm_v2": {
+          "allowed_exclusion_reasons": [],
+          "any_resource_metric_valid": true,
+          "cpu_target_semantics": null,
+          "cpu_unit": null,
+          "dataset_id": "azure_public_vm_v2",
+          "evaluation_mode": null,
+          "evaluation_record_level": null,
+          "has_cpu_average": true,
+          "has_cpu_peak": true,
+          "has_memory_average": false,
+          "has_memory_peak": false,
+          "instance_event_time_semantics": null,
+          "memory_target_semantics": null,
+          "memory_unit": null,
+          "notes": "CPU telemetry and VM capacity supported; observed memory unavailable.",
+          "observed_cpu_semantics": null,
+          "observed_memory_semantics": null,
+          "peak_cpu_semantics": null,
+          "peak_memory_semantics": null,
+          "recurrence_key_origin": "none",
+          "supported_record_levels": null,
+          "supports_allocated_cpu": true,
+          "supports_allocated_memory": true,
+          "supports_cpu": true,
+          "supports_memory": true,
+          "supports_ml": false,
+          "supports_observed_cpu": true,
+          "supports_observed_memory": false,
+          "supports_recurrence": false,
+          "supports_request": false,
+          "supports_targets": false,
+          "target_split_isolation": false,
+          "telemetry_window": null,
+          "time_semantics": null
+        },
+        "google_clusterdata2019": {
+          "allowed_exclusion_reasons": [],
+          "any_resource_metric_valid": true,
+          "cpu_target_semantics": "next_occurrence_peak",
+          "cpu_unit": "ncu",
+          "dataset_id": "google_clusterdata2019",
+          "evaluation_mode": "full_next_occurrence",
+          "evaluation_record_level": "occurrence",
+          "has_cpu_average": false,
+          "has_cpu_peak": true,
+          "has_memory_average": false,
+          "has_memory_peak": true,
+          "instance_event_time_semantics": null,
+          "memory_target_semantics": "next_occurrence_peak",
+          "memory_unit": "normalized",
+          "notes": "Reference corrected Google occurrence pipeline.",
+          "observed_cpu_semantics": null,
+          "observed_memory_semantics": null,
+          "peak_cpu_semantics": "window_peak",
+          "peak_memory_semantics": "window_peak",
+          "recurrence_key_origin": "constructed",
+          "supported_record_levels": [
+            "occurrence"
+          ],
+          "supports_allocated_cpu": false,
+          "supports_allocated_memory": false,
+          "supports_cpu": true,
+          "supports_memory": true,
+          "supports_ml": true,
+          "supports_observed_cpu": true,
+          "supports_observed_memory": true,
+          "supports_recurrence": true,
+          "supports_request": true,
+          "supports_targets": true,
+          "target_split_isolation": false,
+          "telemetry_window": "Full 31-day subset",
+          "time_semantics": "first_execution_start"
+        }
+      },
+      "sha256": "db4f8cbf66f6dc2d822f700934fd28bd493bb10e69e09a7bcb0e6932ce368a0d"
+    },
+    "files": [
+      {
+        "path": "scripts/build_final_cross_dataset_report.py",
+        "path_base": "executing_checkout",
+        "role": "generator",
+        "sha256": "e845fcda5136930f142df3caf7550ffe2b9258d5a971b0b74e1f9d335300f3ee"
+      },
+      {
+        "path": "src/canonical/schema.py",
+        "path_base": "executing_checkout",
+        "role": "schema_and_capability_definitions",
+        "sha256": "19dd1b4832eb1c550e6fe4458a2ab955347dda5cabac73bf2a0d95d09621e12d"
+      },
+      {
+        "path": "src/reporting/artifact_provenance.py",
+        "path_base": "executing_checkout",
+        "role": "published_evidence_validator",
+        "sha256": "a469a43a29e431e67d1d224ccc0258bd2649e0e4b9ed495094feefbe558da36d"
+      },
+      {
+        "path": "src/reporting/summary_validation.py",
+        "path_base": "executing_checkout",
+        "role": "scientific_summary_validator",
+        "sha256": "d662eff028f4e64959688fb87b6761ab5187df4f5af65fe0ce2d4724d33489f6"
+      },
+      {
+        "path": "src/reporting/metadata_schema.py",
+        "path_base": "executing_checkout",
+        "role": "report_metadata_schema",
+        "sha256": "88d92f8c9e853e010d4df95b7628cdae349b15944fcf6649e912e20a353cacb4"
+      },
+      {
+        "path": "scripts/verify_alibaba_gpu_2020_artifacts.py",
+        "path_base": "executing_checkout",
+        "role": "audited_task8_csv_contract",
+        "sha256": "20116a4b917ddd3f78dd3319a375ac9aceb00441fe896a846779528ddf3cc0b2"
+      }
+    ],
+    "path_base_description": "executing_checkout is the checkout containing the running generator; it is independent of --root"
+  },
+  "kind": "Task 12 final reporting receipt v2",
+  "metric_traceability": {
+    "conclusion_metric_cells": 8,
+    "rendered_metric_cells": 518,
+    "unique_source_metric_cells": 399
+  },
+  "outputs": [
+    {
+      "path": "alibaba_gpu_v2020/01_memory.csv",
+      "sha256": "d7601d5735aee5da783995faa942aa106488e964853cb7ee038d6e2d09a9bff1"
+    },
+    {
+      "path": "alibaba_gpu_v2020/01_memory.md",
+      "sha256": "a3ca875d0485de6089160f6cd93cbe73c05416de975cfed7a67708e98547f650"
+    },
+    {
+      "path": "alibaba_gpu_v2020/01_memory.svg",
+      "sha256": "be7a2a826ec2d2188dc5d07720b90485f4424d06ca2ebe90c6816f72ef91ce7c"
+    },
+    {
+      "path": "alibaba_gpu_v2020/02_cpu.csv",
+      "sha256": "7db395f7bc5bf25c4916bc7dad823acf26d744f04111d879b2ea4a590ee0bf47"
+    },
+    {
+      "path": "alibaba_gpu_v2020/02_cpu.md",
+      "sha256": "39fd76557b582c11234100a1ce0b377bfc82ac5705ace2e30cb554673ca77fab"
+    },
+    {
+      "path": "alibaba_gpu_v2020/02_cpu.svg",
+      "sha256": "bb3863002dc83a84d7d5fb71c68abab4ed1677ab17cebec4f7779823ff8f6306"
+    },
+    {
+      "path": "alibaba_gpu_v2020/results.csv",
+      "sha256": "4fa3fa22b09119280b237a9161ba2c61742aefc3d31e0d22b532418c30dd5a77"
+    },
+    {
+      "path": "alibaba_gpu_v2020/results.md",
+      "sha256": "a4caf5a65b097e22633fbba2247c51fac123fd1d3080cce01e977aade0672359"
+    },
+    {
+      "path": "alibaba_gpu_v2020/sensitivity.csv",
+      "sha256": "712e34e0f950a800befe4e4435c3812b96d21f27a78a92daea8ad13a21bc7dcc"
+    },
+    {
+      "path": "alibaba_gpu_v2020/sensitivity.md",
+      "sha256": "9352a79015c155140d79f657e2953d2f49da468514fdd28f8323fcc7f0fce59f"
+    },
+    {
+      "path": "comparability.csv",
+      "sha256": "9773697694745929d454c6200d968c64bcf674a840fcad81288f7d56db77c242"
+    },
+    {
+      "path": "comparability.md",
+      "sha256": "bd56984e5f465a32f34a94585757546c6027c527b5c3d4ea996df781efd39222"
+    },
+    {
+      "path": "conclusion_evidence.csv",
+      "sha256": "43cee31336bb59c48d83ac2abfd21a08b795417ea599fa42d8e4890371d08f33"
+    },
+    {
+      "path": "conclusion_evidence.md",
+      "sha256": "f5c62a5896442d61898af1824df4c89ebeadb70c78c603cc499c9e2e6681655e"
+    },
+    {
+      "path": "conclusions.md",
+      "sha256": "57072c0f16dd0f9ef9771e83e03e9d53b84bc1b58d5afc2e5348b1434aea079c"
+    },
+    {
+      "path": "contract_comparison.csv",
+      "sha256": "c26a0a52e737c1178abee58208e0fd07f5c2c0cd9d6ffc81442cada84beab52f"
+    },
+    {
+      "path": "contract_comparison.md",
+      "sha256": "70449576c4dde8d2d799fec8fd6f83eef8a8bc92a68bf89a8288006c60a5a0b2"
+    },
+    {
+      "path": "dataset_status.csv",
+      "sha256": "a497257b131b03dadb202a24ab498aead0ae2035c3c0ae28a1ac7827d85c6a0a"
+    },
+    {
+      "path": "dataset_status.md",
+      "sha256": "7a00f2e63f18555789722c7a84b4100dbcb5025d250d1dcbe81d0481939a7559"
+    },
+    {
+      "path": "evidence_status.csv",
+      "sha256": "0087a562eb2d79cdd8460db8db22ec9f887a233a3071b5cceff49d15f1071309"
+    },
+    {
+      "path": "evidence_status.md",
+      "sha256": "c8dfb4a57e4127b8485c594387c488b28210165f939b4463cbf0801caacc897f"
+    },
+    {
+      "path": "google_clusterdata2019/01_cpu.csv",
+      "sha256": "6cfb437575631958a192c3fa2f6f107baccd339e351c53cb1fbc6e2e5fdd4f70"
+    },
+    {
+      "path": "google_clusterdata2019/01_cpu.md",
+      "sha256": "3c293f33d53a446106ea27cd3c34441360c47be995f70111c9264abe390658b4"
+    },
+    {
+      "path": "google_clusterdata2019/01_cpu.svg",
+      "sha256": "7997c57a436bef5d56a0ac692af15a6446b52cf7a7e0f6304e3211e984c90160"
+    },
+    {
+      "path": "google_clusterdata2019/02_memory.csv",
+      "sha256": "cd3c1bf9ca449275eabaaa531ed5480616a2df5e9f45501f6e9a396dd938a32a"
+    },
+    {
+      "path": "google_clusterdata2019/02_memory.md",
+      "sha256": "30cb11114493100daef5579f4d60ea3b487c944387954de6f30d15fcf6559fb4"
+    },
+    {
+      "path": "google_clusterdata2019/02_memory.svg",
+      "sha256": "4e57d4a6991a170a17b58f060f4e1a0c6d3167acb835d8f105806dabe112e6a0"
+    },
+    {
+      "path": "google_clusterdata2019/03_any_resource.csv",
+      "sha256": "595ce28ffdd8f6eed80c590dd4ba3f3deae20e30d6010aa68206a50ab410805f"
+    },
+    {
+      "path": "google_clusterdata2019/03_any_resource.md",
+      "sha256": "8f7d536b338bc865bff7c8c297f7388c553dbbfeb7b73462858d9a7702a54736"
+    },
+    {
+      "path": "google_clusterdata2019/03_any_resource.svg",
+      "sha256": "5b7082f30ae65bff155a10997691ca330e794ce439bd4be9325998fdbbc0cb02"
+    },
+    {
+      "path": "google_clusterdata2019/results.csv",
+      "sha256": "7bebfe8ae2da7bb1dd09f55db5c3c0fe78e8e601021874b1c5cd53f4906c345e"
+    },
+    {
+      "path": "google_clusterdata2019/results.md",
+      "sha256": "5601c486f2ab1613bcc0c12ca5c85b7e7442c24ac5fbf042bac1cdde4c91bb38"
+    },
+    {
+      "path": "limitations.md",
+      "sha256": "7f69395f4cf5203b1c9f62fd1880fe576002db4132a36eb1d1065ee99e96e926"
+    },
+    {
+      "path": "report.md",
+      "sha256": "c5b49c1e6781ce29173705c27dd794feba94edf80d2d4a422d6917b914f8ea94"
+    },
+    {
+      "path": "report_sources.csv",
+      "sha256": "57b17ba2f7e4e9f11f0f731af4e76fc705ad8a8ca622b5a8366da7e16fd5d74f"
+    },
+    {
+      "path": "reporting_decisions.csv",
+      "sha256": "1d7ba098a378f0af172c43b7be89ea900fa374bbd5d7c564e0d5c84d744c7458"
+    },
+    {
+      "path": "reporting_decisions.md",
+      "sha256": "fd8a3695ec42cfd0e316f17c399a4f967fed6d6111a288cbcbd1aa545a260b32"
+    }
+  ],
+  "project_completion": false,
+  "reference_documents": [
+    {
+      "path": "docs/design/canonical_workload_schema.md",
+      "path_base": "executing_checkout",
+      "role": "scope_aggregation_reference",
+      "sha256": "87653fe9022b1ca8092e07cc9a50b85f34003bb0e556c0a544e22f427b7bb295"
+    }
+  ],
+  "reporting_status": "DECISION_PENDING",
+  "sources": [
+    {
+      "path": "config/reporting_decisions/alibaba_clustertrace2018.evidence.json",
+      "path_base": "input_artifact_root",
+      "sha256": "5c4398f338823550411e9dab447a03f6fe632bed6b9d4811ef22b589bde26c5f"
+    },
+    {
+      "path": "config/reporting_decisions/alibaba_clustertrace2018.json",
+      "path_base": "input_artifact_root",
+      "sha256": "765bb96decbd3c5387c1b0e0fce527c26b585d5970c9a2c86fc75cf55fa903e1"
+    },
+    {
+      "path": "config/reporting_decisions/alibaba_gpu_v2020.evidence.json",
+      "path_base": "input_artifact_root",
+      "sha256": "9df0f48489fb6877c93551612887ac771fb09b8e308468268ea26706b02d266b"
+    },
+    {
+      "path": "config/reporting_decisions/alibaba_gpu_v2020.json",
+      "path_base": "input_artifact_root",
+      "sha256": "dda147381b533bc1e62112853c84b72c0bf9901d376d64db52e3627f11147f38"
+    },
+    {
+      "path": "config/reporting_decisions/azure_public_vm_v2.evidence.json",
+      "path_base": "input_artifact_root",
+      "sha256": "239148b5892c9c96e2ef975edb548d3a3423e62314c64f4b0667061c1cc8418a"
+    },
+    {
+      "path": "config/reporting_decisions/azure_public_vm_v2.json",
+      "path_base": "input_artifact_root",
+      "sha256": "9b0a6ad5e7bce05c585c38e2a5aac82fd587d37c3c3e3cbc4c2546790949106c"
+    },
+    {
+      "path": "config/reporting_decisions/google_clusterdata2019.evidence.json",
+      "path_base": "input_artifact_root",
+      "sha256": "b209a7b45ca0abb0e64906a956b79c6ff7f766f4cc52ca8b323d787c7492de9c"
+    },
+    {
+      "path": "config/reporting_decisions/google_clusterdata2019.json",
+      "path_base": "input_artifact_root",
+      "sha256": "faf588d30596d7cde04f7922e69c58cd59f47825e4160da2614c9a282cfb390b"
+    },
+    {
+      "path": "docs/data/alibaba_gpu_2020_evidence_and_limitations.md",
+      "path_base": "input_artifact_root",
+      "sha256": "d298c08c6145a6f8a13bf8fcc81f1891193b55551bc6f7971354f5bdd7ff9f2c"
+    },
+    {
+      "path": "docs/data/azure_vm_traceadvisor_feasibility.md",
+      "path_base": "input_artifact_root",
+      "sha256": "eb35fb65a2e0080b3362a9b4c808203078216de337849e4e5e8c96981bceffd0"
+    },
+    {
+      "path": "docs/data/google_subset_pipeline_analysis.md",
+      "path_base": "input_artifact_root",
+      "sha256": "d688b206046422473c29f59145f4732eb595e2ad391ad2f5a4529448c25f15b6"
+    },
+    {
+      "path": "docs/design/discussion_summary_2026-11-16.md",
+      "path_base": "input_artifact_root",
+      "sha256": "66dcac66545e90faa86e027303304755b66a7cb4d4b9a6f3ed6187647942973b"
+    },
+    {
+      "path": "docs/planning/github_issues/current_status.md",
+      "path_base": "input_artifact_root",
+      "sha256": "7f94d600512351e27b9d693b3854fb588fc6bba73937e6f74d7ed77ae2a2ab85"
+    },
+    {
+      "path": "docs/planning/github_issues/task10_google_subset_corrections_and_rerun.md",
+      "path_base": "input_artifact_root",
+      "sha256": "3f9fda9941e3c4cb8d5f0fdc3ce6bc23891d8e7b45f1b1fca72c88cfabb06f08"
+    },
+    {
+      "path": "docs/planning/github_issues/task11_azure_vm_dataset_integration.md",
+      "path_base": "input_artifact_root",
+      "sha256": "65d599b04c66441147b14124d0a9da6613f6c59485a8084a742208febfd8c1cf"
+    },
+    {
+      "path": "docs/planning/github_issues/task8_alibaba_gpu_2020_final_verification.md",
+      "path_base": "input_artifact_root",
+      "sha256": "c2bb4d846522862d6a2623fa255b6f7df5551ed6bbb661d46cc721e30d32941a"
+    },
+    {
+      "path": "docs/planning/github_issues/task9_alibaba_2018_adapter_demonstration.md",
+      "path_base": "input_artifact_root",
+      "sha256": "1a65e32d9d441494f8369e7abc037a8c18924b52bb917d63b2246f7111c6f47e"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/final_test/SHA256SUMS",
+      "path_base": "input_artifact_root",
+      "sha256": "e9a00316e361c7e586a7865c573033edb3c8754824c6f2428208930f0d8ef803"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
+      "path_base": "input_artifact_root",
+      "sha256": "c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/final_test/final_test_sensitivity.csv",
+      "path_base": "input_artifact_root",
+      "sha256": "e7f25120d954ec54341b10082142b254893c16ecdb4f670a8b839f0b90433fc1"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/final_test/metadata.json",
+      "path_base": "input_artifact_root",
+      "sha256": "94360125c1d6b241565457f93d6775af49bf285f498677919f8812c7d2010835"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/final_test/run_record.json",
+      "path_base": "input_artifact_root",
+      "sha256": "9221362f1cf51aa2eaea3958b1bbc234eb3f9019667067ea8ba43210ef21b6eb"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/ml/decision_manifest.json",
+      "path_base": "input_artifact_root",
+      "sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/ml/final_test_runs.jsonl",
+      "path_base": "input_artifact_root",
+      "sha256": "dfb98d2e6807ce4d444218e13a238e723ac510acf857ed5cb8779386b7678f33"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/verification/artifact_manifest.json",
+      "path_base": "input_artifact_root",
+      "sha256": "d9987e9f774c3556e7f5b8670747ae16abd66a9862879fe6cecb617a1b3a6d34"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/verification/reproduction_metadata.json",
+      "path_base": "input_artifact_root",
+      "sha256": "20fc134b3008de82247be36c9163c68e1c49600babf25929d40c8f3a04278f52"
+    },
+    {
+      "path": "reports/results/alibaba_gpu_2020/verification/verification_report.md",
+      "path_base": "input_artifact_root",
+      "sha256": "e5af8dbaffa81bf0f62d261239d4c5f184e3a1532ebb782210db238897d9039b"
+    },
+    {
+      "path": "reports/results/google_subset/decision_manifest.json",
+      "path_base": "input_artifact_root",
+      "sha256": "0669ca5c3cdec70a1013c886fbce4c0efc3746b936b7b0748f106523d40fa775"
+    },
+    {
+      "path": "reports/results/google_subset/final_test_run_metadata.json",
+      "path_base": "input_artifact_root",
+      "sha256": "a933ac23889c9229650b98da71f714532ce21ff52ec30ae2d1f6aa3da25c2c39"
+    },
+    {
+      "path": "reports/results/google_subset/ml_feature_manifest.json",
+      "path_base": "input_artifact_root",
+      "sha256": "b0b8a1356fe1a5412d8a9e32ed0d7c6992a614596ce882fced2402bf35153e5e"
+    },
+    {
+      "path": "reports/results/google_subset/n04_metadata.json",
+      "path_base": "input_artifact_root",
+      "sha256": "71961278053bcaa6ab1f47e8af7e789bb0bc58faf3b7dc37bb1e0ce011afbb5b"
+    },
+    {
+      "path": "reports/results/google_subset/n05_ml_metadata.json",
+      "path_base": "input_artifact_root",
+      "sha256": "1705328652d3a6df7e81cd5c61314dd464d10b0821d6d0975f654622b2314159"
+    },
+    {
+      "path": "reports/results/google_subset/tables/final_test_policy_comparison.csv",
+      "path_base": "input_artifact_root",
+      "sha256": "3a83f94ffc5e67675d85b7ff33ce6867e2067d0a6ca9231c825fffdd22c19219"
+    }
+  ],
+  "upstream_evidence": {
+    "alibaba_gpu_v2020": {
+      "bindings": [
+        {
+          "dataset_id": "alibaba_gpu_v2020",
+          "logical_artifact": "metadata",
+          "manifest_path": "data/processed/alibaba_gpu_v2020_ml/decision_manifest.json",
+          "observed_sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
+          "published_path": "reports/results/alibaba_gpu_2020/ml/decision_manifest.json",
+          "sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
+          "stage": "task7_pr1_ml",
+          "verification": "published_bytes_verified"
+        },
+        {
+          "dataset_id": "alibaba_gpu_v2020",
+          "logical_artifact": "results",
+          "manifest_path": "data/processed/alibaba_gpu_v2020_final_test/final_test_policy_comparison.csv",
+          "observed_sha256": "c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8",
+          "published_path": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
+          "sha256": "c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8",
+          "stage": "task7_pr2_final_test",
+          "verification": "published_bytes_verified"
+        },
+        {
+          "dataset_id": "alibaba_gpu_v2020",
+          "logical_artifact": "sensitivity",
+          "manifest_path": "data/processed/alibaba_gpu_v2020_final_test/final_test_sensitivity.csv",
+          "observed_sha256": "e7f25120d954ec54341b10082142b254893c16ecdb4f670a8b839f0b90433fc1",
+          "published_path": "reports/results/alibaba_gpu_2020/final_test/final_test_sensitivity.csv",
+          "sha256": "e7f25120d954ec54341b10082142b254893c16ecdb4f670a8b839f0b90433fc1",
+          "stage": "task7_pr2_final_test",
+          "verification": "published_bytes_verified"
+        },
+        {
+          "dataset_id": "alibaba_gpu_v2020",
+          "logical_artifact": "run_record",
+          "manifest_path": "data/processed/alibaba_gpu_v2020_final_test/run_record.json",
+          "observed_sha256": "9221362f1cf51aa2eaea3958b1bbc234eb3f9019667067ea8ba43210ef21b6eb",
+          "published_path": "reports/results/alibaba_gpu_2020/final_test/run_record.json",
+          "sha256": "9221362f1cf51aa2eaea3958b1bbc234eb3f9019667067ea8ba43210ef21b6eb",
+          "stage": "task7_pr2_final_test",
+          "verification": "published_bytes_verified"
+        },
+        {
+          "dataset_id": "alibaba_gpu_v2020",
+          "logical_artifact": "final_metadata",
+          "manifest_path": "data/processed/alibaba_gpu_v2020_final_test/metadata.json",
+          "observed_sha256": "94360125c1d6b241565457f93d6775af49bf285f498677919f8812c7d2010835",
+          "published_path": "reports/results/alibaba_gpu_2020/final_test/metadata.json",
+          "sha256": "94360125c1d6b241565457f93d6775af49bf285f498677919f8812c7d2010835",
+          "stage": "task7_pr2_final_test",
+          "verification": "published_bytes_verified"
+        }
+      ],
+      "dataset_id": "alibaba_gpu_v2020",
+      "external_physical_artifact_bytes": "UNVERIFIED: not inspected by reporting",
+      "final_population_size": 44053,
+      "followups": [
+        "Run history across earlier decisions remains an upstream follow-up.",
+        "Scientific execution environment differs from the repository lock file.",
+        "Task 8 reporting receipt records a dirty source tree; no clean reproduction is claimed."
+      ],
+      "generation_id": "9253c758018b4803ab009f7c638f64cf",
+      "historical_exactly_once_execution": "recorded integer-one counters; not independently observed",
+      "identity": {
+        "code_commit": "ea6aa08458aace364cd33529ce77de894bcd76ad",
+        "decision_manifest_sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
+        "run_id": "4fdc7e96-789b-43a9-990f-20f189e9598b"
+      },
+      "manifest_sha256": "d9987e9f774c3556e7f5b8670747ae16abd66a9862879fe6cecb617a1b3a6d34",
+      "november_10_byte_equivalence": "UNVERIFIED: old and new physical bundles not compared",
+      "published_artifact_bytes": "verified",
+      "published_metadata_consistency": "verified",
+      "scientific_inference_reproduction": "UNVERIFIED",
+      "unverified_items": [
+        {
+          "item": "Task 4 split isolation / history timing / target-value consistency on test rows",
+          "reason": "Task 8 deliberately does not reopen test target values. Test-side value-level checks are therefore inherited from the frozen Task 4 artifact checksums and metadata, not independently recomputed here."
+        },
+        {
+          "item": "Task 7 model-prediction reproduction on the real test feature rows",
+          "reason": "The verifier checks the locked model checksums, feature-order lock, saved prediction artifact checksum and run provenance, but does not rerun model inference in Task 8."
+        }
+      ],
+      "upstream_reporting_environment": {
+        "code_commit": "91400ba764cfdc0e433605f33f749bb7e3965020",
+        "code_dirty": true,
+        "dataset_id": "alibaba_gpu_v2020",
+        "full_test_command": "python -m pytest -q",
+        "generated_utc": "2026-11-16T20:11:10Z",
+        "generation_id": "9253c758018b4803ab009f7c638f64cf",
+        "pandas_version": "3.0.2",
+        "python_version": "3.11.15",
+        "schema_version": "0.2.0",
+        "verification_command": "python scripts/verify_alibaba_gpu_2020_artifacts.py",
+        "verification_status": "PASS"
+      }
+    },
+    "google_clusterdata2019": {
+      "dataset_id": "google_clusterdata2019",
+      "decision_manifest_sha256": "0669ca5c3cdec70a1013c886fbce4c0efc3746b936b7b0748f106523d40fa775",
+      "execution_commit": "e59349e04a8fb87f8097780462cb2464a9e5d337",
+      "external_physical_artifact_bytes": "UNVERIFIED: not inspected by reporting",
+      "final_population_size": 259,
+      "historical_exactly_once_execution": "not independently observed",
+      "limitations": [
+        "F3/F4: cross-split targets and contaminated validation; not leakage-safe final results.",
+        "F7/F8: abnormal/incomplete records and multi-machine aggregation remain limitations.",
+        "Task 10 correction or documented retention is governed by the validated dataset decision record."
+      ],
+      "producer_dataset_id": "google_subset_v1",
+      "published_artifact_bytes": "verified",
+      "published_metadata_consistency": "verified",
+      "scientific_inference_reproduction": "UNVERIFIED"
+    }
+  },
+  "verification_scope": {
+    "configuration_annotations": "Unverified operator notes; excluded from authoritative rendered reporting",
+    "external_physical_artifact_bytes": "UNVERIFIED",
+    "historical_execution": "UNVERIFIED",
+    "model_inference_reproduction": "UNVERIFIED",
+    "published_metadata": "consistency checked against pinned Task 8 sources",
+    "published_reporting_bytes": "verified against pinned source hashes",
+    "task4_test_value_isolation": "UNVERIFIED"
+  }
+}

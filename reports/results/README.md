@@ -2,6 +2,20 @@
 
 Final results of the TraceAdvisor evaluation, one folder per dataset. Every file here is small (Markdown, CSV, JSON, PNG); the full Parquet tables and model files stay in `data/processed/` (not tracked by Git) and are identified by the `SHA256SUMS` and manifest copies kept here.
 
+**Current cross-dataset entry point:** [Task 12 PR 2](cross_dataset_final/report.md),
+with [evidence](cross_dataset_final/evidence_status.md),
+[limitations](cross_dataset_final/limitations.md),
+[conclusions](cross_dataset_final/conclusions.md), and
+[artifact manifest](cross_dataset_final/artifact_manifest.json).
+Reporting validation passes while final dataset decisions remain pending.
+Published-byte validation is distinct from unavailable physical-artifact checks.
+Use the [runbook](../../docs/data/cross_dataset_reporting_runbook.md) to reproduce.
+
+`cross_dataset_pr1/` is the unchanged historical PR 1 snapshot. Some older
+per-stage narratives and manuscript numbers also describe earlier Alibaba runs;
+the PR 2 bundle uses the authoritative November 15 published tables. Updating
+those manuscript numbers is a separate follow-up.
+
 **Start with** each dataset's `*_results_and_analysis.md`: headline results, tables, figures and interpretation. The other report in each folder is the detailed run record.
 
 | Folder | Read first | Run record | Layout |

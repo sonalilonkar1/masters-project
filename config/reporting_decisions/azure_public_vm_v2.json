@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "dataset_id": "azure_public_vm_v2",
+  "status": "decision_pending",
+  "outcome": "pending",
+  "summary": "No documented team approval supplied. Decision remains pending.",
+  "evidence_path": "config/reporting_decisions/azure_public_vm_v2.evidence.json",
+  "evidence_sha256": "239148b5892c9c96e2ef975edb548d3a3423e62314c64f4b0667061c1cc8418a"
+}

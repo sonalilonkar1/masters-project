@@ -19,7 +19,7 @@
 | Task | Issue | Priority | Status | What is left |
 |---|---|---|---|---|
 | Task 8: Alibaba GPU 2020 final verification | #113 | P1 | **PR #121 merged 2026-11-16.** `main` now holds the Nov 15 run (`4fdc7e96…`), which re-ran Tasks 4–7 and the final test in a different environment and replaced the Oct 30 results and run log | Follow-ups: record the rerun, update the report's Alibaba ML/Hybrid numbers, check the environment against the lock file; close #113 (table 4.1) |
-| Task 12: final cross-dataset reporting | #117 | P1 | **PR 1 merged (#123)**; outputs in `reports/results/cross_dataset_pr1/` are provisional | PR 2: verified status, final manifest, limitations, conclusions, README and reproducibility (table 4.2) |
+| Task 12: final cross-dataset reporting | #117 (closed prematurely for full scope) | P1 | **PR 1 merged (#123)**; historical outputs preserved. PR 2 implemented locally, not pushed/reviewed | Review PR 2; Google/Azure/Alibaba 2018 decisions remain pending; no final project-completion claim |
 | Task 15: recommendation backend (UI export and read-only API) | #120 | P1 | **Not started**; no API code on `main`. Design in `docs/design/recommendation_service_design_plan.md` | Risk-level config, UI export, API, tests (table 4.3) |
 | Task 16: recommendation web UI | *new; file the issue* | P1 | **Not started**; split from Task 15 | Framework choice, views, tests, report Figures 8.1 and 8.2 (table 4.4) |
 | Task 10: Google subset corrections and rerun | #115 | P3 | **Not started** | Targets after split assignment, reselection, rerun of Notebooks 04–06, or a recorded decision to keep the current results with limitations (table 4.6) |
@@ -56,6 +56,16 @@
 | 10 | Close #113, #87 and #89 | **Remaining** | |
 
 ### 4.2 Task 12 PR 2: Final Cross-Dataset Reporting (#117)
+
+Local implementation note: authoritative published Task 8 linkage, strengthened
+aggregate validation, the separate `cross_dataset_final/` bundle, final artifact
+inventory, limitations, conclusions and runbook are implemented on
+`task12-final-reporting-pr2`, pending review. Existing rows below describe the
+original completion checklist; local implementation is not merge approval.
+Google retention, Azure go/stop and Alibaba 2018 outcomes remain `decision_pending`.
+Issue #117 is closed; a proposed reopening comment is prepared but not submitted.
+Task 8 history/environment repairs and manuscript updates remain separate work.
+
 
 | # | Item (task file section) | Status | Note |
 |---|---|---|---|
