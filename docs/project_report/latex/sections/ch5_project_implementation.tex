@@ -164,14 +164,14 @@ On Alibaba, the ML script, \texttt{run\_alibaba\_gpu\_2020\_ml.py}, verifies the
 \begin{tabular}{>{\raggedright\arraybackslash}p{0.060\linewidth}>{\raggedright\arraybackslash}p{0.195\linewidth}>{\raggedright\arraybackslash}p{0.417\linewidth}>{\raggedright\arraybackslash}p{0.044\linewidth}>{\raggedright\arraybackslash}p{0.044\linewidth}>{\raggedright\arraybackslash}p{0.091\linewidth}}
 \hline
 \textbf{Resource} & \textbf{Model} & \textbf{Settings} & \textbf{RMSE} & \textbf{MAE} & \textbf{Selected} \\ \hline
-CPU & Histogram gradient boosting & 100 iterations, learning rate 0.1, 31 leaves & 412.94 & 135.72 & Yes \\
-CPU & XGBoost & 300 trees, depth 6, learning rate 0.05, subsampling 0.8 & 415.04 & 134.48 &  \\
-CPU & Random forest & 100 trees & 425.97 & 134.67 &  \\
-CPU & Decision tree & No depth limit & 519.17 & 167.49 &  \\
+CPU & Histogram gradient boosting & 100 iterations, learning rate 0.1, 31 leaves & 412.91 & 136.03 & Yes \\
+CPU & XGBoost & 300 trees, depth 6, learning rate 0.05, subsampling 0.8 & 413.26 & 134.16 &  \\
+CPU & Random forest & 100 trees & 427.00 & 134.95 &  \\
+CPU & Decision tree & No depth limit & 520.09 & 169.69 &  \\
 CPU & Mean reference & Constant & 858.95 & 566.23 & Not selectable \\
-Memory & Histogram gradient boosting & 100 iterations, learning rate 0.1, 31 leaves & 8.98 & 3.14 & Yes \\
-Memory & XGBoost & 300 trees, depth 6, learning rate 0.05, subsampling 0.8 & 9.09 & 3.22 &  \\
-Memory & Random forest & 100 trees & 9.16 & 3.21 &  \\
+Memory & Histogram gradient boosting & 100 iterations, learning rate 0.1, 31 leaves & 8.87 & 3.14 & Yes \\
+Memory & Random forest & 100 trees & 9.16 & 3.20 &  \\
+Memory & XGBoost & 300 trees, depth 6, learning rate 0.05, subsampling 0.8 & 9.20 & 3.25 &  \\
 Memory & Decision tree & No depth limit & 10.34 & 3.62 &  \\
 Memory & Mean reference & Constant & 13.28 & 9.23 & Not selectable \\
 \hline
@@ -182,7 +182,7 @@ Memory & Mean reference & Constant & 13.28 & 9.23 & Not selectable \\
 
 On Google, tuning improved every model family over its starting configuration, and the random forest was the best tuned candidate for both resources on every accuracy measure (Table~\ref{tab:5.5}). The median reference has a lower MAE than every tuned model but a much higher log-scale error and RMSE: it predicts the typical occurrence well and fails on the large ones, which matter most for sizing. The grouped cross-validation gave similar mean errors to the time-ordered folds but a spread about five times larger ($\pm$ 0.285 against $\pm$ 0.054 for CPU), so accuracy on unseen workloads depends strongly on which workloads are held out.
 
-On Alibaba, the three ensemble models are within about 3\% of one another in RMSE, and the decision tree without a depth limit is clearly the weakest learner (Table~\ref{tab:5.6}). Every model beats the constant predictor on MAE, and the selected models reach an R$^{2}$ of 0.76 for CPU and 0.53 for memory. The constant predictor nevertheless has the lowest violation rate of all candidates, 11.97\% for CPU and 24.79\% for memory against 41.91\% and 47.76\% for the selected models, because the mean of a heavy-tailed target lies above most of its values; a violation-first ranking would therefore have selected it (Section~\ref{sec:4.2.2}).
+On Alibaba, the three ensemble models are within about 4\% of one another in RMSE, and the decision tree without a depth limit is clearly the weakest learner (Table~\ref{tab:5.6}). Every model beats the constant predictor on MAE, and the selected models reach an R$^{2}$ of 0.76 for CPU and 0.54 for memory. The constant predictor nevertheless has the lowest violation rate of all candidates, 11.97\% for CPU and 24.79\% for memory against 42.18\% and 47.28\% for the selected models, because the mean of a heavy-tailed target lies above most of its values; a violation-first ranking would therefore have selected it (Section~\ref{sec:4.2.2}).
 
 \subsection{Hybrid Safeguard Recommender}\label{sec:5.4}
 
@@ -224,4 +224,4 @@ On Google, Notebook 06 freezes the decisions in \texttt{decision\_manifest.json}
 
 On Alibaba, the ML script writes its decision manifest after selection and refit, before the test table has been opened. It records the baseline selection and the hash of its record, the input checksums, the selected models with their hyperparameters and file hashes, the feature list and order, the Hybrid and clipping rules, the selection order, the random seed, the library versions, the result semantics and the code commit. The final-test script, \texttt{run\_alibaba\_gpu\_2020\_final\_test.py}, opens the test table only after it has verified every input against the manifest, confirmed that the manifest was built from a clean working tree at the current commit and logged the run, and it refuses a second run for the same manifest whatever output folder is requested (Section~\ref{sec:6.2}). It then loads the locked models without refitting, scores the seven policies on the 44,053 test rows with at least one available target, and writes the comparison, the sensitivity results, row-level predictions and a run record.
 
-Raw and processed data remain outside version control because of their size, while the final results of each dataset, including the decision manifests and run records, are committed under \texttt{reports/results/}, and all final runs use the locked environment of \texttt{requirements-lock.txt} (Table~\ref{tab:3.1}). A planned REST API will serve the published recommendation and result files as JSON, organized by dataset, workload and policy and labelled with their units, and a web frontend will present them to developers; neither component will run a pipeline stage or modify an artifact (Sections~\ref{sec:4.4} and~\ref{sec:8.3}).
+Raw and processed data remain outside version control because of their size, while the final results of each dataset, including the decision manifests and run records, are committed under \texttt{reports/results/}, and the final runs use the locked environment of \texttt{requirements-lock.txt} (Table~\ref{tab:3.1}), except the published Alibaba run, whose library versions are recorded in its decision manifest (Section~\ref{sec:8.2}). A planned REST API will serve the published recommendation and result files as JSON, organized by dataset, workload and policy and labelled with their units, and a web frontend will present them to developers; neither component will run a pipeline stage or modify an artifact (Sections~\ref{sec:4.4} and~\ref{sec:8.3}).

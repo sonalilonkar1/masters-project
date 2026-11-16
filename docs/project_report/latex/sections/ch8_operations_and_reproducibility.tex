@@ -28,7 +28,7 @@ On the reference machine, the published Alibaba run of 30 October 2026 took 56 s
 
 \subsection{Reproducibility and Repository Layout}\label{sec:8.2}
 
-\textbf{Environment.} All final runs used a locked Python 3.12 environment. \texttt{requirements-lock.txt} pins the exact version of every package, while \texttt{requirements.txt} keeps the minimum versions (Table~\ref{tab:3.1}). The environment is created as follows:
+\textbf{Environment.} The Google final run and the first Alibaba run used a locked Python 3.12 environment. The published Alibaba run (Section~\ref{sec:6.2}) used Python 3.11.15 with pandas 3.0.2, scikit-learn 1.8.0 and XGBoost 3.2.0; these versions are recorded in its decision manifest and differ from the lock file. \texttt{requirements-lock.txt} pins the exact version of every package, while \texttt{requirements.txt} keeps the minimum versions (Table~\ref{tab:3.1}). The environment is created as follows:
 
 {\footnotesize
 \begin{verbatim}
@@ -70,9 +70,9 @@ The last command registers the kernel used by the Google notebooks. The test sui
 
 Code, configuration, documentation and final results are versioned in Git, while data and model files remain local, as described in Section~\ref{sec:4.4}.
 
-\textbf{Provenance records.} Each result can be traced to the data and code that produced it. On Google, the decision manifest records the selections and the checksums of the thirteen inputs, and \texttt{final\_test\_run\_metadata.json} records the commit and manifest checksum of the test run. On Alibaba, every stage writes a \texttt{metadata.json} and a \texttt{SHA256SUMS} file, the canonical build writes a count report that reconciles output rows with the source tables, and the ML stage writes a decision manifest. The run log \texttt{ml/final\_test\_runs.jsonl} and the record \texttt{final\_test/run\_record.json} document the single test run. Copies of these records are kept with the results in \texttt{reports/results/}.
+\textbf{Provenance records.} Each result can be traced to the data and code that produced it. On Google, the decision manifest records the selections and the checksums of the thirteen inputs, and \texttt{final\_test\_run\_metadata.json} records the commit and manifest checksum of the test run. On Alibaba, every stage writes a \texttt{metadata.json} and a \texttt{SHA256SUMS} file, the canonical build writes a count report that reconciles output rows with the source tables, and the ML stage writes a decision manifest. The run log \texttt{ml/final\_test\_runs.jsonl} and the record \texttt{final\_test/run\_record.json} document the published test run, which is the second execution of the Alibaba final test (Section~\ref{sec:6.2}). Copies of these records are kept with the results in \texttt{reports/results/}.
 
-\textbf{Reproduction limits.} Because each final test can be run only once per decision manifest, the published test results cannot be produced again in the same output location. They can be reproduced elsewhere from the same commit: the Google freeze and test from a clean checkout of \texttt{e59349e}, and the Alibaba ML lock and final test from a clean checkout of \texttt{fe38ea0}, the commit used for the published run. Building a new Alibaba ML lock produces a new decision manifest, which counts as a new experiment rather than a reproduction of the published one.
+\textbf{Reproduction limits.} Because each final test can be run only once per decision manifest, the published test results cannot be produced again in the same output location. They can be reproduced elsewhere from the same commit: the Google freeze and test from a clean checkout of \texttt{e59349e}, and the Alibaba ML lock and final test from a clean checkout of \texttt{ea6aa08}, the commit used for the published run, with the library versions recorded in its decision manifest. Building a new Alibaba ML lock produces a new decision manifest, which counts as a new experiment rather than a reproduction of the published one.
 
 \subsection{Developer-Facing API and Web Frontend}\label{sec:8.3}
 
@@ -92,7 +92,7 @@ The web frontend will let a developer look up a recurring workload and choose ho
   \textbf{Efficient} shows the P90 recommendation.
 \end{itemize}
 
-Next to each recommended CPU and memory value, the frontend shows the workload's original request and the violation rate and average waste that the selected policy had in the test period, so the developer sees what each level costs and how often it was exceeded. On Alibaba, for example, memory recommendations were exceeded by 3.15\% of test occurrences under Hybrid, 6.04\% under P95 and 9.89\% under P90, at average waste of 8.71, 7.89 and 7.44 GB (Table~\ref{tab:7.3}). Mean and ML alone are not offered, because they were exceeded by about a third or more of test occurrences on both datasets; they remain in the policy comparison view (Fig.~\ref{fig:8.2}).
+Next to each recommended CPU and memory value, the frontend shows the workload's original request and the violation rate and average waste that the selected policy had in the test period, so the developer sees what each level costs and how often it was exceeded. On Alibaba, for example, memory recommendations were exceeded by 3.18\% of test occurrences under Hybrid, 6.04\% under P95 and 9.89\% under P90, at average waste of 8.70, 7.89 and 7.44 GB (Table~\ref{tab:7.3}). Mean and ML alone are not offered, because they were exceeded by about a third or more of test occurrences on both datasets; they remain in the policy comparison view (Fig.~\ref{fig:8.2}).
 
 \begin{figure*}[!t]
 \centering

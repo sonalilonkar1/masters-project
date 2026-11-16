@@ -1,6 +1,6 @@
 # Chapter 7 evidence source map
 
-Repository audit: 30 October 2026. This is an evidence inventory, not a chapter draft. No experiments were rerun. Existing notebooks, implementation and result artifacts were read only. Paths below are repository-relative; notebook cell numbers are zero-based JSON indices. Numerical tables below are transcribed programmatically from saved CSVs, rounded for display; the named CSV and row key are authoritative for full precision.
+Repository audit: 30 October 2026; Alibaba ML, Hybrid and sensitivity values updated on 16 November 2026 to the published second execution (PR #121), regenerated from the committed CSVs. This is an evidence inventory, not a chapter draft. No experiments were rerun. Existing notebooks, implementation and result artifacts were read only. Paths below are repository-relative; notebook cell numbers are zero-based JSON indices. Numerical tables below are transcribed programmatically from saved CSVs, rounded for display; the named CSV and row key are authoritative for full precision.
 
 ## Evidence status and metric definitions
 
@@ -178,15 +178,15 @@ Source: `reports/results/alibaba_gpu_2020/ml/candidate_models.csv`. Output locat
 | resource | model | n_train | n_val | n_clipped_validation | mae | rmse | r2 | violation_pct | average_shortfall | selected |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | cpu | dummy_mean | 220299 | 41913 | 0 | 566.228260 | 858.953806 | -0.048516 | 11.970033 | 190.730941 | False |
-| cpu | decision_tree | 220299 | 41913 | 0 | 167.491769 | 519.172279 | 0.616948 | 55.591344 | 79.094343 | False |
-| cpu | random_forest | 220299 | 41913 | 0 | 134.670213 | 425.971240 | 0.742133 | 53.978479 | 54.386433 | False |
-| cpu | hist_gradient_boosting | 220299 | 41913 | 151 | 135.723501 | 412.940869 | 0.757668 | 41.908238 | 49.226306 | True |
-| cpu | xgboost | 220299 | 41913 | 1 | 134.482223 | 415.038047 | 0.755200 | 45.348698 | 49.818194 | False |
+| cpu | decision_tree | 220299 | 41913 | 0 | 169.693341 | 520.086553 | 0.615597 | 55.293107 | 80.834929 | False |
+| cpu | random_forest | 220299 | 41913 | 0 | 134.953732 | 427.004264 | 0.740881 | 53.785222 | 53.917603 | False |
+| cpu | hist_gradient_boosting | 220299 | 41913 | 153 | 136.026196 | 412.905936 | 0.757709 | 42.175459 | 48.674434 | True |
+| cpu | xgboost | 220299 | 41913 | 19 | 134.159570 | 413.264260 | 0.757288 | 46.486770 | 50.773017 | False |
 | memory | dummy_mean | 220832 | 42069 | 0 | 9.228217 | 13.276163 | -0.029706 | 24.787849 | 3.486624 | False |
 | memory | decision_tree | 220832 | 42069 | 0 | 3.619940 | 10.334961 | 0.375998 | 47.747748 | 1.414858 | False |
 | memory | random_forest | 220832 | 42069 | 0 | 3.204646 | 9.161680 | 0.509636 | 46.376191 | 1.235032 | False |
-| memory | hist_gradient_boosting | 220832 | 42069 | 376 | 3.142379 | 8.982769 | 0.528601 | 47.759633 | 1.239059 | True |
-| memory | xgboost | 220832 | 42069 | 353 | 3.224062 | 9.087733 | 0.517520 | 50.010697 | 1.230351 | False |
+| memory | hist_gradient_boosting | 220832 | 42069 | 33 | 3.140518 | 8.874319 | 0.539915 | 47.277092 | 1.218818 | True |
+| memory | xgboost | 220832 | 42069 | 246 | 3.249749 | 9.195405 | 0.506019 | 50.331598 | 1.233803 | False |
 
 #### Alibaba policies — validation / selection
 
@@ -199,8 +199,8 @@ Source: `reports/results/alibaba_gpu_2020/ml/validation_policy_comparison.csv`. 
 | P90 | 42069 | 41913 | 42069 | 12.251569 | 12.396301 | 0.697437 | 0.683364 | 235.442059 | 7.802820 | 28.713061 | 0.488651 |
 | P95 | 42069 | 41913 | 42069 | 8.999594 | 8.457534 | 0.675090 | 0.660382 | 263.084356 | 8.260064 | 25.721453 | 0.451071 |
 | P99 | 42069 | 41913 | 42069 | 6.618472 | 5.576553 | 0.644912 | 0.626029 | 294.955963 | 8.941158 | 23.993369 | 0.423667 |
-| ML | 42069 | 41913 | 42069 | 41.908238 | 47.759633 | 0.821489 | 0.853581 | 86.497195 | 1.903320 | 49.226306 | 1.239059 |
-| Hybrid | 42069 | 41913 | 42069 | 4.602391 | 5.148684 | 0.626924 | 0.623725 | 305.621776 | 9.140566 | 12.995332 | 0.307365 |
+| ML | 42069 | 41913 | 42069 | 42.175459 | 47.277092 | 0.823344 | 0.852246 | 87.351762 | 1.921700 | 48.674434 | 1.218818 |
+| Hybrid | 42069 | 41913 | 42069 | 4.509341 | 5.229504 | 0.627055 | 0.624374 | 305.465535 | 9.136972 | 12.924671 | 0.309615 |
 
 #### Alibaba policies — saved final test
 
@@ -213,10 +213,10 @@ Source: `reports/results/alibaba_gpu_2020/final_test/final_test_policy_compariso
 | P90 | 44053 | 44045 | 44053 | 44045 | 44053 | 12.407765 | 9.888089 | 0.704164 | 0.682353 | 237.569508 | 7.440147 | 48.063104 | 0.301017 |
 | P95 | 44053 | 44045 | 44053 | 44045 | 44053 | 9.097514 | 6.044991 | 0.681723 | 0.658849 | 266.947073 | 7.894859 | 45.267546 | 0.264165 |
 | P99 | 44053 | 44045 | 44053 | 44045 | 44053 | 6.452492 | 3.443579 | 0.648675 | 0.620059 | 306.435275 | 8.667781 | 43.529385 | 0.232954 |
-| ML | 44053 | 44045 | 44053 | 44042 | 44049 | 47.372006 | 44.768801 | 0.857457 | 0.841783 | 72.007092 | 1.327719 | 78.384134 | 1.045793 |
-| Hybrid | 44053 | 44045 | 44053 | 44045 | 44053 | 3.766602 | 3.146210 | 0.629465 | 0.617031 | 326.823419 | 8.706855 | 20.539894 | 0.196647 |
+| ML | 44053 | 44045 | 44053 | 44018 | 44046 | 45.530707 | 45.526979 | 0.852255 | 0.846441 | 75.157799 | 1.295635 | 78.086441 | 1.063900 |
+| Hybrid | 44053 | 44045 | 44053 | 44045 | 44053 | 3.621296 | 3.177990 | 0.628634 | 0.618541 | 327.473234 | 8.698869 | 20.735379 | 0.197045 |
 
-Final record: clean commit `fe38ea0c07969a4cdceb3d1d08bbe08813232d5f` for ML lock and test; locked models refitted on train+validation; `prior_runs=0`, no defect rerun, test manifest hash matches ML manifest. `final_test/run_record.json` reports negative test predictions clipped: CPU 44, memory 18; Hybrid missing safeguards: zero for either resource. CPU utilization ML denominator 44,042, memory 44,049; violations use 44,045 / 44,053. The committed run record supports a recorded first test; it is not independent proof that no other experiment ever accessed test data.
+Final record (updated 16 Nov 2026 to the published second execution, PR #121): clean commit `ea6aa08458aace364cd33529ce77de894bcd76ad` for ML lock and test, run `4fdc7e96-789b-43a9-990f-20f189e9598b`, decision manifest `d36964c0…`; locked models refitted on train+validation; `prior_runs=0`, no defect reason, `test_target_read_count = 1`, `test_evaluator_call_count = 1`. The first execution (commit `fe38ea0`, 30 Oct 2026; manifest `dd6819bf…`) is not in the committed run log; its numbers are in git history before `7eb48a7` (Chapter 6 §6.2). `final_test/run_record.json` reports negative test predictions clipped: CPU 237, memory 22; Hybrid missing safeguards: zero for either resource. CPU utilization ML denominator 44,018, memory 44,046; violations use 44,045 / 44,053. The committed run record supports a recorded first test; it is not independent proof that no other experiment ever accessed test data.
 
 Sensitivity artifacts: `baselines/sensitivity_validation.csv` and `final_test/final_test_sensitivity.csv` contain same-second successor exclusion/only, multi-instance subgroup and recurrence/group-weighted metrics. These are supplementary subgroup/weighting analyses, not additional independent test datasets. Exact rows and all metrics are available below.
 
@@ -263,36 +263,36 @@ Source: `reports/results/alibaba_gpu_2020/final_test/final_test_sensitivity.csv`
 | occurrence_weighted | P90 | 44053 | 44045 | 44053 | 44045 | 44053 | 12.407765 | 9.888089 | 0.704164 | 0.682353 | 237.569508 | 7.440147 | 48.063104 | 0.301017 | average_usage | memory | False |  |
 | occurrence_weighted | P95 | 44053 | 44045 | 44053 | 44045 | 44053 | 9.097514 | 6.044991 | 0.681723 | 0.658849 | 266.947073 | 7.894859 | 45.267546 | 0.264165 | average_usage | memory | False |  |
 | occurrence_weighted | P99 | 44053 | 44045 | 44053 | 44045 | 44053 | 6.452492 | 3.443579 | 0.648675 | 0.620059 | 306.435275 | 8.667781 | 43.529385 | 0.232954 | average_usage | memory | False |  |
-| occurrence_weighted | ML | 44053 | 44045 | 44053 | 44042 | 44049 | 47.372006 | 44.768801 | 0.857457 | 0.841783 | 72.007092 | 1.327719 | 78.384134 | 1.045793 | average_usage | memory | False |  |
-| occurrence_weighted | Hybrid | 44053 | 44045 | 44053 | 44045 | 44053 | 3.766602 | 3.146210 | 0.629465 | 0.617031 | 326.823419 | 8.706855 | 20.539894 | 0.196647 | average_usage | memory | False |  |
+| occurrence_weighted | ML | 44053 | 44045 | 44053 | 44018 | 44046 | 45.530707 | 45.526979 | 0.852255 | 0.846441 | 75.157799 | 1.295635 | 78.086441 | 1.063900 | average_usage | memory | False |  |
+| occurrence_weighted | Hybrid | 44053 | 44045 | 44053 | 44045 | 44053 | 3.621296 | 3.177990 | 0.628634 | 0.618541 | 327.473234 | 8.698869 | 20.735379 | 0.197045 | average_usage | memory | False |  |
 | same_second_excluded | Request | 43802 | 43794 | 43802 | 43794 | 43802 | 16.805955 | 3.171088 | 0.380210 | 0.253126 | 418.878506 | 22.349306 | 192.560379 | 0.664803 | average_usage | memory | False |  |
 | same_second_excluded | Mean | 43802 | 43794 | 43802 | 43794 | 43802 | 41.797963 | 36.977764 | 0.787432 | 0.744365 | 139.317041 | 6.473666 | 81.484554 | 0.616536 | average_usage | memory | False |  |
 | same_second_excluded | P90 | 43802 | 43794 | 43802 | 43794 | 43802 | 12.421793 | 9.919638 | 0.703221 | 0.681650 | 238.641435 | 7.463499 | 48.332815 | 0.302347 | average_usage | memory | False |  |
 | same_second_excluded | P95 | 43802 | 43794 | 43802 | 43794 | 43802 | 9.124538 | 6.065933 | 0.680719 | 0.658126 | 268.161182 | 7.917708 | 45.525542 | 0.265544 | average_usage | memory | False |  |
 | same_second_excluded | P99 | 43802 | 43794 | 43802 | 43794 | 43802 | 6.482623 | 3.456463 | 0.647587 | 0.619349 | 307.852369 | 8.692160 | 43.778386 | 0.234260 | average_usage | memory | False |  |
-| same_second_excluded | ML | 43802 | 43794 | 43802 | 43791 | 43798 | 47.232498 | 44.726268 | 0.856835 | 0.841347 | 72.371812 | 1.331003 | 78.724052 | 1.050113 | average_usage | memory | False |  |
-| same_second_excluded | Hybrid | 43802 | 43794 | 43802 | 43794 | 43802 | 3.781340 | 3.157390 | 0.628267 | 0.616303 | 328.357365 | 8.731458 | 20.657133 | 0.197744 | average_usage | memory | False |  |
+| same_second_excluded | ML | 43802 | 43794 | 43802 | 43767 | 43795 | 45.403480 | 45.518469 | 0.851615 | 0.846097 | 75.541130 | 1.297637 | 78.431738 | 1.068483 | average_usage | memory | False |  |
+| same_second_excluded | Hybrid | 43802 | 43794 | 43802 | 43794 | 43802 | 3.635201 | 3.189352 | 0.627431 | 0.617822 | 329.010905 | 8.723426 | 20.853739 | 0.198144 | average_usage | memory | False |  |
 | same_second_only | Request | 251 | 251 | 251 | 251 | 251 | 0 | 1.992032 | 0.307728 | 0.321312 | 610.571928 | 16.011878 | 0 | 0.082556 | average_usage | memory | False |  |
 | same_second_only | Mean | 251 | 251 | 251 | 251 | 251 | 47.410359 | 44.621514 | 0.912557 | 0.865438 | 40.301843 | 2.477965 | 5.541268 | 0.221023 | average_usage | memory | False |  |
 | same_second_only | P90 | 251 | 251 | 251 | 251 | 251 | 9.960159 | 4.382470 | 0.868766 | 0.805041 | 50.541734 | 3.365008 | 1.004443 | 0.068924 | average_usage | memory | False |  |
 | same_second_only | P95 | 251 | 251 | 251 | 251 | 251 | 4.382470 | 2.390438 | 0.856813 | 0.785011 | 55.111501 | 3.907450 | 0.252901 | 0.023455 | average_usage | memory | False |  |
 | same_second_only | P99 | 251 | 251 | 251 | 251 | 251 | 1.195219 | 1.195219 | 0.838511 | 0.743947 | 59.183476 | 4.413408 | 0.084160 | 0.005171 | average_usage | memory | False |  |
-| same_second_only | ML | 251 | 251 | 251 | 251 | 251 | 71.713147 | 52.191235 | 0.965914 | 0.917818 | 8.371501 | 0.754619 | 19.075859 | 0.291970 | average_usage | memory | False |  |
+| same_second_only | ML | 251 | 251 | 251 | 251 | 251 | 67.729084 | 47.011952 | 0.963978 | 0.906534 | 8.274905 | 0.946155 | 17.839700 | 0.264092 | average_usage | memory | False |  |
 | same_second_only | Hybrid | 251 | 251 | 251 | 251 | 251 | 1.195219 | 1.195219 | 0.838511 | 0.743947 | 59.183476 | 4.413408 | 0.084160 | 0.005171 | average_usage | memory | False |  |
 | multi_instance | Request | 595 | 595 | 595 | 595 | 595 | 14.789916 | 13.445378 | 0.343835 | 0.331009 | 630.342064 | 26.741680 | 186.226479 | 1.620913 | average_usage | memory | False |  |
 | multi_instance | Mean | 595 | 595 | 595 | 595 | 595 | 32.941176 | 28.403361 | 0.715792 | 0.673795 | 240.492781 | 10.657478 | 89.870551 | 1.223865 | average_usage | memory | False |  |
 | multi_instance | P90 | 595 | 595 | 595 | 595 | 595 | 15.798319 | 10.924370 | 0.659468 | 0.622378 | 331.815226 | 11.387300 | 76.502110 | 1.085672 | average_usage | memory | False |  |
 | multi_instance | P95 | 595 | 595 | 595 | 595 | 595 | 13.445378 | 8.739496 | 0.639131 | 0.598990 | 348.623342 | 11.884423 | 75.114819 | 1.070232 | average_usage | memory | False |  |
 | multi_instance | P99 | 595 | 595 | 595 | 595 | 595 | 12.100840 | 8.067227 | 0.615734 | 0.569701 | 369.630278 | 12.417323 | 73.680764 | 1.063248 | average_usage | memory | False |  |
-| multi_instance | ML | 595 | 595 | 595 | 594 | 595 | 31.596639 | 40.840336 | 0.832642 | 0.879062 | 76.810052 | 1.139446 | 61.612667 | 0.806965 | average_usage | memory | False |  |
-| multi_instance | Hybrid | 595 | 595 | 595 | 595 | 595 | 5.546218 | 5.714286 | 0.595016 | 0.564230 | 377.934985 | 12.561526 | 35.393008 | 0.264302 | average_usage | memory | False |  |
+| multi_instance | ML | 595 | 595 | 595 | 595 | 595 | 31.932773 | 39.159664 | 0.833370 | 0.880951 | 81.568802 | 1.154789 | 60.533658 | 0.809912 | average_usage | memory | False |  |
+| multi_instance | Hybrid | 595 | 595 | 595 | 595 | 595 | 5.546218 | 5.882353 | 0.597155 | 0.564868 | 378.973925 | 12.577392 | 34.659950 | 0.288891 | average_usage | memory | False |  |
 | group_weighted | Request | 44053 |  |  |  |  | 21.216760 | 4.111972 | 0.460739 | 0.281964 | 362.674679 | 22.233622 | 195.034605 | 1.017021 | average_usage | memory | False | 9720 |
 | group_weighted | Mean | 44053 |  |  |  |  | 36.881892 | 27.598035 | 0.721266 | 0.622870 | 195.310341 | 10.701615 | 89.291503 | 0.860636 | average_usage | memory | False | 9720 |
 | group_weighted | P90 | 44053 |  |  |  |  | 15.730275 | 9.234626 | 0.658788 | 0.577736 | 283.950627 | 11.534822 | 59.587573 | 0.597694 | average_usage | memory | False | 9720 |
 | group_weighted | P95 | 44053 |  |  |  |  | 13.274324 | 6.236901 | 0.642943 | 0.560695 | 308.664444 | 11.940020 | 57.049134 | 0.563863 | average_usage | memory | False | 9720 |
 | group_weighted | P99 | 44053 |  |  |  |  | 11.384634 | 4.168754 | 0.621302 | 0.534196 | 339.778670 | 12.607378 | 55.462326 | 0.534916 | average_usage | memory | False | 9720 |
-| group_weighted | ML | 44053 |  |  |  |  | 42.733106 | 41.226514 | 0.812587 | 0.805971 | 96.411405 | 1.556925 | 80.578300 | 1.601634 | average_usage | memory | False | 9720 |
-| group_weighted | Hybrid | 44053 |  |  |  |  | 4.084581 | 3.709276 | 0.566033 | 0.531438 | 378.498123 | 12.668642 | 22.816291 | 0.443584 | average_usage | memory | False | 9720 |
+| group_weighted | ML | 44053 |  |  |  |  | 40.134100 | 40.522010 | 0.802010 | 0.813001 | 102.855131 | 1.499570 | 78.351731 | 1.615235 | average_usage | memory | False | 9720 |
+| group_weighted | Hybrid | 44053 |  |  |  |  | 3.857815 | 3.774143 | 0.565147 | 0.532509 | 379.541753 | 12.661023 | 22.977180 | 0.444781 | average_usage | memory | False | 9720 |
 
 #### Sensitivity — Google validation
 
@@ -328,7 +328,7 @@ Cross-platform comparability: compare the qualitative history/ML/Hybrid trade-of
 ### Findings supported by the primary saved tables
 
 - Google final test: Hybrid any-resource violation 12.355212% versus P95 17.374517% and selected P99 14.671815%; CPU waste 7.636559 versus P95 7.616189 and P99 17.482997. P99 has lower CPU violation (9.266409%) than Hybrid (10.810811%). Use resource-specific qualifications, not “Hybrid wins every metric.” Source: Google final policy table above; status: saved test with the validation-leakage limitation below.
-- Alibaba final test: Hybrid memory violation 3.146210% versus P99 3.443579%; memory waste 8.706855 versus 8.667781 GB. Request is 3.164370%, numerically close but not an exact tie. Hybrid CPU violation 3.766602% versus P99 6.452492%. Source: Alibaba final table; CPU is average-usage sizing only.
+- Alibaba final test: Hybrid memory violation 3.177990% versus P99 3.443579%; memory waste 8.698869 versus 8.667781 GB. Request is 3.164370%, numerically close but not an exact tie (Hybrid is now 0.014 points higher). Hybrid CPU violation 3.621296% versus P99 6.452492%. Source: Alibaba final table; CPU is average-usage sizing only.
 - ML-only has lowest average waste in each saved final table, but high violation rates; lower average waste alone does not establish a good recommendation. Model accuracy and provisioning reliability measure different goals.
 - min_runs affects fallback: Google P99 validation any-resource violation rises from 21.951220%@1 to 30.981595%@10; Alibaba P99 memory violation falls from 8.742780%@1 to 5.576553%@10 (check exact source CSV for full precision). Requests differ between datasets, explaining why more fallback has different effects. These are validation candidate observations, not causal experiments or test tuning.
 - History coverage (added 16 Nov 2026): fallback rows among evaluated final-test rows are Google 9 of 259 (Table 5.3) and Alibaba memory 11,036 of 44,053 (Table 5.4). Per workload, the last test run (target status `no_next_occurrence`) falls back for 233 of 472 Google workloads (`data/processed/google_subset_v1/test_occurrences.parquet`, rows with both targets null, `uses_history_memory_p95 = False`) and 19,341 of 25,232 Alibaba workloads (`data/processed/alibaba_gpu_v2020_final_test/final_test_predictions.parquet` joined on `role_key` + `occurrence_id` to Task 6 `recommendations_test.parquet`, `uses_history_memory_p99 = False`). Computed from recommendation flags only; no test target values were read. Outcomes of history versus fallback rows are not analysed (Task 14).
@@ -361,7 +361,7 @@ The seven primary Google/Alibaba figure files are present. `reports/results/make
 - §7.1 Azure supporting studies: Resource Central VM-level comparison, Splitwise and ModServe test summaries (sources above); no Table 7.1.
 - §7.2 Google: Table 7.1 (final-test baselines), Table 7.2 (ML/Hybrid), Figure 7.1 (`figures/fig_7_1.png` = `fig_google_baseline_candidates.png`), Figure 7.2 (`figures/fig_7_2.png` = `fig_google_test_tradeoff.png`). Metric definitions refer to Chapter 4 §4.3. No §7.2.3.
 - §7.3 Alibaba: Table 7.3 (validation and final test, with CPU waste from `average_cpu_waste`), Figure 7.3 (`figures/fig_7_3.png` = `fig_alibaba_test_tradeoff.png`, memory left, CPU right). Sensitivity paragraph from `final_test/final_test_sensitivity.csv` rows `multi_instance` and `group_weighted`.
-- §7.4 Google and Alibaba only: Table 7.4 (measurement scope); cross-dataset findings (Hybrid vs safeguard, ML alone, requests) and the `min_runs` contrast from `google_subset/tables/baseline_validation_comparison.csv` (P99 any-resource 21.951% @1, 30.982% @10) and `alibaba_gpu_2020/baselines/validation_comparison.csv` (P99 memory 8.743% @1, 5.577% @10). Request memory waste 22.313 / Hybrid 8.707 = 2.56×.
+- §7.4 Google and Alibaba only: Table 7.4 (measurement scope); cross-dataset findings (Hybrid vs safeguard, ML alone, requests) and the `min_runs` contrast from `google_subset/tables/baseline_validation_comparison.csv` (P99 any-resource 21.951% @1, 30.982% @10) and `alibaba_gpu_2020/baselines/validation_comparison.csv` (P99 memory 8.743% @1, 5.577% @10). Request memory waste 22.313 / Hybrid 8.699 = 2.57×.
 - §7.5 Discussion and limitations: validation leakage, small Google sample, Alibaba eligibility and single-instance share, no feature importance, no confidence intervals or deployment measurements.
 - PNGs are copies of `reports/results/*/figures/`; regenerate there with `reports/results/make_results_figures.py` and recopy.
 - Citations: [Wilkes 2019] and [Alibaba 2020], mapped to [7] and [19] in `references.md` at assembly.
