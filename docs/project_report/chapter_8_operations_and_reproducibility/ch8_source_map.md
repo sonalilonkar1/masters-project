@@ -33,7 +33,7 @@
 | Repository layout | System guide §3; README "Project Structure": `src/` (canonical, adapters, sources, features, baselines, models, policies, evaluation), `pipelines/google_subset/`, `scripts/`, `config/`, `tests/`, `data/` (local only), `reports/results/` (final results), `reports/eval/` (earlier baseline experiments), `docs/` |
 | What is versioned | Code, docs, config and final results in Git; raw and processed data local (Chapter 4 §4.4) |
 | Provenance records | Google `decision_manifest.json` and `final_test_run_metadata.json`; Alibaba `metadata.json`, `count_report.md`, `SHA256SUMS`, Alibaba `ml/decision_manifest.json`, `ml/final_test_runs.jsonl`, `final_test/run_record.json` (copies in `reports/results/alibaba_gpu_2020/`) |
-| Reproduction limits | Each final test can be run once per manifest. Google: freeze from a clean checkout of `e59349e` (`googlepipeline_finalrun.md` §8). Alibaba: run PR1 and the final test at one clean commit (the published run used `fe38ea0`); a new PR1 lock gives a new manifest |
+| Reproduction limits | Each final test can be run once per manifest. Google: freeze from a clean checkout of `e59349e` (`googlepipeline_finalrun.md` §8). Alibaba: run PR1 and the final test at one clean commit (the published run used `ea6aa08`; the first execution used `fe38ea0`, Chapter 6 §6.2); a new PR1 lock gives a new manifest. Published run versions: `ml/decision_manifest.json` `library_versions` (Python 3.11.15, pandas 3.0.2, scikit-learn 1.8.0, XGBoost 3.2.0) |
 | Tests | `pytest` in the locked environment (Chapter 6) |
 | Earlier experiments | Azure Resource Central, Splitwise, ModServe notebooks and `reports/eval/` (system guide §11): kept for context, not part of the evaluated system |
 

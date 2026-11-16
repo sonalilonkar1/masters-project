@@ -17,15 +17,15 @@
 | Policies | Chapter 4 §4.2 (Request, Mean, P90/P95/P99 with `min_runs`, ML, Hybrid = max(ML, safeguard)) |
 | Evaluation | Chapter 4 §4.3 (replay, separate CPU and memory metrics, fixed populations, lock and one-time test) |
 | Google results | Chapter 7 §7.2 (test: Hybrid 12.36% any-resource violation, P99 14.67%, Request 54.47%; Hybrid waste ≈ P95) |
-| Alibaba results | Chapter 7 §7.3: final test Hybrid 3.15% memory / 3.77% CPU violation vs P99@10 3.44% / 6.45% at 8.71 vs 8.67 GB memory waste; Request 3.16% memory at 22.31 GB; ML 44.77% memory at 1.33 GB |
+| Alibaba results | Chapter 7 §7.3: final test Hybrid 3.18% memory / 3.62% CPU violation vs P99@10 3.44% / 6.45% at 8.70 vs 8.67 GB memory waste; Request 3.16% memory at 22.31 GB; ML 45.53% memory at 1.30 GB (published second execution) |
 
 ## 9.2 Conclusions
 
 | Conclusion to evaluate | Evidence |
 |---|---|
 | History-based percentiles reduce violations relative to requests where requests are too low (Google), and reduce waste where requests are generous (Alibaba memory) | Chapter 7 §7.2.1, §7.3 |
-| An accurate ML model alone is efficient but under-provisions often | Google test: ML 32.82% any-resource violation at the lowest waste; Alibaba test: ML 44.77% memory / 47.37% CPU at the lowest waste, despite R² 0.53 / 0.76 on validation |
-| The Hybrid safeguard combines the two: never more violations than its safeguard, at close to the safeguard's waste | Google test: 12.36 vs P95 17.37, waste 7.637 vs 7.616 CPU; Alibaba test: memory 3.15 vs P99 3.44 (8.71 vs 8.67 GB), CPU 3.77 vs 6.45 |
+| An accurate ML model alone is efficient but under-provisions often | Google test: ML 32.82% any-resource violation at the lowest waste; Alibaba test: ML 45.53% memory / 45.53% CPU at the lowest waste, despite R² 0.54 / 0.76 on validation |
+| The Hybrid safeguard combines the two: never more violations than its safeguard, at close to the safeguard's waste | Google test: 12.36 vs P95 17.37, waste 7.637 vs 7.616 CPU; Alibaba test: memory 3.18 vs P99 3.44 (8.70 vs 8.67 GB), CPU 3.62 vs 6.45 |
 | Canonical model and capability profiles allow one evaluation across structurally different traces without pretending they measure the same thing | Chapter 4 §4.1–4.3, Table 4.1 |
 | Strict temporal controls are necessary and observable | Chapter 6 §6.2 (checks; Google cross-split finding and its sensitivity) |
 | The Google findings hold on Alibaba; what differs is the role of the request (low on Google, generous on Alibaba), which decides whether a larger `min_runs` adds or removes safety | Chapter 7 §7.4; `alibaba_gpu_2020_results_and_analysis.md` §8 |

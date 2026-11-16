@@ -115,34 +115,34 @@ Validation & Mean & 40.84 / 39.90 & 142.56 & 6.851 \\
 Validation & P90 & 12.25 / 12.40 & 235.44 & 7.803 \\
 Validation & P95 & 9.00 / 8.46 & 263.08 & 8.260 \\
 Validation & P99 & 6.62 / 5.58 & 294.96 & 8.941 \\
-Validation & ML & 41.91 / 47.76 & 86.50 & 1.903 \\
-Validation & Hybrid & 4.60 / 5.15 & 305.62 & 9.141 \\
+Validation & ML & 42.18 / 47.28 & 87.35 & 1.922 \\
+Validation & Hybrid & 4.51 / 5.23 & 305.47 & 9.137 \\
 Final test & Request & 16.71 / 3.16 & 419.97 & 22.313 \\
 Final test & Mean & 41.83 / 37.02 & 138.75 & 6.451 \\
 Final test & P90 & 12.41 / 9.89 & 237.57 & 7.440 \\
 Final test & P95 & 9.10 / 6.04 & 266.95 & 7.895 \\
 Final test & P99 & 6.45 / 3.44 & 306.44 & 8.668 \\
-Final test & ML & 47.37 / 44.77 & 72.01 & 1.328 \\
-Final test & Hybrid & 3.77 / 3.15 & 326.82 & 8.707 \\
+Final test & ML & 45.53 / 45.53 & 75.16 & 1.296 \\
+Final test & Hybrid & 3.62 / 3.18 & 327.47 & 8.699 \\
 \hline
 \end{tabular}
 \end{table*}
 
 \subsubsection{ML and Hybrid Recommendation Results}\label{sec:7.3.2}
 
-HistGradientBoosting was selected independently for CPU and memory based on validation RMSE among candidate models evaluated with fixed settings. The selected models achieved validation RMSE values of 412.94 in percent-of-vCPU units for CPU and 8.98 GB for memory, with R$^{2}$ values of 0.758 and 0.529, respectively. These measurements reflect validation performance used for model selection, not final-test regression performance.
+HistGradientBoosting was selected independently for CPU and memory based on validation RMSE among candidate models evaluated with fixed settings. The selected models achieved validation RMSE values of 412.91 in percent-of-vCPU units for CPU and 8.87 GB for memory, with R$^{2}$ values of 0.758 and 0.540, respectively. These measurements reflect validation performance used for model selection, not final-test regression performance.
 
 Unlike the Google evaluation, which uses historical P95 as its Hybrid safeguard, Alibaba uses the validation-selected P99 baseline. For each resource, Hybrid recommends the maximum of the ML prediction and the historical P99 recommendation. Following model selection, the selected models were retrained using the combined training and validation data before generating final-test predictions.
 
-During validation, Hybrid achieved CPU and memory violation rates of 4.60\% and 5.15\%, compared with 41.91\% and 47.76\% for ML alone. Because these results were obtained from the model-selection split, they should not be interpreted as independent test evidence. The separate final-test results in Table~\ref{tab:7.3} show that Hybrid maintains lower violation rates for both resources, while ML alone remains substantially more prone to under-provisioning.
+During validation, Hybrid achieved CPU and memory violation rates of 4.51\% and 5.23\%, compared with 42.18\% and 47.28\% for ML alone. Because these results were obtained from the model-selection split, they should not be interpreted as independent test evidence. The separate final-test results in Table~\ref{tab:7.3} show that Hybrid maintains lower violation rates for both resources, while ML alone remains substantially more prone to under-provisioning.
 
-In the final-test evaluation, Hybrid achieved a memory violation rate of 3.15\%, compared with 3.44\% for P99, 6.04\% for P95, 9.89\% for P90, and 37.02\% for Mean. Request achieved a similar memory violation rate of 3.16\%, but produced substantially greater average memory waste at 22.313 GB, compared with 8.707 GB for Hybrid and 8.668 GB for P99.
+In the final-test evaluation, Hybrid achieved a memory violation rate of 3.18\%, compared with 3.44\% for P99, 6.04\% for P95, 9.89\% for P90, and 37.02\% for Mean. Request achieved a similar memory violation rate of 3.16\%, but produced substantially greater average memory waste at 22.313 GB, compared with 8.699 GB for Hybrid and 8.668 GB for P99.
 
-Hybrid also achieved a CPU violation rate of 3.77\%, compared with 6.45\% for P99, 16.71\% for Request, and 47.37\% for ML, at 6.7\% more average CPU waste than P99 (326.82 versus 306.44). However, Alibaba CPU targets represent the maximum lifetime-average CPU usage across instances within a workload role, rather than peak CPU demand. Therefore, these results evaluate average-usage resource sizing and do not establish protection against CPU usage peaks.
+Hybrid also achieved a CPU violation rate of 3.62\%, compared with 6.45\% for P99, 16.71\% for Request, and 45.53\% for ML, at 6.9\% more average CPU waste than P99 (327.47 versus 306.44). However, Alibaba CPU targets represent the maximum lifetime-average CPU usage across instances within a workload role, rather than peak CPU demand. Therefore, these results evaluate average-usage resource sizing and do not establish protection against CPU usage peaks.
 
-ML alone produced the lowest average memory waste at 1.328 GB, but had a substantially higher memory violation rate of 44.77\%. Hybrid also achieved a lower average memory shortfall of 0.197 GB, compared with 0.233 GB for P99 and 1.046 GB for ML.
+ML alone produced the lowest average memory waste at 1.296 GB, but had a substantially higher memory violation rate of 45.53\%. Hybrid also achieved a lower average memory shortfall of 0.197 GB, compared with 0.233 GB for P99 and 1.046 GB for ML.
 
-Fig.~\ref{fig:7.3} shows these trade-offs for both resources. Two final-test sensitivity checks support the same ordering. On the 595 occurrences from multi-instance roles, Hybrid's memory violation rate was 5.71\% compared with 8.07\% for P99. When each workload is weighted equally rather than each occurrence, Hybrid's CPU and memory violation rates were 4.08\% and 3.71\%, compared with 11.38\% and 4.17\% for P99.
+Fig.~\ref{fig:7.3} shows these trade-offs for both resources. Two final-test sensitivity checks support the same ordering. On the 595 occurrences from multi-instance roles, Hybrid's memory violation rate was 5.88\% compared with 8.07\% for P99. When each workload is weighted equally rather than each occurrence, Hybrid's CPU and memory violation rates were 3.86\% and 3.77\%, compared with 11.38\% and 4.17\% for P99.
 
 \begin{figure*}[!t]
 \centering
@@ -171,7 +171,7 @@ Alibaba GPU 2020 & Per-role maximum instance lifetime-average CPU, in percent of
 
 A key finding across the evaluated datasets is the tradeoff between resource reliability and efficiency. Historical percentile-based recommendations generally reduce resource violations at the cost of increased resource waste, while Hybrid combines ML predictions with historical safeguards to balance these objectives. However, violation rates cannot be directly compared across datasets because their resource targets, measurement units, aggregation methods, filtering criteria, and Hybrid safeguards differ.
 
-Three findings nevertheless hold on both datasets. First, Hybrid had fewer violations than its own safeguard at almost the same waste: on Google, 12.36\% any-resource violations compared with 17.37\% for P95, and on Alibaba, 3.77\% and 3.15\% CPU and memory violations compared with 6.45\% and 3.44\% for P99. Second, ML alone had the lowest waste but under-provisioned about one occurrence in three on Google and almost one in two on Alibaba, so accuracy-driven point predictions are not reliable allocations on their own. Third, the value of the original request differs. Google requests were exceeded by 54.47\% of test occurrences, whereas Alibaba memory requests were exceeded by only 3.16\% at about 2.6 times Hybrid's memory waste.
+Three findings nevertheless hold on both datasets. First, Hybrid had fewer violations than its own safeguard at almost the same waste: on Google, 12.36\% any-resource violations compared with 17.37\% for P95, and on Alibaba, 3.62\% and 3.18\% CPU and memory violations compared with 6.45\% and 3.44\% for P99. Second, ML alone had the lowest waste but under-provisioned about one occurrence in three on Google and almost one in two on Alibaba, so accuracy-driven point predictions are not reliable allocations on their own. Third, the value of the original request differs. Google requests were exceeded by 54.47\% of test occurrences, whereas Alibaba memory requests were exceeded by only 3.16\% at about 2.6 times Hybrid's memory waste.
 
 This difference in requests also explains why the history threshold had opposite effects. Raising \texttt{min\_runs} sends more occurrences to the request fallback. On Google validation, P99's any-resource violation rate rose from 21.95\% at \texttt{min\_runs\ =\ 1} to 30.98\% at \texttt{min\_runs\ =\ 10}, because the fallback requests are often too low; on Alibaba validation, P99's memory violation rate fell from 8.74\% to 5.58\%, because the fallback requests are generous. These are validation observations used for selection, not separate experiments.
 
