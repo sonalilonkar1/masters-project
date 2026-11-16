@@ -479,6 +479,16 @@
       "ok": true
     },
     {
+      "detail": "same-second valid-count denominators partition occurrence counts",
+      "name": "task7_pr2.sensitivity.denominator_partition",
+      "ok": true
+    },
+    {
+      "detail": "scenario populations and group counts are policy-independent",
+      "name": "task7_pr2.sensitivity.population_consistency",
+      "ok": true
+    },
+    {
       "detail": "cross-table relationships valid",
       "name": "task7_pr2.sensitivity.cross_table_relationships",
       "ok": true
@@ -595,8 +605,8 @@
     }
   ],
   "companion_files": {
-    "reproduction_metadata.json": "f40f4ba01421bfbb81c3897bfc96d18b0c3ba237781236e7ce58e83a7916c201",
-    "verification_report.md": "c86f85aded989563389fa3a42da6eb4cd80527120c35942d38e87c80be22fcf4"
+    "reproduction_metadata.json": "20fc134b3008de82247be36c9163c68e1c49600babf25929d40c8f3a04278f52",
+    "verification_report.md": "e5af8dbaffa81bf0f62d261239d4c5f184e3a1532ebb782210db238897d9039b"
   },
   "dataset_id": "alibaba_gpu_v2020",
   "decision_manifest_sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
@@ -607,7 +617,7 @@
     "run_id": "4fdc7e96-789b-43a9-990f-20f189e9598b",
     "timestamp_utc": "2026-11-15T09:26:29Z"
   },
-  "generation_id": "1cc473e40341494d9d946c25a7dc9a25",
+  "generation_id": "9253c758018b4803ab009f7c638f64cf",
   "schema_version": "0.2.0",
   "status": "PASS",
   "unverified_items": [
@@ -620,6 +630,6 @@
       "reason": "The verifier checks the locked model checksums, feature-order lock, saved prediction artifact checksum and run provenance, but does not rerun model inference in Task 8."
     }
   ],
-  "verification_timestamp_utc": "2026-11-16T05:10:42Z",
+  "verification_timestamp_utc": "2026-11-16T20:11:17Z",
   "verified": true
 }

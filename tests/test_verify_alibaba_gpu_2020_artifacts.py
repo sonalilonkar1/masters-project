@@ -356,13 +356,25 @@ def _valid_sensitivity(comparison: pd.DataFrame | None = None) -> pd.DataFrame:
         rows.append(occurrence)
         for scenario, count in (("same_second_excluded", 80), ("same_second_only", 20), ("multi_instance", 50)):
             row = dict(comp)
+            if scenario == "same_second_only":
+                # Complement same_second_excluded so the two subsets exactly
+                # partition the occurrence-level valid-count denominators.
+                cpu_violation = int(comp["valid_cpu_violation_count"]) - 79
+                memory_violation = int(comp["valid_memory_violation_count"]) - 80
+                cpu_utilization = int(comp["valid_cpu_utilization_count"]) - 78
+                memory_utilization = int(comp["valid_memory_utilization_count"]) - 79
+            else:
+                cpu_violation = max(count - 1, 0)
+                memory_violation = count
+                cpu_utilization = max(count - 2, 0)
+                memory_utilization = max(count - 1, 0)
             row.update({
                 "sensitivity": scenario,
                 "row_count": count,
-                "valid_cpu_violation_count": max(count - 1, 0),
-                "valid_memory_violation_count": count,
-                "valid_cpu_utilization_count": max(count - 2, 0),
-                "valid_memory_utilization_count": max(count - 1, 0),
+                "valid_cpu_violation_count": cpu_violation,
+                "valid_memory_violation_count": memory_violation,
+                "valid_cpu_utilization_count": cpu_utilization,
+                "valid_memory_utilization_count": memory_utilization,
                 "n_groups": None,
             })
             rows.append(row)
@@ -787,9 +799,16 @@ def test_sensitivity_empty_subset_matches_producer_output():
         frame[column] = frame[column].astype(object)
     frame.loc[only_mask, "row_count"] = 0
     frame.loc[only_mask, nullable] = None
-    occurrence_by_policy = frame.loc[occurrence_mask].set_index("policy")["row_count"]
+    occurrence_by_policy = frame.loc[occurrence_mask].set_index("policy")
+    count_columns = [
+        "valid_cpu_violation_count", "valid_memory_violation_count",
+        "valid_cpu_utilization_count", "valid_memory_utilization_count",
+    ]
     for policy in v.FINAL_POLICIES:
-        frame.loc[excluded_mask & (frame["policy"] == policy), "row_count"] = occurrence_by_policy.loc[policy]
+        target = excluded_mask & (frame["policy"] == policy)
+        frame.loc[target, "row_count"] = occurrence_by_policy.loc[policy, "row_count"]
+        for column in count_columns:
+            frame.loc[target, column] = occurrence_by_policy.loc[policy, column]
     checks = v._validate_sensitivity(frame, comparison=comparison)
     failures = [(check.name, check.detail) for check in checks if not check.ok]
     assert not failures, failures
@@ -800,6 +819,61 @@ def test_sensitivity_occurrence_rows_match_comparison():
     frame.loc[(frame["sensitivity"] == "occurrence_weighted") & (frame["policy"] == "P99"), "average_memory_waste"] += 1
     checks = v._validate_sensitivity(frame, comparison)
     assert any(c.name == "task7_pr2.sensitivity.cross_table_relationships" and not c.ok for c in checks)
+
+
+def test_sensitivity_rejects_one_count_denominator_partition_discrepancy():
+    comparison = _valid_comparison()
+    frame = _valid_sensitivity(comparison)
+    mask = (
+        (frame["sensitivity"] == "same_second_excluded")
+        & (frame["policy"] == "Request")
+    )
+    frame.loc[mask, "valid_cpu_violation_count"] += 1
+
+    checks = v._validate_sensitivity(frame, comparison)
+    check = next(
+        c for c in checks
+        if c.name == "task7_pr2.sensitivity.denominator_partition"
+    )
+    assert not check.ok
+    assert "Request" in check.detail
+    assert "valid_cpu_violation_count" in check.detail
+
+
+def test_sensitivity_requires_policy_independent_scenario_population():
+    comparison = _valid_comparison()
+    frame = _valid_sensitivity(comparison)
+    mask = (
+        (frame["sensitivity"] == "multi_instance")
+        & (frame["policy"] == "Request")
+    )
+    frame.loc[mask, "row_count"] += 1
+
+    checks = v._validate_sensitivity(frame, comparison)
+    check = next(
+        c for c in checks
+        if c.name == "task7_pr2.sensitivity.population_consistency"
+    )
+    assert not check.ok
+    assert "multi_instance" in check.detail
+
+
+def test_sensitivity_requires_policy_independent_group_count():
+    comparison = _valid_comparison()
+    frame = _valid_sensitivity(comparison)
+    mask = (
+        (frame["sensitivity"] == "group_weighted")
+        & (frame["policy"] == "Request")
+    )
+    frame.loc[mask, "n_groups"] += 1
+
+    checks = v._validate_sensitivity(frame, comparison)
+    check = next(
+        c for c in checks
+        if c.name == "task7_pr2.sensitivity.population_consistency"
+    )
+    assert not check.ok
+    assert "n_groups" in check.detail
 
 
 def _args(tmp_path, out_dir):

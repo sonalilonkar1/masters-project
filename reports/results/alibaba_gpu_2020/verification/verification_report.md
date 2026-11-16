@@ -3,9 +3,9 @@
 - Dataset: `alibaba_gpu_v2020`
 - Schema: `0.2.0`
 - Result: **PASS**
-- Checks: 81 passed, 0 failed
-- Generated: `2026-11-16T05:10:42Z`
-- Generation ID: `1cc473e40341494d9d946c25a7dc9a25`
+- Checks: 83 passed, 0 failed
+- Generated: `2026-11-16T20:11:17Z`
+- Generation ID: `9253c758018b4803ab009f7c638f64cf`
 - Decision manifest SHA-256: `d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac`
 - Final run ID: `4fdc7e96-789b-43a9-990f-20f189e9598b`
 - Final run code commit: `ea6aa08458aace364cd33529ce77de894bcd76ad`
@@ -72,6 +72,8 @@
 | `task7_pr2.sensitivity.cartesian_product` | PASS | rows=35, unique_pairs=35, missing=[], unexpected=[] |
 | `task7_pr2.sensitivity.semantics` | PASS | semantics valid |
 | `task7_pr2.sensitivity.numeric_contract` | PASS | producer-compatible sensitivity numeric/null contract valid |
+| `task7_pr2.sensitivity.denominator_partition` | PASS | same-second valid-count denominators partition occurrence counts |
+| `task7_pr2.sensitivity.population_consistency` | PASS | scenario populations and group counts are policy-independent |
 | `task7_pr2.sensitivity.cross_table_relationships` | PASS | cross-table relationships valid |
 | `task7.lock_before_final_test` | PASS | earlier='2026-11-15T09:16:50Z', later='2026-11-15T09:26:29Z' |
 | `task7.final_run_traces_manifest` | PASS | computed='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', run='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', metadata='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac' |

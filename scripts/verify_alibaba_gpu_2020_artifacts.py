@@ -1048,6 +1048,42 @@ def _validate_sensitivity(frame: pd.DataFrame, comparison: pd.DataFrame | None =
     ))
 
     cross_failures: list[str] = []
+    denominator_partition_failures: list[str] = []
+    population_consistency_failures: list[str] = []
+
+    # The producer applies each sensitivity population mask before evaluating any
+    # policy, so membership cannot vary by policy. Require a single row_count per
+    # scenario. Group-weighted aggregation uses the same recurrence population for
+    # every policy, so n_groups must likewise be policy-independent.
+    for scenario in SENSITIVITY_SCENARIOS:
+        scenario_rows = frame[frame["sensitivity"] == scenario]
+        parsed_counts, count_failures = _parse_numeric_series(scenario_rows["row_count"])
+        if count_failures or parsed_counts.isna().any():
+            population_consistency_failures.append(
+                f"{scenario}: row_count cannot be compared across policies"
+            )
+        else:
+            unique_counts = sorted({int(value) for value in parsed_counts.tolist()})
+            if len(unique_counts) != 1:
+                population_consistency_failures.append(
+                    f"{scenario}: row_count differs across policies: {unique_counts}"
+                )
+
+    group_rows = frame[frame["sensitivity"] == "group_weighted"]
+    nonempty_group_rows = group_rows[group_rows["row_count"].fillna(0) != 0]
+    if not nonempty_group_rows.empty:
+        parsed_groups, group_failures = _parse_numeric_series(nonempty_group_rows["n_groups"])
+        if group_failures or parsed_groups.isna().any():
+            population_consistency_failures.append(
+                "group_weighted: n_groups cannot be compared across policies"
+            )
+        else:
+            unique_groups = sorted({int(value) for value in parsed_groups.tolist()})
+            if len(unique_groups) != 1:
+                population_consistency_failures.append(
+                    f"group_weighted: n_groups differs across policies: {unique_groups}"
+                )
+
     if comparison is not None and set(COMPARISON_COLUMNS).issubset(comparison.columns):
         comp_by_policy = comparison.set_index("policy")
         occ = frame[frame["sensitivity"] == "occurrence_weighted"].set_index("policy")
@@ -1060,6 +1096,13 @@ def _validate_sensitivity(frame: pd.DataFrame, comparison: pd.DataFrame | None =
                     continue
                 if not _null_aware_equal(comp_by_policy.loc[policy, column], occ.loc[policy, column]):
                     cross_failures.append(f"{policy}: occurrence_weighted {column} differs from comparison")
+
+        partition_columns = (
+            "valid_cpu_violation_count",
+            "valid_memory_violation_count",
+            "valid_cpu_utilization_count",
+            "valid_memory_utilization_count",
+        )
         for policy in FINAL_POLICIES:
             rows = frame[frame["policy"] == policy].set_index("sensitivity")
             if set(SENSITIVITY_SCENARIOS).issubset(rows.index):
@@ -1074,6 +1117,52 @@ def _validate_sensitivity(frame: pd.DataFrame, comparison: pd.DataFrame | None =
                     cross_failures.append(f"{policy}: multi_instance exceeds occurrence rows")
                 if group != occurrence:
                     cross_failures.append(f"{policy}: group_weighted row_count differs from occurrence")
+
+                # same_second_excluded and same_second_only are complementary
+                # subsets of occurrence_weighted. Their valid-count denominators
+                # must therefore partition the corresponding occurrence count.
+                # Producer-compatible empty subsets store null scientific cells;
+                # those null count cells contribute zero to the partition.
+                for column in partition_columns:
+                    occurrence_value = rows.loc["occurrence_weighted", column]
+                    excluded_value = rows.loc["same_second_excluded", column]
+                    only_value = rows.loc["same_second_only", column]
+
+                    def _partition_value(value: Any) -> float | None:
+                        if pd.isna(value):
+                            return 0.0
+                        parsed, failures = _parse_numeric_series(pd.Series([value]))
+                        if failures or pd.isna(parsed.iloc[0]):
+                            return None
+                        return float(parsed.iloc[0])
+
+                    occurrence_number = _partition_value(occurrence_value)
+                    excluded_number = _partition_value(excluded_value)
+                    only_number = _partition_value(only_value)
+                    if None in (occurrence_number, excluded_number, only_number):
+                        denominator_partition_failures.append(
+                            f"{policy}: {column} partition contains an unparsable value"
+                        )
+                    elif excluded_number + only_number != occurrence_number:
+                        denominator_partition_failures.append(
+                            f"{policy}: {column} does not partition occurrence "
+                            f"({excluded_number:g} + {only_number:g} != {occurrence_number:g})"
+                        )
+
+    checks.append(Check(
+        "task7_pr2.sensitivity.denominator_partition",
+        not denominator_partition_failures,
+        "; ".join(denominator_partition_failures)
+        if denominator_partition_failures
+        else "same-second valid-count denominators partition occurrence counts",
+    ))
+    checks.append(Check(
+        "task7_pr2.sensitivity.population_consistency",
+        not population_consistency_failures,
+        "; ".join(population_consistency_failures)
+        if population_consistency_failures
+        else "scenario populations and group counts are policy-independent",
+    ))
     checks.append(Check(
         "task7_pr2.sensitivity.cross_table_relationships",
         not cross_failures,
