@@ -32,7 +32,7 @@ Build the backend that lets a developer choose a dataset (Google ClusterData 201
 | Latest run falls back to the request (memory) | 233 of 472 workloads | 19,341 of 25,232 workloads |
 | Run start time | `execution_start_time_us` | `start_time_us` in `alibaba_gpu_v2020_targets/test.parquet` (join on `role_key`) |
 
-- The local Alibaba final-test outputs and the report are the 2026-10-30 run. PR #124 added `run_id` and the read and evaluator-call counters. PR #121 (Task 8) re-ran the chain and the final test on 2026-11-15 (run `4fdc7e96…`; its description names `7dd3942e…`) with changed ML and Hybrid numbers. The team must decide which run is authoritative before the final export.
+- PR #121 (Task 8, merged 2026-11-16) re-ran the chain and the final test on 2026-11-15 (run `4fdc7e96…`) with changed ML and Hybrid numbers; this run is now the published result on `main`. The local outputs and the report are still the 2026-10-30 run, which lacks the `run_id` and counters added by PR #124.
 - No API code exists.
 
 ## What This Task Builds
@@ -96,7 +96,7 @@ Build the backend that lets a developer choose a dataset (Google ClusterData 201
 
 ## Dependencies
 
-- Task 8 (PR #121) merged and the verified Alibaba final-test outputs available locally, for the final export. Parts A, C and D (on the fixture bundle) and the export code can start before that.
+- The Nov 15 Alibaba final-test outputs (on `main` since PR #121) available locally, for the final export. Everything else can start now on the local Oct 30 outputs and the fixture bundle.
 
 ## Blocks
 

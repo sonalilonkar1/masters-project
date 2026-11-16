@@ -1,6 +1,6 @@
 # Key Takeaways: Status Review, Recommendation Service Design and Code Review
 
-**Date:** 2026-11-16. Based on `main` at `d46e282`, open PR #121, a full read of `src/` and `pipelines/google_subset/`, and the local `data/processed/` outputs.
+**Date:** 2026-11-16. Based on `main` at `d46e282`, PR #121 (merged later the same day), a full read of `src/` and `pipelines/google_subset/`, and the local `data/processed/` outputs.
 
 ---
 
@@ -43,7 +43,7 @@
 | Oct 30 run (report) | 3.146% | 8.707 GB | 3.767% |
 | Nov 15 run (PR #121) | 3.178% | 8.699 GB | 3.621% |
 
-**Options:** (a) keep Oct 30 and verify it; (b) adopt Nov 15, restore every earlier run in the log with a reason, and use the locked environment or update the lock file. Option (a) keeps the report correct.
+**Outcome:** PR #121 was merged on 2026-11-16, so `main` now publishes the Nov 15 run. Follow-ups: record the Oct 30 run and the reason for the rerun, fix the verifier's run-history check, align `requirements-lock.txt` with the environment used, and update the report's Alibaba ML and Hybrid numbers (separate PR).
 
 ## 4. History Coverage and the Request Fallback
 
@@ -96,7 +96,8 @@ The percentile trades safety for waste. The fallback share is set by `min_runs`,
 
 | Item | Owner |
 |---|---|
-| Authoritative Alibaba run (§3); report numbers follow it | Team |
+| Task 8 follow-ups (§3): record the rerun, verifier fix, lock file | Team |
+| Report: Alibaba ML and Hybrid numbers to the Nov 15 run (separate PR) | Team |
 | Update GitHub #120 to Task 15; create the Task 16 issue | Team |
 | Close stale #75 and #67 | Team |
 | Frontend framework (Task 16) | Team |

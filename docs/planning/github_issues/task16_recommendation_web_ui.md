@@ -81,7 +81,7 @@ Dataset ──► Workload ──► Risk level ──► Recommendation + evide
 ## Dependencies
 
 - Task 15 API contract agreed (OpenAPI file committed) to start; Task 15 fixture bundle for tests.
-- Task 15 real bundle (after Task 8) for the final screenshots.
+- Task 15 real bundle (from the Nov 15 Alibaba run) for the final screenshots.
 
 ## Blocks
 

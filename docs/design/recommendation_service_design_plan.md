@@ -125,7 +125,7 @@ Export rules:
 
 1. **Copy, reshape, rename, label.** No recalculation except the Google Hybrid case in §5, which is verified against stored values.
 2. **Missing stays missing.** Null actuals stay null; a missing request stays null.
-3. **Use the verified Alibaba run.** The export reads `run_record.json` and refuses to run unless it carries a `run_id`, `test_target_read_count = 1` and `test_evaluator_call_count = 1` (added by PR #124 and verified by Task 8, PR #121). The local Oct 30 run lacks these fields and is rejected.
+3. **Use the verified Alibaba run.** The export reads `run_record.json` and refuses to run unless it carries a `run_id`, `test_target_read_count = 1` and `test_evaluator_call_count = 1` (added by PR #124; the Nov 15 run on `main`, verified by Task 8, has them). The Oct 30 run lacks these fields: during development the export reports the missing fields instead of refusing, and only the final published export enforces them.
 4. **Self-checks before writing:** per-policy row counts, equality of every copied value with its source, one `is_latest` row per workload, policy metrics equal to the summary CSV, and every Alibaba join on `role_key` validated one-to-one.
 5. Same command-line conventions as the Alibaba scripts: refuses a dirty tree and an existing output unless `--allow-dirty` or `--force`; `--out-dir`.
 
@@ -257,7 +257,7 @@ tests/fixtures/ui_bundle/               # tiny hand-built bundle for API and UI 
 
 | Step | Task | Pull request | Can start |
 |---|---|---|---|
-| 1 | 15 | Risk-level config, bundle format and the export with its tests | Now on local data; final export after Task 8 merges |
+| 1 | 15 | Risk-level config, bundle format and the export with its tests | Now on local data; final export from the Nov 15 run |
 | 2 | 15 | API, fixture bundle and API tests; contract frozen | After step 1's format is agreed |
 | 3 | 16 | UI against the fixture-backed API | After step 2's contract is agreed |
 | 4 | 16 | Real bundle, screenshots for Figures 8.1 and 8.2, §8.3, README, demo script | After steps 1–3 |
@@ -266,7 +266,7 @@ tests/fixtures/ui_bundle/               # tiny hand-built bundle for API and UI 
 
 | Item | Impact | Proposal |
 |---|---|---|
-| Alibaba source run: the report and local outputs are the Oct 30 run; PR #121 re-ran the chain and the final test (run `4fdc7e96…`, Nov 15) in a different environment, with changed ML and Hybrid numbers | Exported numbers must match the one run the team declares authoritative | Team decision first (see `docs/design/discussion_summary_2026-11-16.md`); export enforces provenance (§6 rule 3) |
+| Alibaba source run: PR #121 (merged 2026-11-16) published the Nov 15 run (`4fdc7e96…`) on `main`; the report and the local outputs are still the Oct 30 run | Exported numbers must match `main` | Get the Nov 15 outputs locally; export enforces provenance (§6 rule 3); report numbers updated in a separate PR |
 | Most latest recommendations fall back to the request (§5 fact 3) | Risk levels look meaningless for most workloads | Show the basis; default to workloads with history; demo with those; state the limit in the report (Ch7 §7.5, Ch9) |
 | Alibaba bundle size | Over 20 MB cannot be committed | Measure after step 1; Drive with checksums otherwise |
 | Google results may be corrected (Task 10) | Bundle becomes stale | Re-run the export only; no code change |

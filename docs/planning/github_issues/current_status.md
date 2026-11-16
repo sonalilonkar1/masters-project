@@ -1,6 +1,6 @@
 # Current Status of Tasks and Issues
 
-**Snapshot:** 2026-11-16, checked against `main` at `ea6aa08` (PR #124 merged), the open GitHub issues and pull requests, and the task files in this folder. Task 15 was split into Tasks 15 (backend) and 16 (web UI) the same day. GitHub is the live record; check it before acting on any row here.
+**Snapshot:** 2026-11-16, checked against `main` at `ea6aa08` (PR #124 merged), the open GitHub issues and pull requests, and the task files in this folder. Task 15 was split into Tasks 15 (backend) and 16 (web UI) the same day, and Task 8 rows were updated after PR #121 merged (`7eb48a7`). GitHub is the live record; check it before acting on any row here.
 
 ---
 
@@ -10,7 +10,7 @@
 |---|---|---|---|
 | Tasks 1–5, schema 0.2.0 and Alibaba 2018 corrections | #66, #77, #79, #80, #81, #82, #85 | All closed; PRs #86–#96 merged | Done |
 | Task 6: Alibaba GPU 2020 baselines and `min_runs` | **#87 (still open)** | PR #97 merged; PR #124 added `dataset_id` and `schema_version` metadata | Work done; close the issue |
-| Task 7: ML, Hybrid and final test | **#89 (still open)** | PRs #98, #99, #102, #103 and the provenance follow-up #124 merged | Work done; close the issue after Task 8 merges |
+| Task 7: ML, Hybrid and final test | **#89 (still open)** | PRs #98, #99, #102, #103 and the provenance follow-up #124 merged | Work done; close the issue (Task 8 merged 2026-11-16) |
 | Task 13: Google subset thin adapter | #118 | PR #122 merged | Closed |
 | Report: Abstract and Chapters 1–9, LaTeX and Overleaf | #71, #100, #107, #108 | PRs #101–#112 merged | Closed |
 
@@ -18,7 +18,7 @@
 
 | Task | Issue | Priority | Status | What is left |
 |---|---|---|---|---|
-| Task 8: Alibaba GPU 2020 final verification | #113 | P1 | **PR #121 open, not merged.** Its report passes 83 checks, but the PR re-ran Tasks 4–7 and the final test (run `4fdc7e96…`, Nov 15) in a different environment and replaced the published results and run log | **Team decision on the authoritative run** before merging (table 4.1) |
+| Task 8: Alibaba GPU 2020 final verification | #113 | P1 | **PR #121 merged 2026-11-16.** `main` now holds the Nov 15 run (`4fdc7e96…`), which re-ran Tasks 4–7 and the final test in a different environment and replaced the Oct 30 results and run log | Follow-ups: record the rerun, update the report's Alibaba ML/Hybrid numbers, check the environment against the lock file; close #113 (table 4.1) |
 | Task 12: final cross-dataset reporting | #117 | P1 | **PR 1 merged (#123)**; outputs in `reports/results/cross_dataset_pr1/` are provisional | PR 2: verified status, final manifest, limitations, conclusions, README and reproducibility (table 4.2) |
 | Task 15: recommendation backend (UI export and read-only API) | #120 | P1 | **Not started**; no API code on `main`. Design in `docs/design/recommendation_service_design_plan.md` | Risk-level config, UI export, API, tests (table 4.3) |
 | Task 16: recommendation web UI | *new; file the issue* | P1 | **Not started**; split from Task 15 | Framework choice, views, tests, report Figures 8.1 and 8.2 (table 4.4) |
@@ -48,9 +48,12 @@
 | 2 | Contract checks (dataset ID, schema 0.2.0, seven policies, memory first, separate denominators, no GPU or any-resource metric) | Done in PR #121 | |
 | 3 | Lock predates the final test; one test-target read; one evaluator call | Done in PR #121 | Depends on the counters from PR #124 |
 | 4 | Review PR #121 | Done 2026-11-16 | Findings in `docs/design/discussion_summary_2026-11-16.md` §3 |
-| 5 | Decide the authoritative Alibaba run: keep Oct 30 (report numbers, locked environment) or adopt Nov 15 with every earlier run restored in the log and a rerun reason | **Remaining** | Team decision |
-| 6 | Fix the verifier's run-history check (all manifest hashes; fail when `prior_runs = 0` but earlier runs exist); regenerate the report from a clean tree; update the PR description | **Remaining** | PR #121 |
-| 7 | Merge PR #121 and close #113, #87 and #89 | **Remaining** | Unblocks Task 12 PR 2 and the Task 15 final export |
+| 5 | Merge PR #121 | Done 2026-11-16 | The Nov 15 run is now the published Alibaba result on `main` |
+| 6 | Record the rerun: add the Oct 30 run (and `7dd3942e…`) to the run log or a provenance note, with the reason for the rerun | **Remaining** | Run log on `main` still shows one run with `prior_runs: 0` |
+| 7 | Fix the verifier's run-history check (all manifest hashes; fail when `prior_runs = 0` but earlier runs exist) | **Remaining** | Follow-up PR |
+| 8 | Environment: the Nov 15 run used Python 3.11, pandas 3.0.2, scikit-learn 1.8.0, xgboost 3.2.0; either update `requirements-lock.txt` or document the difference | **Remaining** | Reproducibility (Ch8) |
+| 9 | Update the report's Alibaba ML and Hybrid numbers (abstract, Ch5, Ch7, Ch9) to the Nov 15 run | **Remaining** | Separate PR; baselines unchanged |
+| 10 | Close #113, #87 and #89 | **Remaining** | |
 
 ### 4.2 Task 12 PR 2: Final Cross-Dataset Reporting (#117)
 
@@ -81,7 +84,7 @@
 | 5 | Part C: read-only API under `/api/v1`, checksum check at start-up | **Remaining** | FastAPI proposed |
 | 6 | Part C: OpenAPI contract committed for Task 16 | **Remaining** | Unblocks Task 16 |
 | 7 | Part D: export tests, fixture bundle, API tests; dependencies in the lock file | **Remaining** | |
-| 8 | Final export from the verified Alibaba run | **Remaining** | Needs Task 8 (PR #121) |
+| 8 | Final export from the Nov 15 Alibaba run now on `main` | **Remaining** | Needs the Nov 15 outputs locally (Drive) |
 | 9 | README: run the export and the API | **Remaining** | |
 
 ### 4.4 Task 16: Recommendation Web UI (no issue yet)
@@ -152,7 +155,7 @@
 
 | # | Item | Status |
 |---|---|---|
-| 1 | Close #87 (Task 6) and #89 (Task 7) after Task 8 merges | **Remaining** |
+| 1 | Close #87 (Task 6), #89 (Task 7) and #113 (Task 8) | **Remaining** |
 | 2 | Close #75 (N06) and #67 (Issue 5) | **Remaining** |
 | 3 | Remove `pr70_schema_followup_review.md` | **Remaining** |
 | 4 | Update #120 to the Task 15 backend scope; create the Task 16 issue | **Remaining** |
