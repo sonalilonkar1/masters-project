@@ -95,7 +95,7 @@ Location: `reports/results/ui/` (committed if the total stays under 20 MB; other
 | `risk_levels.json` | Level → policy per dataset, with descriptions; copied from `config/ui_risk_levels.json` |
 | `<dataset>/dataset.json` | Display name, units, CPU and memory semantics, scope, primary resource, population sizes, notes (e.g. "historical replay, not a live cluster") |
 | `<dataset>/policy_metrics.json` | Per policy: violation rates, average waste, shortfall and utilization, valid-row counts; copied field by field from the summary CSV |
-| `<dataset>/workloads.parquet` | One row per workload: `workload_id`, `display_name`, `test_run_count`, `scored_run_count`, `first_start`, `last_start`, `latest_occurrence_id`, `latest_has_history` |
+| `<dataset>/workloads.parquet` | One row per workload: `workload_id`, `display_name`, `test_run_count`, `scored_run_count`, `first_start`, `last_start`, `latest_occurrence_id`, `latest_uses_history`, `has_scored_history` |
 | `<dataset>/rules.json` | The locked rules copied from the frozen records: `min_runs`, selected baseline, ML model, Hybrid rule and safeguard (Google N04 `metadata.json`, N05 `ml_metadata.json`, N06 `decision_manifest.json`; Alibaba Task 6 `baseline_selection.json`, Task 7 `decision_manifest.json`) |
 | `<dataset>/recommendations.parquet` | One row per (occurrence, policy), the common long format below |
 | `<dataset>/metadata.json` | Source paths and SHA-256, source run ID, decision-manifest checksum, code commit, export time, row counts |
@@ -125,7 +125,7 @@ Export rules:
 
 1. **Copy, reshape, rename, label.** No recalculation except the Google Hybrid case in §5, which is verified against stored values.
 2. **Missing stays missing.** Null actuals stay null; a missing request stays null.
-3. **Use the verified Alibaba run.** The export reads `run_record.json` and refuses to run unless it carries a `run_id`, `test_target_read_count = 1` and `test_evaluator_call_count = 1` (added by PR #124; the Nov 15 run on `main`, verified by Task 8, has them). The Oct 30 run lacks these fields: during development the export reports the missing fields instead of refusing, and only the final published export enforces them.
+3. **Use only the agreed inputs.** Every input must match the checksum committed on `main`: Alibaba against `reports/results/alibaba_gpu_2020/verification/artifact_manifest.json` (and the same `run_id` and manifest checksum as `final_test/run_record.json`), Google against `reports/results/google_subset/decision_manifest.json`. References are read at export time, never hard-coded. `--allow-unverified-source` allows other files for development only; the bundle is then marked `development` and must not be published. See Task 15, Source of Truth.
 4. **Self-checks before writing:** per-policy row counts, equality of every copied value with its source, one `is_latest` row per workload, policy metrics equal to the summary CSV, and every Alibaba join on `role_key` validated one-to-one.
 5. Same command-line conventions as the Alibaba scripts: refuses a dirty tree and an existing output unless `--allow-dirty` or `--force`; `--out-dir`.
 
