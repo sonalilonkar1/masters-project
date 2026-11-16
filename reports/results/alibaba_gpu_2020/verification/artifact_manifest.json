@@ -189,6 +189,11 @@
   ],
   "checks": [
     {
+      "detail": "overlaps=[]",
+      "name": "verification.output_directory_isolated",
+      "ok": true
+    },
+    {
       "detail": "5 checksums match",
       "name": "task3_canonical.sha256",
       "ok": true
@@ -211,6 +216,11 @@
     {
       "detail": "5 checksums match",
       "name": "task7_pr2_final_test.sha256",
+      "ok": true
+    },
+    {
+      "detail": "2 published files match",
+      "name": "task3.published_evidence",
       "ok": true
     },
     {
@@ -274,16 +284,6 @@
       "ok": true
     },
     {
-      "detail": "selected_policy='P99'",
-      "name": "task6.selected_policy",
-      "ok": true
-    },
-    {
-      "detail": "selected_min_runs=10",
-      "name": "task6.selected_min_runs",
-      "ok": true
-    },
-    {
       "detail": "phase='pr1_validation_lock'",
       "name": "task7_pr1.phase",
       "ok": true
@@ -304,13 +304,133 @@
       "ok": true
     },
     {
-      "detail": "selected_models={'cpu': 'hist_gradient_boosting', 'memory': 'hist_gradient_boosting'}",
-      "name": "task7_pr1.models_locked",
+      "detail": "task4_inputs={'targets_dir': 'data/processed/alibaba_gpu_v2020_targets', 'targets_manifest': {'metadata.json': '1a24461ecebeddcca725383720ebc7c2cc84628c2e242f6b823a57bc9fe3c455', 'test.parquet': 'daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f', 'train.parquet': 'f2378317f8fd26bda7663df84052ff7ec446af4c282c19e838fa4df76fef81e4', 'validation.parquet': 'a30adc80aa036d34e71f9033330cb9b17bf7d18acd4678707df74ce70f985421'}, 'task3_source_commit': 'c2ae87f4aa357384a3cc8bdc72f776f1012c3ab7', 'task4_code_commit': 'd29d24469c217005adc3ba08249bcc6d7a815ea3'}",
+      "name": "task7_pr1.task4_inputs_present",
       "ok": true
     },
     {
-      "detail": "locked=['requested_cpu', 'requested_memory', 'requested_gpu', 'inst_num', 'cpu_history_count', 'memory_history_count', 'hist_cpu_mean', 'hist_cpu_p90', 'hist_cpu_p95', 'hist_cpu_p99', 'hist_memory_mean', 'hist_memory_p90', 'hist_memory_p95', 'hist_memory_p99', 'hist_cpu_mean_missing', 'hist_cpu_p90_missing', 'hist_cpu_p95_missing', 'hist_cpu_p99_missing', 'hist_memory_mean_missing', 'hist_memory_p90_missing', 'hist_memory_p95_missing', 'hist_memory_p99_missing', 'gpu_type_MISC', 'gpu_type_P100', 'gpu_type_T4', 'gpu_type_V100', 'gpu_type_V100M32', 'gpu_type__NA_', 'gpu_type_spec_P100', 'gpu_type_spec_T4', 'gpu_type_spec_V100', 'gpu_type_spec_V100M32', 'gpu_type_spec__NA_', 'workload_bert', 'workload_ctr', 'workload_graphlearn', 'workload_inception', 'workload_nmt', 'workload_resnet', 'workload_rl', 'workload_vgg', 'workload_xlnet', 'workload__NA_'], artifact=['requested_cpu', 'requested_memory', 'requested_gpu', 'inst_num', 'cpu_history_count', 'memory_history_count', 'hist_cpu_mean', 'hist_cpu_p90', 'hist_cpu_p95', 'hist_cpu_p99', 'hist_memory_mean', 'hist_memory_p90', 'hist_memory_p95', 'hist_memory_p99', 'hist_cpu_mean_missing', 'hist_cpu_p90_missing', 'hist_cpu_p95_missing', 'hist_cpu_p99_missing', 'hist_memory_mean_missing', 'hist_memory_p90_missing', 'hist_memory_p95_missing', 'hist_memory_p99_missing', 'gpu_type_MISC', 'gpu_type_P100', 'gpu_type_T4', 'gpu_type_V100', 'gpu_type_V100M32', 'gpu_type__NA_', 'gpu_type_spec_P100', 'gpu_type_spec_T4', 'gpu_type_spec_V100', 'gpu_type_spec_V100M32', 'gpu_type_spec__NA_', 'workload_bert', 'workload_ctr', 'workload_graphlearn', 'workload_inception', 'workload_nmt', 'workload_resnet', 'workload_rl', 'workload_vgg', 'workload_xlnet', 'workload__NA_']",
+      "detail": "targets_manifest={'metadata.json': '1a24461ecebeddcca725383720ebc7c2cc84628c2e242f6b823a57bc9fe3c455', 'test.parquet': 'daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f', 'train.parquet': 'f2378317f8fd26bda7663df84052ff7ec446af4c282c19e838fa4df76fef81e4', 'validation.parquet': 'a30adc80aa036d34e71f9033330cb9b17bf7d18acd4678707df74ce70f985421'}",
+      "name": "task7_pr1.task4_targets_manifest_present",
+      "ok": true
+    },
+    {
+      "detail": "4 bound checksums match",
+      "name": "task7_pr1.task4_checksum_binding",
+      "ok": true
+    },
+    {
+      "detail": "decision='daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f', run_record='daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f'",
+      "name": "task7.task4_test_checksum_binding",
+      "ok": true
+    },
+    {
+      "detail": "task6_selection={'baseline_selection_sha256': 'ec3c4e07f51b991c16ad27825b90752191958339aa9b78f25f06a51b61c6ad5e', 'baselines_manifest': {'baseline_selection.json': 'ec3c4e07f51b991c16ad27825b90752191958339aa9b78f25f06a51b61c6ad5e', 'history_statistics.parquet': '39e12b6ed581cc1a03735cdc04c88c17e2c021ab9da0c67beff1d9552edd54d3', 'metadata.json': '7a44dd9606f6164b518a5aece3c260758ec9ab5a15c77dcd2ac88af3d965d048', 'recommendations_test.parquet': '1e3361f68224d6565c00ab92820cf38bcbdeda703843647c5ef96fd820046e1b', 'recommendations_train.parquet': '93d618830576724defa523755ac8bf26ad281cc96a61725dc56094ee683de05b', 'recommendations_validation.parquet': '1d3df7a8aa0b81776340f4469171c8efbbc7d68ce15b0ab94a3ca865e4ddbc65', 'sensitivity_validation.csv': 'fd01cf2ca082cd60902180a450d9136c90936f21d08dd2884974d243aff7f1c0', 'validation_comparison.csv': '3b19cb6b5aff26fec79585064a44bb88d5658387433db255070490368460fb78'}, 'selected_min_runs': 10, 'selected_policy': 'P99'}",
+      "name": "task7_pr1.task6_selection_present",
+      "ok": true
+    },
+    {
+      "detail": "baselines_manifest={'baseline_selection.json': 'ec3c4e07f51b991c16ad27825b90752191958339aa9b78f25f06a51b61c6ad5e', 'history_statistics.parquet': '39e12b6ed581cc1a03735cdc04c88c17e2c021ab9da0c67beff1d9552edd54d3', 'metadata.json': '7a44dd9606f6164b518a5aece3c260758ec9ab5a15c77dcd2ac88af3d965d048', 'recommendations_test.parquet': '1e3361f68224d6565c00ab92820cf38bcbdeda703843647c5ef96fd820046e1b', 'recommendations_train.parquet': '93d618830576724defa523755ac8bf26ad281cc96a61725dc56094ee683de05b', 'recommendations_validation.parquet': '1d3df7a8aa0b81776340f4469171c8efbbc7d68ce15b0ab94a3ca865e4ddbc65', 'sensitivity_validation.csv': 'fd01cf2ca082cd60902180a450d9136c90936f21d08dd2884974d243aff7f1c0', 'validation_comparison.csv': '3b19cb6b5aff26fec79585064a44bb88d5658387433db255070490368460fb78'}",
+      "name": "task7_pr1.task6_baselines_manifest_present",
+      "ok": true
+    },
+    {
+      "detail": "8 bound checksums match",
+      "name": "task7_pr1.task6_checksum_binding",
+      "ok": true
+    },
+    {
+      "detail": "decision={'baseline_selection.json': 'ec3c4e07f51b991c16ad27825b90752191958339aa9b78f25f06a51b61c6ad5e', 'history_statistics.parquet': '39e12b6ed581cc1a03735cdc04c88c17e2c021ab9da0c67beff1d9552edd54d3', 'metadata.json': '7a44dd9606f6164b518a5aece3c260758ec9ab5a15c77dcd2ac88af3d965d048', 'recommendations_test.parquet': '1e3361f68224d6565c00ab92820cf38bcbdeda703843647c5ef96fd820046e1b', 'recommendations_train.parquet': '93d618830576724defa523755ac8bf26ad281cc96a61725dc56094ee683de05b', 'recommendations_validation.parquet': '1d3df7a8aa0b81776340f4469171c8efbbc7d68ce15b0ab94a3ca865e4ddbc65', 'sensitivity_validation.csv': 'fd01cf2ca082cd60902180a450d9136c90936f21d08dd2884974d243aff7f1c0', 'validation_comparison.csv': '3b19cb6b5aff26fec79585064a44bb88d5658387433db255070490368460fb78'}, run_record={'baseline_selection.json': 'ec3c4e07f51b991c16ad27825b90752191958339aa9b78f25f06a51b61c6ad5e', 'history_statistics.parquet': '39e12b6ed581cc1a03735cdc04c88c17e2c021ab9da0c67beff1d9552edd54d3', 'metadata.json': '7a44dd9606f6164b518a5aece3c260758ec9ab5a15c77dcd2ac88af3d965d048', 'recommendations_test.parquet': '1e3361f68224d6565c00ab92820cf38bcbdeda703843647c5ef96fd820046e1b', 'recommendations_train.parquet': '93d618830576724defa523755ac8bf26ad281cc96a61725dc56094ee683de05b', 'recommendations_validation.parquet': '1d3df7a8aa0b81776340f4469171c8efbbc7d68ce15b0ab94a3ca865e4ddbc65', 'sensitivity_validation.csv': 'fd01cf2ca082cd60902180a450d9136c90936f21d08dd2884974d243aff7f1c0', 'validation_comparison.csv': '3b19cb6b5aff26fec79585064a44bb88d5658387433db255070490368460fb78'}",
+      "name": "task7.task6_run_record_binding",
+      "ok": true
+    },
+    {
+      "detail": "decision='ec3c4e07f51b991c16ad27825b90752191958339aa9b78f25f06a51b61c6ad5e', manifest='ec3c4e07f51b991c16ad27825b90752191958339aa9b78f25f06a51b61c6ad5e'",
+      "name": "task7_pr1.baseline_selection_hash_binding",
+      "ok": true
+    },
+    {
+      "detail": "physical=('P99',10), decision=('P99',10), run=('P99',10)",
+      "name": "task7_pr1.baseline_selection_semantics",
+      "ok": true
+    },
+    {
+      "detail": "model_artifacts={'cpu': {'file': 'cpu_model.joblib', 'sha256': 'ff4a1521eb02343d1fb0ef089af0c24acdfbff72a28a73c823890c3740258384'}, 'memory': {'file': 'memory_model.joblib', 'sha256': 'c79c29ded8eb466a235ac93dad26d23d7166efbf4e8a69dcc461cdf8cbc5286a'}}",
+      "name": "task7_pr1.model_artifacts_present",
+      "ok": true
+    },
+    {
+      "detail": "selected_models={'cpu': 'hist_gradient_boosting', 'memory': 'hist_gradient_boosting'}",
+      "name": "task7_pr1.selected_models_present",
+      "ok": true
+    },
+    {
+      "detail": "artifact={'file': 'cpu_model.joblib', 'sha256': 'ff4a1521eb02343d1fb0ef089af0c24acdfbff72a28a73c823890c3740258384'}",
+      "name": "task7_pr1.cpu_model_artifact_present",
+      "ok": true
+    },
+    {
+      "detail": "decision/stage/run/physical model hash binding valid",
+      "name": "task7_pr1.cpu_model_hash_binding",
+      "ok": true
+    },
+    {
+      "detail": "selected_model='hist_gradient_boosting'",
+      "name": "task7_pr1.cpu_selected_model",
+      "ok": true
+    },
+    {
+      "detail": "artifact={'file': 'memory_model.joblib', 'sha256': 'c79c29ded8eb466a235ac93dad26d23d7166efbf4e8a69dcc461cdf8cbc5286a'}",
+      "name": "task7_pr1.memory_model_artifact_present",
+      "ok": true
+    },
+    {
+      "detail": "decision/stage/run/physical model hash binding valid",
+      "name": "task7_pr1.memory_model_hash_binding",
+      "ok": true
+    },
+    {
+      "detail": "selected_model='hist_gradient_boosting'",
+      "name": "task7_pr1.memory_selected_model",
+      "ok": true
+    },
+    {
+      "detail": "decision='hist_gradient_boosting', model_selection='hist_gradient_boosting', run='hist_gradient_boosting'",
+      "name": "task7_pr1.model_selection_cpu_matches_lock",
+      "ok": true
+    },
+    {
+      "detail": "decision='hist_gradient_boosting', model_selection='hist_gradient_boosting', run='hist_gradient_boosting'",
+      "name": "task7_pr1.model_selection_memory_matches_lock",
+      "ok": true
+    },
+    {
+      "detail": "feature_order=['requested_cpu', 'requested_memory', 'requested_gpu', 'inst_num', 'cpu_history_count', 'memory_history_count', 'hist_cpu_mean', 'hist_cpu_p90', 'hist_cpu_p95', 'hist_cpu_p99', 'hist_memory_mean', 'hist_memory_p90', 'hist_memory_p95', 'hist_memory_p99', 'hist_cpu_mean_missing', 'hist_cpu_p90_missing', 'hist_cpu_p95_missing', 'hist_cpu_p99_missing', 'hist_memory_mean_missing', 'hist_memory_p90_missing', 'hist_memory_p95_missing', 'hist_memory_p99_missing', 'gpu_type_MISC', 'gpu_type_P100', 'gpu_type_T4', 'gpu_type_V100', 'gpu_type_V100M32', 'gpu_type__NA_', 'gpu_type_spec_P100', 'gpu_type_spec_T4', 'gpu_type_spec_V100', 'gpu_type_spec_V100M32', 'gpu_type_spec__NA_', 'workload_bert', 'workload_ctr', 'workload_graphlearn', 'workload_inception', 'workload_nmt', 'workload_resnet', 'workload_rl', 'workload_vgg', 'workload_xlnet', 'workload__NA_']",
+      "name": "task7_pr1.feature_order_present",
+      "ok": true
+    },
+    {
+      "detail": "decision=['requested_cpu', 'requested_memory', 'requested_gpu', 'inst_num', 'cpu_history_count', 'memory_history_count', 'hist_cpu_mean', 'hist_cpu_p90', 'hist_cpu_p95', 'hist_cpu_p99', 'hist_memory_mean', 'hist_memory_p90', 'hist_memory_p95', 'hist_memory_p99', 'hist_cpu_mean_missing', 'hist_cpu_p90_missing', 'hist_cpu_p95_missing', 'hist_cpu_p99_missing', 'hist_memory_mean_missing', 'hist_memory_p90_missing', 'hist_memory_p95_missing', 'hist_memory_p99_missing', 'gpu_type_MISC', 'gpu_type_P100', 'gpu_type_T4', 'gpu_type_V100', 'gpu_type_V100M32', 'gpu_type__NA_', 'gpu_type_spec_P100', 'gpu_type_spec_T4', 'gpu_type_spec_V100', 'gpu_type_spec_V100M32', 'gpu_type_spec__NA_', 'workload_bert', 'workload_ctr', 'workload_graphlearn', 'workload_inception', 'workload_nmt', 'workload_resnet', 'workload_rl', 'workload_vgg', 'workload_xlnet', 'workload__NA_'], artifact=['requested_cpu', 'requested_memory', 'requested_gpu', 'inst_num', 'cpu_history_count', 'memory_history_count', 'hist_cpu_mean', 'hist_cpu_p90', 'hist_cpu_p95', 'hist_cpu_p99', 'hist_memory_mean', 'hist_memory_p90', 'hist_memory_p95', 'hist_memory_p99', 'hist_cpu_mean_missing', 'hist_cpu_p90_missing', 'hist_cpu_p95_missing', 'hist_cpu_p99_missing', 'hist_memory_mean_missing', 'hist_memory_p90_missing', 'hist_memory_p95_missing', 'hist_memory_p99_missing', 'gpu_type_MISC', 'gpu_type_P100', 'gpu_type_T4', 'gpu_type_V100', 'gpu_type_V100M32', 'gpu_type__NA_', 'gpu_type_spec_P100', 'gpu_type_spec_T4', 'gpu_type_spec_V100', 'gpu_type_spec_V100M32', 'gpu_type_spec__NA_', 'workload_bert', 'workload_ctr', 'workload_graphlearn', 'workload_inception', 'workload_nmt', 'workload_resnet', 'workload_rl', 'workload_vgg', 'workload_xlnet', 'workload__NA_']",
       "name": "task7_pr1.feature_order_matches_lock",
+      "ok": true
+    },
+    {
+      "detail": "physical='b9b74433fafbb4401284f76966d2fb134685f9a44e3bdde5c56adb526a34f925', stage='b9b74433fafbb4401284f76966d2fb134685f9a44e3bdde5c56adb526a34f925', run='b9b74433fafbb4401284f76966d2fb134685f9a44e3bdde5c56adb526a34f925'",
+      "name": "task7_pr1.feature_order_hash_binding",
+      "ok": true
+    },
+    {
+      "detail": "stage={'candidate_models.csv': 'ef474ef5ac200f4163772a19e0af75c2bea7903577bb4bf934f963b28137262c', 'cpu_model.joblib': 'ff4a1521eb02343d1fb0ef089af0c24acdfbff72a28a73c823890c3740258384', 'decision_manifest.json': 'd36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', 'feature_order.json': 'b9b74433fafbb4401284f76966d2fb134685f9a44e3bdde5c56adb526a34f925', 'memory_model.joblib': 'c79c29ded8eb466a235ac93dad26d23d7166efbf4e8a69dcc461cdf8cbc5286a', 'metadata.json': '7136748103537e4531df8c34563b594e9ee9d1fe75c005e75412a2d5870dcf80', 'model_selection.json': 'b9357ea5b0c139d79cbb23c56f8e781f24c2a0b2276b2ce64b813f2cbb177e08', 'validation_ml_hybrid_predictions.parquet': '5d71419ec52383f6cedc4db0d3776c8ffba9795e9670b925081e6bf8cf4c245d', 'validation_policy_comparison.csv': '382bb89be7024e3474e34ed3f4f19563513858c06df71d9a201a2d3c2898a463'}, run_record={'candidate_models.csv': 'ef474ef5ac200f4163772a19e0af75c2bea7903577bb4bf934f963b28137262c', 'cpu_model.joblib': 'ff4a1521eb02343d1fb0ef089af0c24acdfbff72a28a73c823890c3740258384', 'decision_manifest.json': 'd36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', 'feature_order.json': 'b9b74433fafbb4401284f76966d2fb134685f9a44e3bdde5c56adb526a34f925', 'memory_model.joblib': 'c79c29ded8eb466a235ac93dad26d23d7166efbf4e8a69dcc461cdf8cbc5286a', 'metadata.json': '7136748103537e4531df8c34563b594e9ee9d1fe75c005e75412a2d5870dcf80', 'model_selection.json': 'b9357ea5b0c139d79cbb23c56f8e781f24c2a0b2276b2ce64b813f2cbb177e08', 'validation_ml_hybrid_predictions.parquet': '5d71419ec52383f6cedc4db0d3776c8ffba9795e9670b925081e6bf8cf4c245d', 'validation_policy_comparison.csv': '382bb89be7024e3474e34ed3f4f19563513858c06df71d9a201a2d3c2898a463'}",
+      "name": "task7.pr1_run_record_binding",
+      "ok": true
+    },
+    {
+      "detail": "final_population_size=44053",
+      "name": "task7.final_population_size",
+      "ok": true
+    },
+    {
+      "detail": "missing=[], unexpected=[], columns=('policy', 'row_count', 'valid_cpu_violation_count', 'valid_memory_violation_count', 'valid_cpu_utilization_count', 'valid_memory_utilization_count', 'cpu_violation_pct', 'memory_violation_pct', 'average_cpu_utilization', 'average_memory_utilization', 'average_cpu_waste', 'average_memory_waste', 'average_cpu_shortfall', 'average_memory_shortfall', 'cpu_result_semantics', 'primary_resource', 'any_resource_metric_reported')",
+      "name": "task7_pr2.comparison.schema",
       "ok": true
     },
     {
@@ -319,58 +439,48 @@
       "ok": true
     },
     {
-      "detail": "required=['valid_cpu_violation_count', 'valid_memory_violation_count'], columns=['policy', 'row_count', 'valid_cpu_violation_count', 'valid_memory_violation_count', 'valid_cpu_utilization_count', 'valid_memory_utilization_count', 'cpu_violation_pct', 'memory_violation_pct', 'average_cpu_utilization', 'average_memory_utilization', 'average_cpu_waste', 'average_memory_waste', 'average_cpu_shortfall', 'average_memory_shortfall', 'cpu_result_semantics', 'primary_resource', 'any_resource_metric_reported']",
-      "name": "task7_pr2.separate_denominators",
+      "detail": "semantics valid",
+      "name": "task7_pr2.comparison.semantics",
       "ok": true
     },
     {
-      "detail": "all rows must carry cpu_result_semantics=average_usage",
-      "name": "task7_pr2.cpu_semantics",
+      "detail": "numeric columns parse",
+      "name": "task7_pr2.comparison.numeric_parse",
       "ok": true
     },
     {
-      "detail": "all rows must carry primary_resource=memory",
-      "name": "task7_pr2.memory_primary",
+      "detail": "count relationships valid",
+      "name": "task7_pr2.comparison.denominator_relationships",
       "ok": true
     },
     {
-      "detail": "forbidden columns=[]",
-      "name": "task7_pr2.no_gpu_or_any_resource_metrics",
+      "detail": "metric ranges/nullability valid",
+      "name": "task7_pr2.comparison.metric_contract",
       "ok": true
     },
     {
-      "detail": "numeric cells must be finite and non-null",
-      "name": "task7_pr2.comparison.numeric_finite",
+      "detail": "missing=[], unexpected=[], columns=('sensitivity', 'policy', 'row_count', 'valid_cpu_violation_count', 'valid_memory_violation_count', 'valid_cpu_utilization_count', 'valid_memory_utilization_count', 'cpu_violation_pct', 'memory_violation_pct', 'average_cpu_utilization', 'average_memory_utilization', 'average_cpu_waste', 'average_memory_waste', 'average_cpu_shortfall', 'average_memory_shortfall', 'cpu_result_semantics', 'primary_resource', 'any_resource_metric_reported', 'n_groups')",
+      "name": "task7_pr2.sensitivity.schema",
       "ok": true
     },
     {
-      "detail": "numeric bounds valid",
-      "name": "task7_pr2.comparison.numeric_bounds",
+      "detail": "rows=35, unique_pairs=35, missing=[], unexpected=[]",
+      "name": "task7_pr2.sensitivity.cartesian_product",
       "ok": true
     },
     {
-      "detail": "expected 35 rows (5 sensitivities x 7 policies), found 35",
-      "name": "task7_pr2.sensitivity_row_count",
+      "detail": "semantics valid",
+      "name": "task7_pr2.sensitivity.semantics",
       "ok": true
     },
     {
-      "detail": "policy_counts={'Request': 5, 'Mean': 5, 'P90': 5, 'P95': 5, 'P99': 5, 'ML': 5, 'Hybrid': 5}",
-      "name": "task7_pr2.sensitivity_policy_coverage",
+      "detail": "producer-compatible sensitivity numeric/null contract valid",
+      "name": "task7_pr2.sensitivity.numeric_contract",
       "ok": true
     },
     {
-      "detail": "candidate_columns=['sensitivity', 'n_groups'], chosen_columns=['sensitivity'], groups=5",
-      "name": "task7_pr2.sensitivity_exact_groups",
-      "ok": true
-    },
-    {
-      "detail": "always_finite=True, group_counts_null=True, group_n_groups_valid=True, non_group_counts_valid=True, non_group_n_groups_null=True",
-      "name": "task7_pr2.sensitivity.numeric_finite",
-      "ok": "True"
-    },
-    {
-      "detail": "numeric bounds valid",
-      "name": "task7_pr2.sensitivity.numeric_bounds",
+      "detail": "cross-table relationships valid",
+      "name": "task7_pr2.sensitivity.cross_table_relationships",
       "ok": true
     },
     {
@@ -379,43 +489,58 @@
       "ok": true
     },
     {
-      "detail": "expected manifest sha='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', run_record='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac'",
+      "detail": "computed='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', run='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', metadata='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac'",
       "name": "task7.final_run_traces_manifest",
       "ok": true
     },
     {
-      "detail": "expected explicit test_evaluator_call_count=1, found 1",
-      "name": "task7.test_evaluator_call_count",
+      "detail": "expected exact integer 1, found 1 (int)",
+      "name": "task7.run_record.test_evaluator_call_count",
       "ok": true
     },
     {
-      "detail": "expected explicit test_target_read_count=1, found 1",
-      "name": "task7.test_target_read_count",
+      "detail": "expected exact integer 1, found 1 (int)",
+      "name": "task7.run_record.test_target_read_count",
       "ok": true
     },
     {
-      "detail": "expected non-empty run_id, found '4fdc7e96-789b-43a9-990f-20f189e9598b'",
+      "detail": "expected exact integer 1, found 1 (int)",
+      "name": "task7.final_metadata.test_evaluator_call_count",
+      "ok": true
+    },
+    {
+      "detail": "expected exact integer 1, found 1 (int)",
+      "name": "task7.final_metadata.test_target_read_count",
+      "ok": true
+    },
+    {
+      "detail": "run-record and final-metadata counters must agree",
+      "name": "task7.operation_counters_cross_record",
+      "ok": true
+    },
+    {
+      "detail": "run_id='4fdc7e96-789b-43a9-990f-20f189e9598b'",
       "name": "task7.final_run_id",
       "ok": true
     },
     {
-      "detail": "9 bound checksums match",
-      "name": "task7.pr1_checksum_binding",
+      "detail": "computed='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', stage='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', run_pr1='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', run='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', metadata='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac', log='d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac'",
+      "name": "task7.decision_identity_binding",
       "ok": true
     },
     {
-      "detail": "8 bound checksums match",
-      "name": "task7.task6_checksum_binding",
+      "detail": "ea6aa08458aace364cd33529ce77de894bcd76ad",
+      "name": "task7.execution_commit_exists",
       "ok": true
     },
     {
-      "detail": "expected='daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f', actual='daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f'",
-      "name": "task7.task4_test_checksum_binding",
+      "detail": "identities={'run_record': 'ea6aa08458aace364cd33529ce77de894bcd76ad', 'run_log': 'ea6aa08458aace364cd33529ce77de894bcd76ad', 'final_metadata.build': 'ea6aa08458aace364cd33529ce77de894bcd76ad', 'decision.build': 'ea6aa08458aace364cd33529ce77de894bcd76ad'}",
+      "name": "task7.execution_commit_identity",
       "ok": true
     },
     {
-      "detail": "compared=8, mismatches={}",
-      "name": "task7.final_metadata_matches_run_record",
+      "detail": "recorded commit matches audited source contract from ea6aa08458aace364cd33529ce77de894bcd76ad",
+      "name": "task7.execution_instrumentation_audited",
       "ok": true
     },
     {
@@ -454,6 +579,11 @@
       "ok": true
     },
     {
+      "detail": "required final metadata fields match",
+      "name": "task7.final_metadata_matches_run_record",
+      "ok": true
+    },
+    {
       "detail": "missing=[]",
       "name": "task7.prediction_columns",
       "ok": true
@@ -464,15 +594,22 @@
       "ok": true
     }
   ],
+  "companion_files": {
+    "reproduction_metadata.json": "f40f4ba01421bfbb81c3897bfc96d18b0c3ba237781236e7ce58e83a7916c201",
+    "verification_report.md": "c86f85aded989563389fa3a42da6eb4cd80527120c35942d38e87c80be22fcf4"
+  },
   "dataset_id": "alibaba_gpu_v2020",
   "decision_manifest_sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
+  "error": null,
   "final_run_identity": {
     "code_commit": "ea6aa08458aace364cd33529ce77de894bcd76ad",
     "decision_manifest_sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
     "run_id": "4fdc7e96-789b-43a9-990f-20f189e9598b",
     "timestamp_utc": "2026-11-15T09:26:29Z"
   },
+  "generation_id": "1cc473e40341494d9d946c25a7dc9a25",
   "schema_version": "0.2.0",
+  "status": "PASS",
   "unverified_items": [
     {
       "item": "Task 4 split isolation / history timing / target-value consistency on test rows",
@@ -483,6 +620,6 @@
       "reason": "The verifier checks the locked model checksums, feature-order lock, saved prediction artifact checksum and run provenance, but does not rerun model inference in Task 8."
     }
   ],
-  "verification_timestamp_utc": "2026-11-15T21:34:42Z",
+  "verification_timestamp_utc": "2026-11-16T05:10:42Z",
   "verified": true
 }
