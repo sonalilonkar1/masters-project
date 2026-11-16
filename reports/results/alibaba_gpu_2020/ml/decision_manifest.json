@@ -1,11 +1,11 @@
 {
   "any_resource_metric_reported": false,
   "build": {
-    "code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+    "code_commit": "ea6aa08458aace364cd33529ce77de894bcd76ad",
     "code_dirty": false,
-    "pandas_version": "2.3.3",
+    "pandas_version": "3.0.2",
     "pyarrow_version": "23.0.1",
-    "python_version": "3.12.9"
+    "python_version": "3.11.15"
   },
   "candidate_models": [
     "decision_tree",
@@ -91,14 +91,14 @@
   "hybrid_rule": "max(ml_prediction, selected_task6_baseline)",
   "hybrid_safeguard": "task6_selected_baseline",
   "library_versions": {
-    "joblib": "1.6.0",
-    "numpy": "2.5.4",
-    "pandas": "2.3.3",
-    "python": "3.12.9",
-    "scikit_learn": "1.9.1",
-    "xgboost": "3.4.1"
+    "joblib": "1.5.3",
+    "numpy": "2.4.3",
+    "pandas": "3.0.2",
+    "python": "3.11.15",
+    "scikit_learn": "1.8.0",
+    "xgboost": "3.2.0"
   },
-  "lock_timestamp_utc": "2026-10-30T17:33:08Z",
+  "lock_timestamp_utc": "2026-11-15T09:16:50Z",
   "missing_indicator_columns": [
     "hist_cpu_mean_missing",
     "hist_cpu_p90_missing",
@@ -112,11 +112,11 @@
   "model_artifacts": {
     "cpu": {
       "file": "cpu_model.joblib",
-      "sha256": "acf72de5be7db3ebba9520978544dc3ac2053d88c50038c4950fa7137133d308"
+      "sha256": "ff4a1521eb02343d1fb0ef089af0c24acdfbff72a28a73c823890c3740258384"
     },
     "memory": {
       "file": "memory_model.joblib",
-      "sha256": "421fc28c5522071b4b26a02fb026fe9090d26224bf7d1239ff56576791da2441"
+      "sha256": "c79c29ded8eb466a235ac93dad26d23d7166efbf4e8a69dcc461cdf8cbc5286a"
     }
   },
   "model_hyperparameters": {
@@ -244,23 +244,23 @@
   "task4_inputs": {
     "targets_dir": "data/processed/alibaba_gpu_v2020_targets",
     "targets_manifest": {
-      "metadata.json": "f3fe9c656e2b905a394f741dfe0d1d20b76b84d4662eaac7448518f883b2631c",
-      "test.parquet": "960796ce7a87f3f09216c7aac7fdde78fa7bc87577216470b6c104584e6842f3",
-      "train.parquet": "e08ad6b288fb5aaeaf87f4efe9908a1f70d01a12ae87e8bc867c5812149d7a8a",
-      "validation.parquet": "f84ccde879417204c2c93ee2b5dd7b7070c672a7eaa18e09ecc9534354c134e6"
+      "metadata.json": "1a24461ecebeddcca725383720ebc7c2cc84628c2e242f6b823a57bc9fe3c455",
+      "test.parquet": "daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f",
+      "train.parquet": "f2378317f8fd26bda7663df84052ff7ec446af4c282c19e838fa4df76fef81e4",
+      "validation.parquet": "a30adc80aa036d34e71f9033330cb9b17bf7d18acd4678707df74ce70f985421"
     },
     "task3_source_commit": "c2ae87f4aa357384a3cc8bdc72f776f1012c3ab7",
-    "task4_code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f"
+    "task4_code_commit": "d29d24469c217005adc3ba08249bcc6d7a815ea3"
   },
   "task6_selection": {
-    "baseline_selection_sha256": "6017104f487b10c2f5cd627e8b31cff46189d607d399b6e05149382af145ee75",
+    "baseline_selection_sha256": "ec3c4e07f51b991c16ad27825b90752191958339aa9b78f25f06a51b61c6ad5e",
     "baselines_manifest": {
-      "baseline_selection.json": "6017104f487b10c2f5cd627e8b31cff46189d607d399b6e05149382af145ee75",
-      "history_statistics.parquet": "70212fe4285328d7126aefeb3252efddba083ab4ceff69367ed0d75967cc3556",
-      "metadata.json": "15a4b873e8ffdb9b6ead65f0823bc4cb98adff63f7e0a93e9dc5862e6a1fd6f8",
-      "recommendations_test.parquet": "a5a302e99dbfc17d81ba9fbb96aaad233f14457490507a4165026f7f411e64bd",
-      "recommendations_train.parquet": "b295bc6016459851202cadd48a19a93933fedbb4940f75796013b8be17367ab5",
-      "recommendations_validation.parquet": "a0c567300a1f5fb03c5520489b2328f4406c37b51ddafb97beda0d0f72377c13",
+      "baseline_selection.json": "ec3c4e07f51b991c16ad27825b90752191958339aa9b78f25f06a51b61c6ad5e",
+      "history_statistics.parquet": "39e12b6ed581cc1a03735cdc04c88c17e2c021ab9da0c67beff1d9552edd54d3",
+      "metadata.json": "7a44dd9606f6164b518a5aece3c260758ec9ab5a15c77dcd2ac88af3d965d048",
+      "recommendations_test.parquet": "1e3361f68224d6565c00ab92820cf38bcbdeda703843647c5ef96fd820046e1b",
+      "recommendations_train.parquet": "93d618830576724defa523755ac8bf26ad281cc96a61725dc56094ee683de05b",
+      "recommendations_validation.parquet": "1d3df7a8aa0b81776340f4469171c8efbbc7d68ce15b0ab94a3ca865e4ddbc65",
       "sensitivity_validation.csv": "fd01cf2ca082cd60902180a450d9136c90936f21d08dd2884974d243aff7f1c0",
       "validation_comparison.csv": "3b19cb6b5aff26fec79585064a44bb88d5658387433db255070490368460fb78"
     },

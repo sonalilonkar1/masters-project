@@ -1,11 +1,12 @@
 {
   "build": {
-    "code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+    "code_commit": "ea6aa08458aace364cd33529ce77de894bcd76ad",
     "code_dirty": false,
-    "pandas_version": "2.3.3",
+    "pandas_version": "3.0.2",
     "pyarrow_version": "23.0.1",
-    "python_version": "3.12.9"
+    "python_version": "3.11.15"
   },
+  "dataset_id": "alibaba_gpu_v2020",
   "hybrid_safeguard_missing_validation": {
     "cpu": 0,
     "memory": 0
@@ -23,6 +24,7 @@
   ],
   "phase": "pr1_validation_lock",
   "reads_test": false,
+  "schema_version": "0.2.0",
   "selected_models": {
     "cpu": "hist_gradient_boosting",
     "memory": "hist_gradient_boosting"

@@ -1,15 +1,17 @@
 {
   "any_resource_metric_reported": false,
   "build": {
-    "code_commit": "fe38ea0c07969a4cdceb3d1d08bbe08813232d5f",
+    "code_commit": "ea6aa08458aace364cd33529ce77de894bcd76ad",
     "code_dirty": false,
-    "pandas_version": "2.3.3",
+    "pandas_version": "3.0.2",
     "pyarrow_version": "23.0.1",
-    "python_version": "3.12.9"
+    "python_version": "3.11.15"
   },
   "changes_manifest": false,
   "changes_selection": false,
   "cpu_result_semantics": "average_usage",
+  "dataset_id": "alibaba_gpu_v2020",
+  "decision_manifest_sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
   "final_policies": [
     "Request",
     "Mean",
@@ -30,6 +32,10 @@
   "phase": "pr2_final_test",
   "primary_resource": "memory",
   "reads_test": true,
+  "run_id": "4fdc7e96-789b-43a9-990f-20f189e9598b",
+  "schema_version": "0.2.0",
   "task": "task7_alibaba_gpu_2020_ml_hybrid",
+  "test_evaluator_call_count": 1,
+  "test_target_read_count": 1,
   "trains_models": false
 }
