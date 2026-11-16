@@ -95,7 +95,7 @@ Location: `reports/results/ui/` (committed if the total stays under 20 MB; other
 | `risk_levels.json` | Level → policy per dataset, with descriptions; copied from `config/ui_risk_levels.json` |
 | `<dataset>/dataset.json` | Display name, units, CPU and memory semantics, scope, primary resource, population sizes, notes (e.g. "historical replay, not a live cluster") |
 | `<dataset>/policy_metrics.json` | Per policy: violation rates, average waste, shortfall and utilization, valid-row counts; copied field by field from the summary CSV |
-| `<dataset>/workloads.parquet` | One row per workload: `workload_id`, `display_name`, `test_run_count`, `scored_run_count`, `first_start`, `last_start`, `latest_occurrence_id`, `latest_has_history` |
+| `<dataset>/workloads.parquet` | One row per workload: `workload_id`, `display_name`, `test_run_count`, `scored_run_count`, `first_start`, `last_start`, `latest_occurrence_id`, `latest_uses_history`, `has_scored_history` |
 | `<dataset>/rules.json` | The locked rules copied from the frozen records: `min_runs`, selected baseline, ML model, Hybrid rule and safeguard (Google N04 `metadata.json`, N05 `ml_metadata.json`, N06 `decision_manifest.json`; Alibaba Task 6 `baseline_selection.json`, Task 7 `decision_manifest.json`) |
 | `<dataset>/recommendations.parquet` | One row per (occurrence, policy), the common long format below |
 | `<dataset>/metadata.json` | Source paths and SHA-256, source run ID, decision-manifest checksum, code commit, export time, row counts |
