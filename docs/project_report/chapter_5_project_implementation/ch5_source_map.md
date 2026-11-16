@@ -5,7 +5,7 @@
 **Scope rules**
 - Datasets: Google ClusterData 2019 (Kaggle subset) and Alibaba GPU Cluster Trace 2020. Alibaba 2018 and Azure VM code exists in `src/adapters/` but is out of scope.
 - No old report draft, no traceability file, no full-trace Google analysis doc, no dropped Alibaba evidence doc.
-- Task 13 is written as implemented; the REST API and frontend are described as planned (Chapter 8 §8.3; Task 15). Alibaba Task 7 is merged and run; its statements were checked against the Task 7 artifacts on 30 Oct 2026.
+- Task 13 is written as implemented; the REST API and frontend are described as planned (Chapter 8 §8.3; Tasks 15 and 16). Alibaba Task 7 is merged and run; its statements were checked against the Task 7 artifacts on 30 Oct 2026.
 - Every number is checked against code, committed config or real outputs.
 - Measured outputs moved from Chapters 2 and 4 are now in the Chapter 5 text; their sources are listed in the rows below.
 - Style: formal, paper-style prose; citations only for the two datasets.

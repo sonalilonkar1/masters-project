@@ -5,7 +5,7 @@
 **Scope rules**
 - Datasets: Google ClusterData 2019 (Kaggle subset) and Alibaba GPU Cluster Trace 2020. Alibaba 2018 is not in the report.
 - The old report draft and `REPORT_TRACEABILITY.md` are not sources; nor are `docs/data/google_clusterdata_2019_analysis.md` (full trace) or `docs/data/alibaba_gpu_2020_evidence_and_limitations.md` (dropped).
-- Task 13 and Alibaba Task 7 are written as implemented; the Task 7 statements were checked against the Task 7 artifacts on 30 Oct 2026. The REST API and web frontend are described as planned (Chapter 8 §8.3; Task 15).
+- Task 13 and Alibaba Task 7 are written as implemented; the Task 7 statements were checked against the Task 7 artifacts on 30 Oct 2026. The REST API and web frontend are described as planned (Chapter 8 §8.3; Tasks 15 and 16).
 - Every factual claim is checked against code, committed config or real outputs, not only documents.
 - Line numbers are from the working tree on `docs/issue-17-final-report` (after `0b07fed`).
 
@@ -59,6 +59,7 @@
 | Code: Alibaba | `src/baselines/alibaba_gpu_2020.py` — `MIN_RUNS_CANDIDATES`, `HISTORY_POLICIES`, `SELECTABLE_POLICIES` (Request excluded), `SELECTION_SORT_ORDER` (memory violation, memory waste, CPU violation, CPU waste, `min_runs`, policy), `add_baseline_recommendations` (L247; per-resource fallback), `freeze_common_validation_population` (L374), `select_baseline` (L469) |
 | Design docs | Task 6 issue §2–§6; D-19 |
 | Results (for checking only) | `reports/results/google_subset/n04_metadata.json`, `tables/baseline_validation_comparison.csv`; `reports/results/alibaba_gpu_2020/alibaba_gpu_2020_results_tasks1_6.md` |
+| Fallback limit on Hybrid (added 16 Nov 2026) | `src/baselines/alibaba_gpu_2020.py` `add_baseline_recommendations` (fallback to request below `min_runs`); `src/models/alibaba_gpu_2020_final_test.py` (Hybrid safeguard = `rec_*_selected`); 11,036 of 44,053 test memory rows from Chapter 5 Table 5.4 |
 
 ### 4.2.2 Machine Learning Forecasting
 

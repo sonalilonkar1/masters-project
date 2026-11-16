@@ -41,6 +41,7 @@
 | Alibaba selection bias: 36.8% of roles eligible; 98% of evaluated roles single-instance; telemetry about day 19 to 68.9 | Chapter 4 §4.1.6; `alibaba_gpu_2020_results_tasks1_6.md` §2, §6 |
 | Back-transformation bias of the log target (Google) | Chapter 4 §4.2.2 |
 | Alibaba ML tuning: one fixed configuration per model, no search; ML and Hybrid validation results optimistic because the same split selected the models | Chapter 4 §4.2.2; D-19 |
+| Short histories fall back to the request; most workloads but a minority of runs | Chapter 7 §7.5 history-coverage paragraph; Chapter 5 Tables 5.3, 5.4 |
 | GPU fields not evaluated | Chapter 5 §5.1.1 |
 
 | Recommendation | Source |
@@ -48,6 +49,7 @@
 | Direct quantile modelling with calibration | Chapter 4 §4.2.2 (quantile regression considered, not adopted) |
 | Split-isolated Google targets | Chapter 4 §4.1.7 |
 | Further datasets through the adapter framework (Alibaba 2018 deferred; Azure VM as a CPU-only portability check) | `docs/design/adapter_framework.md`; `docs/data/azure_vm_traceadvisor_feasibility.md`; system guide §11 |
+| Cold-start recommendations from similar workloads | Chapter 7 §7.5; this limitation |
 | GPU sizing | Chapter 5 §5.1.1 |
 | Online or shadow-mode evaluation through the API | Chapter 4 introduction (offline-only evaluation); Chapter 8 §8.3 |
 
