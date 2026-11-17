@@ -1,7 +1,7 @@
 # [P1] Task 8 Follow-up: Share the Nov 15 Alibaba GPU 2020 Run Artifacts
 
 **Labels:** `area-data`, `priority-high`
-**Owner:** Task 8 owner (holds the authoritative run's files)
+**Owner:** Unassigned
 **Related:** PR #121 (merged 2026-11-16), Task 15 (`task15_recommendation_backend_api.md`)
 
 ---
