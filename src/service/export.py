@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from src.evaluation.metrics import cpu_violation, memory_violation
 from src.policies.hybrid import hybrid_recommendation
 from src.service.contract import (
     ALIBABA,
@@ -335,6 +336,19 @@ def _attach_exceeded(recommendations: pd.DataFrame, row_level: pd.DataFrame) -> 
     return merged
 
 
+def _finish(recommendations: pd.DataFrame, dataset_id: str) -> pd.DataFrame:
+    """Select and type the bundle columns, validate them, and check one latest run per workload."""
+    recommendations = recommendations[[spec.name for spec in RECOMMENDATION_COLUMNS]].astype(
+        {spec.name: "string" for spec in RECOMMENDATION_COLUMNS if spec.dtype == "string"}
+    )
+    validate_frame(recommendations, RECOMMENDATION_COLUMNS, f"{dataset_id} recommendations")
+
+    latest = recommendations[recommendations["is_latest"] & (recommendations["policy"] == POLICY_NAMES[0])]
+    if latest["workload_id"].duplicated().any() or latest["workload_id"].nunique() != recommendations["workload_id"].nunique():
+        raise ExportValidationError(f"{dataset_id}: expected exactly one latest run per workload")
+    return recommendations
+
+
 def export_google(occurrences: pd.DataFrame, ml_predictions: pd.DataFrame, row_level: pd.DataFrame) -> DatasetExport:
     """Google recommendations in the bundle format: one row per test occurrence and policy."""
     frame = _google_occurrences(occurrences, ml_predictions)
@@ -364,19 +378,184 @@ def export_google(occurrences: pd.DataFrame, ml_predictions: pd.DataFrame, row_l
         parts.append(base.assign(policy=pd.Series(policy, index=frame.index, dtype="string")).join(values))
     recommendations = pd.concat(parts, ignore_index=True)
 
-    recommendations = _attach_exceeded(recommendations, row_level)
-    recommendations = recommendations[[spec.name for spec in RECOMMENDATION_COLUMNS]].astype(
-        {spec.name: "string" for spec in RECOMMENDATION_COLUMNS if spec.dtype == "string"}
-    )
-    validate_frame(recommendations, RECOMMENDATION_COLUMNS, f"{GOOGLE} recommendations")
-
-    latest = recommendations[recommendations["is_latest"] & (recommendations["policy"] == "Request")]
-    if latest["workload_id"].nunique() != frame["recurrence_key"].nunique() or latest["workload_id"].duplicated().any():
-        raise ExportValidationError("Google: expected exactly one latest run per workload")
+    recommendations = _finish(_attach_exceeded(recommendations, row_level), GOOGLE)
 
     notes = {
         "hybrid_safeguard": "P95",
         "hybrid_safeguard_missing": hybrid_safeguard_missing,
         "target_occurrence_id": "next run of the same workload by start time, checked against the stored target start time and peak",
+    }
+    return DatasetExport(recommendations=recommendations, notes=notes)
+
+
+# --- Alibaba export ------------------------------------------------------------
+
+# Alibaba recommendation columns in final_test_predictions.parquet, per policy.
+ALIBABA_PREDICTION_COLUMNS = {
+    "Request": "rec_{resource}_request",
+    "Mean": "rec_{resource}_mean",
+    "P90": "rec_{resource}_p90",
+    "P95": "rec_{resource}_p95",
+    "P99": "rec_{resource}_p99",
+    "ML": "ml_recommended_{resource}",
+    "Hybrid": "hybrid_recommended_{resource}",
+}
+ALIBABA_HISTORY_POLICIES = {"Mean": "mean", "P90": "p90", "P95": "p95", "P99": "p99"}
+ALIBABA_HYBRID_SAFEGUARD = "p99"
+# Task 4 measures the CPU target as the next run's average and memory as its peak.
+ALIBABA_TARGET_SOURCE = {"cpu": "observed_cpu", "memory": "peak_memory"}
+# Task 4 total order that defines each run's successor (src/features/target_builder.py).
+ALIBABA_RUN_ORDER = ["recurrence_key", "start_time_us", "occurrence_id", "role_key"]
+VIOLATION_RULES = {"cpu": cpu_violation, "memory": memory_violation}
+
+
+def _same_values(left: pd.Series, right: pd.Series) -> bool:
+    """Exact equality with nulls equal to nulls."""
+    a = left.astype("float64").to_numpy()
+    b = right.astype("float64").to_numpy()
+    return bool(np.array_equal(a, b, equal_nan=True))
+
+
+def _alibaba_runs(predictions: pd.DataFrame, targets: pd.DataFrame, baselines: pd.DataFrame) -> pd.DataFrame:
+    """One row per test run: predictions joined one-to-one with Task 4 and Task 6 on role_key."""
+    for table, frame in (("final_test_predictions", predictions), ("targets/test", targets), ("recommendations_test", baselines)):
+        _require_unique(frame, ["role_key"], table)
+    if not (set(predictions["role_key"]) == set(targets["role_key"]) == set(baselines["role_key"])):
+        raise ExportValidationError("Alibaba predictions, Task 4 targets and Task 6 recommendations cover different runs")
+
+    target_columns = ["role_key", "occurrence_id", "recurrence_key", "start_time_us", *ALIBABA_TARGET_SOURCE.values()]
+    target_columns += [f"{r}_target_status" for r in RESOURCES] + [f"actual_{r}" for r in RESOURCES]
+    history_columns = ["role_key", "start_time_us"] + [f"{r}_history_count" for r in RESOURCES]
+    for resource in RESOURCES:
+        for suffix in ALIBABA_HISTORY_POLICIES.values():
+            history_columns += [f"uses_history_{resource}_{suffix}", f"rec_{resource}_{suffix}"]
+        history_columns.append(f"rec_{resource}_request")
+
+    runs = predictions.merge(targets[target_columns], on="role_key", how="inner", validate="one_to_one", suffixes=("", "_task4"))
+    runs = runs.merge(baselines[history_columns], on="role_key", how="inner", validate="one_to_one", suffixes=("", "_task6"))
+
+    for column in ("occurrence_id", "recurrence_key"):
+        if not runs[column].astype("string").eq(runs[f"{column}_task4"].astype("string")).all():
+            raise ExportValidationError(f"Alibaba {column} differs between predictions and Task 4 targets")
+    if not runs["start_time_us"].astype("int64").eq(runs["start_time_us_task6"].astype("int64")).all():
+        raise ExportValidationError("Alibaba start times differ between Task 4 and Task 6")
+    for resource in RESOURCES:
+        status = f"{resource}_target_status"
+        if not runs[status].astype("string").eq(runs[f"{status}_task4"].astype("string")).all():
+            raise ExportValidationError(f"Alibaba {status} differs between predictions and Task 4 targets")
+        if not _same_values(runs[f"actual_{resource}"], runs[f"actual_{resource}_task4"]):
+            raise ExportValidationError(f"Alibaba actual_{resource} differs between predictions and Task 4 targets")
+        for suffix in ("request", *ALIBABA_HISTORY_POLICIES.values()):
+            column = f"rec_{resource}_{suffix}"
+            if not _same_values(runs[column], runs[f"{column}_task6"]):
+                raise ExportValidationError(f"Alibaba {column} differs between predictions and Task 6 recommendations")
+        hybrid = np.fmax(runs[f"ml_recommended_{resource}"].astype("float64"), runs[f"rec_{resource}_{ALIBABA_HYBRID_SAFEGUARD}"].astype("float64"))
+        if not _same_values(runs[f"hybrid_recommended_{resource}"], hybrid):
+            raise ExportValidationError(f"Alibaba stored {resource} Hybrid is not max(ML, P99)")
+    return runs
+
+
+def _alibaba_successors(runs: pd.DataFrame) -> pd.DataFrame:
+    """Next run of each workload in the Task 4 order, checked against the stored targets."""
+    runs = runs.sort_values(ALIBABA_RUN_ORDER, kind="mergesort").reset_index(drop=True)
+    following = runs.assign(start_time_us=runs["start_time_us"].astype("Int64")).groupby("recurrence_key", sort=False)
+    runs["next_occurrence_id"] = following["occurrence_id"].shift(-1)
+    runs["next_start_time_us"] = following["start_time_us"].shift(-1)
+    has_next = runs["next_occurrence_id"].notna()
+
+    for resource, source in ALIBABA_TARGET_SOURCE.items():
+        status = runs[f"{resource}_target_status"].astype("string")
+        if not status.eq("no_next_occurrence").eq(~has_next).all():
+            raise ExportValidationError(f"Alibaba {resource}: 'no_next_occurrence' does not match the Task 4 run order")
+        available = status.eq("available")
+        next_value = following[source].shift(-1)
+        if not _same_values(runs.loc[available, f"actual_{resource}"], next_value[available]):
+            raise ExportValidationError(f"Alibaba {resource} targets differ from the next run in the Task 4 order")
+    return runs
+
+
+def _alibaba_policy_rows(runs: pd.DataFrame, policy: str) -> tuple[pd.DataFrame, dict]:
+    columns, missing_safeguard = {}, {}
+    for resource in RESOURCES:
+        value = runs[ALIBABA_PREDICTION_COLUMNS[policy].format(resource=resource)].astype("float64")
+        count = runs[f"{resource}_history_count"].astype("Int64")
+        if policy == "Request":
+            basis = pd.Series("request", index=runs.index)
+            count = pd.Series(pd.NA, index=runs.index, dtype="Int64")
+        elif policy == "ML":
+            basis = pd.Series("model", index=runs.index)
+            count = pd.Series(pd.NA, index=runs.index, dtype="Int64")
+        else:
+            suffix = ALIBABA_HISTORY_POLICIES.get(policy, ALIBABA_HYBRID_SAFEGUARD)
+            uses_history = runs[f"uses_history_{resource}_{suffix}"].astype(bool)
+            basis = pd.Series(np.where(uses_history, "history", "request_fallback"), index=runs.index)
+            if policy == "Hybrid":
+                guard_missing = runs[f"rec_{resource}_{suffix}"].isna()
+                basis = basis.mask(guard_missing, "model")
+                missing_safeguard[resource] = int(guard_missing.sum())
+        exceeded = VIOLATION_RULES[resource](runs[f"actual_{resource}"].astype("float64"), value)
+        columns[f"recommended_{resource}"] = value
+        columns[f"{resource}_basis"] = basis.astype("string")
+        columns[f"{resource}_history_run_count"] = count
+        columns[f"{resource}_exceeded"] = pd.Series(exceeded, index=runs.index).map({1.0: True, 0.0: False}).astype("boolean")
+    return pd.DataFrame(columns, index=runs.index), missing_safeguard
+
+
+def _check_against_summary(recommendations: pd.DataFrame, summary: pd.DataFrame) -> None:
+    """Violation rates and valid counts from the exceeded flags must equal the run's summary CSV."""
+    summary = summary.set_index("policy")
+    for policy, rows in recommendations.groupby("policy", sort=False):
+        for resource in RESOURCES:
+            flags = rows[f"{resource}_exceeded"]
+            valid = int(flags.notna().sum())
+            rate = float(flags.dropna().astype(float).mean() * 100) if valid else float("nan")
+            expected_valid = int(summary.loc[policy, f"valid_{resource}_violation_count"])
+            expected_rate = float(summary.loc[policy, f"{resource}_violation_pct"])
+            if valid != expected_valid or not np.isclose(rate, expected_rate, rtol=1e-12, atol=0):
+                raise ExportValidationError(
+                    f"Alibaba {policy} {resource}: exceeded flags give {rate} over {valid} rows, "
+                    f"summary has {expected_rate} over {expected_valid}"
+                )
+
+
+def export_alibaba(
+    predictions: pd.DataFrame, targets: pd.DataFrame, baselines: pd.DataFrame, summary: pd.DataFrame
+) -> DatasetExport:
+    """Alibaba recommendations in the bundle format: one row per test run (role_key) and policy."""
+    runs = _alibaba_successors(_alibaba_runs(predictions, targets, baselines))
+    has_next = runs["next_occurrence_id"].notna()
+
+    base = pd.DataFrame(
+        {
+            "workload_id": runs["recurrence_key"].astype("string"),
+            "occurrence_id": runs["occurrence_id"].astype("string"),
+            "role_key": runs["role_key"].astype("string"),
+            "start_time_us": runs["start_time_us"].astype("int64"),
+            "target_start_time_us": runs["next_start_time_us"].astype("Int64"),
+            "target_occurrence_id": runs["next_occurrence_id"].astype("string"),
+            "request_cpu": runs["rec_cpu_request"].astype("float64"),
+            "request_memory": runs["rec_memory_request"].astype("float64"),
+            "actual_cpu": runs["actual_cpu"].astype("float64"),
+            "actual_memory": runs["actual_memory"].astype("float64"),
+            "cpu_target_status": runs["cpu_target_status"].astype("string"),
+            "memory_target_status": runs["memory_target_status"].astype("string"),
+            "is_latest": ~has_next,
+        }
+    )
+
+    parts, hybrid_safeguard_missing = [], {}
+    for policy in POLICY_NAMES:
+        values, missing = _alibaba_policy_rows(runs, policy)
+        hybrid_safeguard_missing.update(missing)
+        parts.append(base.assign(policy=pd.Series(policy, index=runs.index, dtype="string")).join(values))
+    recommendations = _finish(pd.concat(parts, ignore_index=True), ALIBABA)
+    _check_against_summary(recommendations, summary)
+
+    notes = {
+        "hybrid_safeguard": "P99",
+        "hybrid_safeguard_missing": hybrid_safeguard_missing,
+        "target_occurrence_id": "next run of the same workload in the Task 4 order "
+        "(recurrence_key, start_time_us, occurrence_id, role_key), checked against the stored targets",
+        "exceeded": "actual > recommended (src/evaluation/metrics.py), checked against final_test_policy_comparison.csv",
     }
     return DatasetExport(recommendations=recommendations, notes=notes)

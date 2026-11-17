@@ -17,6 +17,7 @@ from src.service.export import (
     GOOGLE_INPUTS,
     ExportValidationError,
     SourceVerificationError,
+    export_alibaba,
     export_google,
     source_status,
     verify_dataset_sources,
@@ -431,3 +432,167 @@ def test_google_duplicate_or_unmatched_predictions_are_refused():
         export_google(occurrences, pd.concat([ml_predictions, ml_predictions.iloc[[0]]]), row_level)
     with pytest.raises(ExportValidationError, match="different occurrences"):
         export_google(occurrences, ml_predictions.iloc[1:], row_level)
+
+
+# --- Alibaba export ------------------------------------------------------------
+
+ALIBABA_POLICY_COLUMNS = {
+    "Request": "rec_{r}_request", "Mean": "rec_{r}_mean", "P90": "rec_{r}_p90", "P95": "rec_{r}_p95",
+    "P99": "rec_{r}_p99", "ML": "ml_recommended_{r}", "Hybrid": "hybrid_recommended_{r}",
+}
+
+
+def alibaba_sources():
+    """Workload A runs three times (a2 and a3 start in the same second); workload B runs once.
+
+    a1 -> a2 has both targets; a2 -> a3 has a memory target but an ineligible CPU target;
+    a3 and b1 have no next run. a2 and a3 have at least 10 earlier runs, a1 and b1 none.
+    """
+    runs = pd.DataFrame(
+        {
+            "role_key": ["G||J1||A", "G||J3||A", "G||J2||A", "G||J4||B"],  # deliberately unsorted
+            "occurrence_id": ["G||J1", "G||J3", "G||J2", "G||J4"],
+            "recurrence_key": ["G||A", "G||A", "G||A", "G||B"],
+            "start_time_us": [100, 200, 200, 150],
+            "observed_cpu": [10.0, np.nan, 30.0, 5.0],
+            "peak_memory": [1.0, 2.0, 3.0, 0.5],
+            "cpu_target_status": ["available", "no_next_occurrence", "next_occurrence_ineligible_resource", "no_next_occurrence"],
+            "memory_target_status": ["available", "no_next_occurrence", "available", "no_next_occurrence"],
+            "actual_cpu": [30.0, np.nan, np.nan, np.nan],
+            "actual_memory": [3.0, np.nan, 2.0, np.nan],
+            "cpu_history_count": pd.array([0, 11, 10, 0], dtype="Int64"),
+            "memory_history_count": pd.array([0, 11, 10, 0], dtype="Int64"),
+        }
+    )
+    for resource, request, history in (("cpu", [50.0, 50.0, 50.0, 20.0], 25.0), ("memory", [4.0, 4.0, 4.0, 1.0], 2.5)):
+        runs[f"rec_{resource}_request"] = request
+        uses_history = runs[f"{resource}_history_count"] >= 10
+        for step, suffix in enumerate(("mean", "p90", "p95", "p99")):
+            runs[f"uses_history_{resource}_{suffix}"] = uses_history.astype(bool)
+            runs[f"rec_{resource}_{suffix}"] = np.where(uses_history, history + step, request)
+        runs[f"ml_recommended_{resource}"] = [history * 2, history / 2, history / 2, history / 4]
+        runs[f"hybrid_recommended_{resource}"] = np.fmax(runs[f"ml_recommended_{resource}"], runs[f"rec_{resource}_p99"])
+
+    predictions = runs[["role_key", "occurrence_id", "recurrence_key", "cpu_target_status", "actual_cpu",
+                        "memory_target_status", "actual_memory",
+                        *[c for c in runs.columns if c.startswith(("rec_", "ml_", "hybrid_"))]]].copy()
+    targets = runs[["role_key", "occurrence_id", "recurrence_key", "start_time_us", "observed_cpu", "peak_memory",
+                    "cpu_target_status", "memory_target_status", "actual_cpu", "actual_memory"]].copy()
+    baselines = runs[["role_key", "start_time_us", "cpu_history_count", "memory_history_count",
+                      *[c for c in runs.columns if c.startswith(("uses_history_", "rec_"))]]].copy()
+    return predictions, targets, baselines, alibaba_summary(predictions)
+
+
+def alibaba_summary(predictions):
+    """Violation rate and valid count per policy, computed independently of the export."""
+    records = []
+    for policy, template in ALIBABA_POLICY_COLUMNS.items():
+        record = {"policy": policy}
+        for resource in ("cpu", "memory"):
+            actual = predictions[f"actual_{resource}"]
+            valid = actual.notna()
+            exceeded = actual[valid] > predictions.loc[valid, template.format(r=resource)]
+            record[f"valid_{resource}_violation_count"] = int(valid.sum())
+            record[f"{resource}_violation_pct"] = float(exceeded.mean() * 100) if valid.any() else np.nan
+        records.append(record)
+    return pd.DataFrame(records)
+
+
+def test_alibaba_export_shape_and_contract():
+    recommendations = export_alibaba(*alibaba_sources()).recommendations
+
+    assert len(recommendations) == 4 * len(POLICY_NAMES)
+    validate_frame(recommendations, RECOMMENDATION_COLUMNS, "alibaba")
+    assert recommendations["role_key"].notna().all()
+    assert set(recommendations["workload_id"]) == {"G||A", "G||B"}
+
+
+def test_alibaba_successor_follows_task4_order_with_same_second_tie():
+    recommendations = export_alibaba(*alibaba_sources()).recommendations
+
+    first = row(recommendations, "G||J1", "P99")
+    assert first["target_occurrence_id"] == "G||J2" and first["target_start_time_us"] == 200
+    tied = row(recommendations, "G||J2", "P99")  # same second as J3; J2 sorts first by occurrence_id
+    assert tied["target_occurrence_id"] == "G||J3"
+    assert tied["cpu_target_status"] == "next_occurrence_ineligible_resource"
+    assert pd.isna(tied["actual_cpu"]) and pd.isna(tied["cpu_exceeded"])
+    assert tied["memory_target_status"] == "available" and tied["actual_memory"] == 2.0
+
+
+def test_alibaba_latest_rows():
+    recommendations = export_alibaba(*alibaba_sources()).recommendations
+    latest = recommendations[recommendations["is_latest"]]
+
+    assert sorted(latest["occurrence_id"].unique()) == ["G||J3", "G||J4"]
+    assert latest["target_occurrence_id"].isna().all()
+
+
+def test_alibaba_basis_and_counts():
+    recommendations = export_alibaba(*alibaba_sources()).recommendations
+
+    assert row(recommendations, "G||J1", "P99")["memory_basis"] == "request_fallback"
+    assert row(recommendations, "G||J2", "P99")["memory_basis"] == "history"
+    assert row(recommendations, "G||J2", "P99")["memory_history_run_count"] == 10
+    assert row(recommendations, "G||J2", "Hybrid")["cpu_basis"] == "history"
+    assert row(recommendations, "G||J4", "Hybrid")["cpu_basis"] == "request_fallback"
+    assert row(recommendations, "G||J2", "ML")["cpu_basis"] == "model"
+    assert pd.isna(row(recommendations, "G||J2", "Request")["cpu_history_run_count"])
+
+
+def test_alibaba_values_copied_and_exceeded_follows_rule():
+    recommendations = export_alibaba(*alibaba_sources()).recommendations
+    first = row(recommendations, "G||J1", "ML")
+
+    assert first["recommended_memory"] == 5.0
+    assert bool(first["memory_exceeded"]) is False  # 3.0 > 5.0 is false
+    assert bool(row(recommendations, "G||J1", "Mean")["memory_exceeded"]) is False
+    assert bool(row(recommendations, "G||J2", "ML")["memory_exceeded"]) is True  # 2.0 > 1.25
+
+
+def test_alibaba_summary_mismatch_is_refused():
+    predictions, targets, baselines, summary = alibaba_sources()
+    summary.loc[summary["policy"] == "P95", "memory_violation_pct"] += 1.0
+
+    with pytest.raises(ExportValidationError, match="P95 memory"):
+        export_alibaba(predictions, targets, baselines, summary)
+
+
+def test_alibaba_hybrid_not_max_of_ml_and_p99_is_refused():
+    predictions, targets, baselines, summary = alibaba_sources()
+    predictions.loc[0, "hybrid_recommended_cpu"] += 1.0
+
+    with pytest.raises(ExportValidationError, match="Hybrid is not max"):
+        export_alibaba(predictions, targets, baselines, summary)
+
+
+def test_alibaba_baseline_copy_mismatch_is_refused():
+    predictions, targets, baselines, summary = alibaba_sources()
+    baselines.loc[1, "rec_memory_p90"] += 1.0
+
+    with pytest.raises(ExportValidationError, match="rec_memory_p90 differs"):
+        export_alibaba(predictions, targets, baselines, summary)
+
+
+def test_alibaba_target_not_matching_next_run_is_refused():
+    predictions, targets, baselines, summary = alibaba_sources()
+    targets.loc[targets["role_key"] == "G||J2||A", "peak_memory"] = 9.0
+
+    with pytest.raises(ExportValidationError, match="memory targets differ"):
+        export_alibaba(predictions, targets, baselines, summary)
+
+
+def test_alibaba_status_disagreement_is_refused():
+    predictions, targets, baselines, summary = alibaba_sources()
+    targets.loc[0, "memory_target_status"] = "no_next_occurrence"
+
+    with pytest.raises(ExportValidationError, match="memory_target_status differs"):
+        export_alibaba(predictions, targets, baselines, summary)
+
+
+def test_alibaba_duplicate_or_unmatched_runs_are_refused():
+    predictions, targets, baselines, summary = alibaba_sources()
+
+    with pytest.raises(ExportValidationError, match="duplicate"):
+        export_alibaba(predictions, pd.concat([targets, targets.iloc[[0]]]), baselines, summary)
+    with pytest.raises(ExportValidationError, match="cover different runs"):
+        export_alibaba(predictions, targets, baselines.iloc[1:], summary)
