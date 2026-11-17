@@ -17,6 +17,8 @@ mastersvenv/
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 *.parquet
+# Task 15 fixture UI bundle: small synthetic files the API tests read
+!tests/fixtures/ui_bundle/**/*.parquet
 subset/borg_traces_data.csv
 
 # Generated evaluation artifacts (large)

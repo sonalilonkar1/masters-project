@@ -1,0 +1,26 @@
+{
+  "google_clusterdata2019": {
+    "min_runs": 1,
+    "selected_baseline_policy": "P99",
+    "hybrid_safeguard_policy": "P95",
+    "hybrid_rule": "hybrid = max(ML prediction, P95 baseline) per resource",
+    "hybrid_fallback": "ML prediction where the P95 baseline is unavailable",
+    "ml_models": {
+      "cpu": "random_forest",
+      "memory": "random_forest"
+    },
+    "source": "reports/results/google_subset/decision_manifest.json"
+  },
+  "alibaba_gpu_v2020": {
+    "min_runs": 10,
+    "selected_baseline_policy": "P99",
+    "hybrid_safeguard_policy": "P99",
+    "hybrid_rule": "max(ml_prediction, selected_task6_baseline)",
+    "hybrid_fallback": "ML prediction where the safeguard is unavailable",
+    "ml_models": {
+      "cpu": "hist_gradient_boosting",
+      "memory": "hist_gradient_boosting"
+    },
+    "source": "reports/results/alibaba_gpu_2020/final_test/run_record.json, reports/results/alibaba_gpu_2020/ml/decision_manifest.json"
+  }
+}

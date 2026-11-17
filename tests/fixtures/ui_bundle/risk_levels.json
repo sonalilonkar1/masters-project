@@ -1,0 +1,50 @@
+{
+  "default_risk_level": "restrictive",
+  "risk_levels": [
+    {
+      "risk_level": "restrictive",
+      "label": "Restrictive",
+      "description": "Lower violation risk and more capacity reserved."
+    },
+    {
+      "risk_level": "balanced",
+      "label": "Balanced",
+      "description": "Middle point in the violation/waste trade-off."
+    },
+    {
+      "risk_level": "efficient",
+      "label": "Efficient",
+      "description": "Lower waste with a higher chance of exceeded runs."
+    }
+  ],
+  "datasets": {
+    "google_clusterdata2019": {
+      "restrictive": {
+        "policy": "Hybrid",
+        "policy_id": "hybrid"
+      },
+      "balanced": {
+        "policy": "P95",
+        "policy_id": "p95"
+      },
+      "efficient": {
+        "policy": "P90",
+        "policy_id": "p90"
+      }
+    },
+    "alibaba_gpu_v2020": {
+      "restrictive": {
+        "policy": "Hybrid",
+        "policy_id": "hybrid"
+      },
+      "balanced": {
+        "policy": "P95",
+        "policy_id": "p95"
+      },
+      "efficient": {
+        "policy": "P90",
+        "policy_id": "p90"
+      }
+    }
+  }
+}
