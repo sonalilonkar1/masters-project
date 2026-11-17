@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "description": "Risk levels offered by the recommendation UI and API (Task 15 Part A). Each level maps to a policy evaluated in the final test. The mapping was fixed by the team on 2026-11-16 from the policy definitions, not tuned on test results. Mean and ML are not risk levels: Mean has no safety margin and ML alone under-provisions too often (report Section 7).",
+  "default_risk_level": "restrictive",
+  "risk_levels": [
+    {
+      "risk_level": "restrictive",
+      "label": "Restrictive",
+      "description": "Lower violation risk and more capacity reserved."
+    },
+    {
+      "risk_level": "balanced",
+      "label": "Balanced",
+      "description": "Middle point in the violation/waste trade-off."
+    },
+    {
+      "risk_level": "efficient",
+      "label": "Efficient",
+      "description": "Lower waste with a higher chance of exceeded runs."
+    }
+  ],
+  "datasets": {
+    "google_clusterdata2019": {
+      "restrictive": "Hybrid",
+      "balanced": "P95",
+      "efficient": "P90"
+    },
+    "alibaba_gpu_v2020": {
+      "restrictive": "Hybrid",
+      "balanced": "P95",
+      "efficient": "P90"
+    }
+  }
+}
