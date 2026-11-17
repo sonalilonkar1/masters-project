@@ -1,6 +1,6 @@
 # Task 15 Implementation Plan: Risk Levels, UI Export and Read-Only API
 
-**Status:** Steps 1–13 done (2026-11-16). Remaining: step 14 (development bundle from local data, done locally; size check) and step 15 (verified bundle, waiting on #130). Delete this file when Task 15 is complete.
+**Status:** Steps 1–14 done (2026-11-16); the bundle uses zstd Parquet (about 13 MB, under the 20 MB commit limit). Remaining: step 15, the verified bundle, waiting on #130; the single PR opens after it. Delete this file when Task 15 is complete.
 **Branch:** `feature/task15-backend` (one PR for all of Task 15)
 **Issue:** Task 15 (`task15_recommendation_backend_api.md`), Parts A–E. Column lists and endpoint details are in the issue and are not repeated here.
 

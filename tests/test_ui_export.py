@@ -637,6 +637,17 @@ def test_write_bundle_layout_checksums_and_round_trip(tmp_path):
     assert sorted(p.name for p in tmp_path.iterdir()) == ["ui"]  # no staging folder left
 
 
+def test_write_bundle_uses_zstd(tmp_path):
+    import pyarrow.parquet as pq
+
+    out = tmp_path / "ui"
+    export.write_bundle(synthetic_contents(), out)
+
+    for path in out.rglob("*.parquet"):
+        metadata = pq.ParquetFile(path).metadata
+        assert {metadata.row_group(0).column(i).compression for i in range(metadata.num_columns)} == {"ZSTD"}
+
+
 def test_write_bundle_is_reproducible(tmp_path):
     first = export.write_bundle(synthetic_contents(), tmp_path / "a")
     second = export.write_bundle(synthetic_contents(), tmp_path / "b")

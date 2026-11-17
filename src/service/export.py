@@ -818,6 +818,8 @@ def build_metadata(
 
 GOOGLE_DATA = "data/processed/google_subset_v1"
 ALIBABA_FINAL_TEST_SUMMARY = "data/processed/alibaba_gpu_v2020_final_test/final_test_policy_comparison.csv"
+# zstd keeps the full bundle near 13 MB (22 MB with the default snappy), under the 20 MB commit limit.
+PARQUET_COMPRESSION = "zstd"
 # Folders the bundle must never be written into.
 INPUT_FOLDERS = (
     GOOGLE_DATA,
@@ -942,7 +944,7 @@ def _bundle_files(contents: BundleContents) -> dict[str, object]:
 def _write_and_check(path: Path, content) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if isinstance(content, pd.DataFrame):
-        content.to_parquet(path, index=False)
+        content.to_parquet(path, index=False, compression=PARQUET_COMPRESSION)
         pd.testing.assert_frame_equal(pd.read_parquet(path), content, check_exact=True)
     else:
         path.write_text(json.dumps(content, indent=2, allow_nan=False) + "\n", encoding="utf-8")

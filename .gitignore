@@ -19,6 +19,8 @@ mastersvenv/
 *.parquet
 # Task 15 fixture UI bundle: small synthetic files the API tests read
 !tests/fixtures/ui_bundle/**/*.parquet
+# Task 15 verified UI bundle (about 13 MB, committed)
+!reports/results/ui/**/*.parquet
 subset/borg_traces_data.csv
 
 # Generated evaluation artifacts (large)
