@@ -9,7 +9,6 @@
 | Part | File | Purpose |
 |---|---|---|
 | A | `config/ui_risk_levels.json` | Restrictive → Hybrid (default), Balanced → P95, Efficient → P90, the same for both datasets, with descriptions |
-| A | `src/service/risk_levels.py`, `tests/test_ui_risk_levels.py` | Load and validate the config (both datasets, every level mapped, only evaluated policies, no Mean or ML) |
 | B | `src/service/__init__.py`, `src/service/export.py` | Export logic as small pure functions, testable on synthetic data |
 | B | `scripts/export_ui_artifacts.py` | Thin CLI: `--out-dir`, `--allow-dirty`, `--force`, `--allow-unverified-source`. Reuses the existing scripts' Git-state check, staging folder, refusal messages and exit codes |
 | C | `src/service/bundle.py` | Load the bundle once, verify `SHA256SUMS`, index by `(workload_id, policy)` |
@@ -25,7 +24,7 @@
 
 | Step | Work | Check before moving on |
 |---|---|---|
-| 1 | Part A config | Loads and validates — **done** (11 tests) |
+| 1 | Part A config | Loads and validates |
 | 2 | Source verification (Part B) | Tests: matching, mismatching, missing, wrong `run_id`, development mode |
 | 3 | Google export | Hybrid equals stored on all 259 scored rows; fallback 233 latest workloads |
 | 4 | Alibaba export | One-to-one joins on `role_key`; one latest row per workload; fallback count recorded |
