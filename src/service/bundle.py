@@ -8,7 +8,22 @@ recorded checksum and no unlisted file is present.
 from __future__ import annotations
 
 import hashlib
+import json
+from dataclasses import dataclass
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from src.service.contract import (
+    BUNDLE_SCHEMA_VERSION,
+    BUNDLE_STATUSES,
+    DATASET_IDS,
+    RECOMMENDATION_COLUMNS,
+    WORKLOAD_COLUMNS,
+    BundleContractError,
+    validate_frame,
+)
 
 CHECKSUM_FILE = "SHA256SUMS"
 
@@ -72,3 +87,90 @@ def verify_bundle(bundle_dir: Path) -> str:
     if problems:
         raise BundleIntegrityError(f"{bundle_dir}: " + "; ".join(problems))
     return _sha256(bundle_dir / CHECKSUM_FILE)
+
+
+# --- Loading ---------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class LoadedDataset:
+    info: dict
+    policy_metrics: dict
+    metadata: dict
+    workloads: pd.DataFrame  # indexed by workload_id
+    recommendations: pd.DataFrame
+    # (workload_id, policy) -> row positions in recommendations, ordered by start time
+    positions: dict
+
+
+@dataclass(frozen=True)
+class LoadedBundle:
+    path: Path
+    checksum: str
+    manifest: dict
+    risk_levels: dict
+    rules: dict
+    datasets: dict  # dataset_id -> LoadedDataset
+
+    def rows(self, dataset_id: str, workload_id: str, policy: str) -> pd.DataFrame:
+        """All test runs of one workload under one policy, oldest first (empty if unknown)."""
+        dataset = self.datasets[dataset_id]
+        positions = dataset.positions.get((workload_id, policy))
+        if positions is None:
+            return dataset.recommendations.iloc[0:0]
+        return dataset.recommendations.iloc[positions]
+
+
+def _read_json(path: Path) -> dict:
+    with open(path, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _load_dataset(dataset_dir: Path, dataset_id: str) -> LoadedDataset:
+    workloads = pd.read_parquet(dataset_dir / "workloads.parquet")
+    recommendations = pd.read_parquet(dataset_dir / "recommendations.parquet")
+    try:
+        validate_frame(workloads, WORKLOAD_COLUMNS, f"{dataset_id} workloads")
+        validate_frame(recommendations, RECOMMENDATION_COLUMNS, f"{dataset_id} recommendations")
+    except BundleContractError as error:
+        raise BundleIntegrityError(str(error)) from error
+
+    info = _read_json(dataset_dir / "dataset.json")
+    if info.get("dataset_id") != dataset_id:
+        raise BundleIntegrityError(f"{dataset_dir / 'dataset.json'} describes {info.get('dataset_id')!r}")
+    grouped = recommendations.groupby(["workload_id", "policy"], sort=False).indices
+    positions = {key: np.sort(index) for key, index in grouped.items()}
+    return LoadedDataset(
+        info=info,
+        policy_metrics=_read_json(dataset_dir / "policy_metrics.json"),
+        metadata=_read_json(dataset_dir / "metadata.json"),
+        workloads=workloads.set_index("workload_id", drop=False).rename_axis(None),
+        recommendations=recommendations,
+        positions=positions,
+    )
+
+
+def load_bundle(bundle_dir: Path) -> LoadedBundle:
+    """Verify checksums and the bundle format, then load every dataset once."""
+    bundle_dir = Path(bundle_dir)
+    if not bundle_dir.is_dir():
+        raise BundleIntegrityError(f"bundle folder not found: {bundle_dir}")
+    checksum = verify_bundle(bundle_dir)
+    manifest = _read_json(bundle_dir / "manifest.json")
+    if manifest.get("bundle_schema_version") != BUNDLE_SCHEMA_VERSION:
+        raise BundleIntegrityError(
+            f"bundle schema {manifest.get('bundle_schema_version')!r}, this code reads {BUNDLE_SCHEMA_VERSION!r}"
+        )
+    if manifest.get("bundle_status") not in BUNDLE_STATUSES:
+        raise BundleIntegrityError(f"unknown bundle status {manifest.get('bundle_status')!r}")
+    if set(manifest.get("datasets", {})) != set(DATASET_IDS):
+        raise BundleIntegrityError(f"bundle datasets {sorted(manifest.get('datasets', {}))}, expected {list(DATASET_IDS)}")
+
+    return LoadedBundle(
+        path=bundle_dir,
+        checksum=checksum,
+        manifest=manifest,
+        risk_levels=_read_json(bundle_dir / "risk_levels.json"),
+        rules=_read_json(bundle_dir / "rules.json"),
+        datasets={dataset_id: _load_dataset(bundle_dir / dataset_id, dataset_id) for dataset_id in DATASET_IDS},
+    )

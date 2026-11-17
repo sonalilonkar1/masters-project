@@ -25,7 +25,7 @@ def google_sources():
         {
             "occurrence_key": ["a1", "a2", "a3", "b1"],
             "occurrence_id": ["a1", "a2", "a3", "b1"],
-            "recurrence_key": ["u||A", "u||A", "u||A", "u||B"],
+            "recurrence_key": ["u||A", "u||A", "u||A", "u/2||B"],  # hashed Google IDs can contain "/"
             "execution_start_time_us": pd.array([100, 200, 300, 150], dtype="Int64"),
             "occurrence_peak_cpu_ncu": [0.10, 0.30, 0.20, 0.05],
             "occurrence_peak_memory_normalized": [0.01, 0.03, 0.02, 0.005],

@@ -488,12 +488,12 @@ def test_google_workloads_summary():
     recommendations = export_google(*google_sources()).recommendations
     workloads = export.build_workloads(recommendations, "google_clusterdata2019", "Hybrid").set_index("workload_id")
 
-    assert list(workloads.index) == ["u||A", "u||B"]
+    assert list(workloads.index) == ["u/2||B", "u||A"]
     a = workloads.loc["u||A"]
     assert (a["test_run_count"], a["scored_run_count"]) == (3, 2)
     assert (a["first_start_time_us"], a["last_start_time_us"]) == (100, 300)
     assert a["latest_occurrence_id"] == "a3" and a["latest_uses_history"] and a["has_scored_history"]
-    b = workloads.loc["u||B"]
+    b = workloads.loc["u/2||B"]
     assert not b["latest_uses_history"] and not b["has_scored_history"]  # Hybrid basis is "model", not history
     assert a["display_name"] == "u||A"
 

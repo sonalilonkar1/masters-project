@@ -72,7 +72,7 @@ BASIS_VALUES = frozenset({"history", "request_fallback", "request", "model"})
 BUNDLE_STATUSES = frozenset({"verified", "development"})
 
 # API error codes; the body is {"error": {"code": ..., "message": ...}}.
-ERROR_CODES = frozenset({"invalid_parameter", "not_found", "internal_error"})
+ERROR_CODES = frozenset({"invalid_parameter", "not_found", "method_not_allowed", "internal_error"})
 
 
 def error_body(code: str, message: str) -> dict:
