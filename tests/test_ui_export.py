@@ -791,3 +791,9 @@ def test_cli_validation_failure_writes_nothing(tmp_path):
 
     assert code == cli.EXIT_FAILED
     assert not (tmp_path / "reports").exists()
+
+
+@pytest.mark.parametrize(("argv", "expected"), [(["--bogus"], "EXIT_INVALID"), (["--out-dir"], "EXIT_INVALID"), (["--help"], "EXIT_OK")])
+def test_cli_invalid_arguments_exit_1(argv, expected, capsys):
+    assert cli.main(argv) == getattr(cli, expected)
+    assert cli.EXIT_INVALID == 1 and cli.EXIT_INVALID != cli.EXIT_REFUSED

@@ -123,7 +123,10 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="development only: allow inputs that differ from the checksums on main",
     )
-    args = parser.parse_args(argv)
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as stop:  # argparse exits with 2, which would read as "refused"
+        return EXIT_OK if stop.code == 0 else EXIT_INVALID
     return run_export(
         args.out_dir,
         allow_dirty=args.allow_dirty,
