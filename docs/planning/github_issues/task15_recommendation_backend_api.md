@@ -239,13 +239,17 @@ Requirements:
 - There is exactly one latest occurrence per workload.
 - Recommendation time and target time must not be confused in the history view.
 
-Target status values:
+Target status values: the canonical vocabulary `TARGET_STATUSES` in `src/canonical/schema.py`, imported rather than copied:
 
 ```text
 available
 no_next_occurrence
-next_occurrence_missing_value
+next_occurrence_in_other_split
+next_occurrence_ineligible_resource
+unsupported_resource
 ```
+
+Alibaba test data uses `available`, `no_next_occurrence` and, for 8 CPU targets, `next_occurrence_ineligible_resource`.
 
 For Alibaba, copy resource-specific target statuses from the verified source.
 
@@ -253,7 +257,7 @@ For Google, derive target status as follows and document the derivation in `meta
 
 - `available` when the target value is present.
 - `no_next_occurrence` when no next occurrence exists.
-- `next_occurrence_missing_value` when a next occurrence exists but its target value is missing.
+- `next_occurrence_ineligible_resource` when a next occurrence exists but its target value is missing (no current Google test row; 259 are `available` and 472 `no_next_occurrence`).
 
 #### Target occurrence alignment
 
