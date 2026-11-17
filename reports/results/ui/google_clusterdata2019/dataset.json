@@ -1,0 +1,30 @@
+{
+  "dataset_id": "google_clusterdata2019",
+  "display_name": "Google ClusterData 2019",
+  "resources": {
+    "cpu": {
+      "unit": "ncu",
+      "semantics": "next_occurrence_peak",
+      "description": "Peak CPU of the next run, in normalized compute units"
+    },
+    "memory": {
+      "unit": "normalized",
+      "semantics": "next_occurrence_peak",
+      "description": "Peak memory of the next run, normalized by the trace publisher"
+    }
+  },
+  "primary_resource": null,
+  "evaluation_scope": "One-time final test: each test run's recommendation is compared with the next run of the same workload.",
+  "population": {
+    "test_runs": 731,
+    "workloads": 472,
+    "scored_runs_cpu": 259,
+    "scored_runs_memory": 259,
+    "workloads_with_history_latest": 241
+  },
+  "caveats": [
+    "CPU and memory are normalized by the trace publisher: values can be compared between policies but cannot be converted to cores or gigabytes.",
+    "User and job names are hashed in the trace, so workload names are identifiers, not readable names.",
+    "Results replay the historical test period once: each recommendation is compared with what the next run of the same workload actually used. They are not measurements from a live cluster."
+  ]
+}

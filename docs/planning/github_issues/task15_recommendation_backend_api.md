@@ -290,7 +290,7 @@ Copy the basis from stored flags. Do not recompute it.
 | Request | Always `request` |
 | Mean, P90, P95, P99 | Corresponding stored history flag |
 | ML | Always `model` |
-| Hybrid | Safeguard history flag: P95 for Google, P99 for Alibaba |
+| Hybrid | Safeguard history flag: P95 for Google, P99 for Alibaba; `model` when the safeguard has no value (Google runs with neither a request nor history, where Hybrid is the ML value alone) |
 
 Earlier-run counts must also be copied from the stored source fields.
 
@@ -742,7 +742,7 @@ This task does not include:
 
 ## Pull Request
 
-One PR covers Parts A–E (team decision, 2026-11-16). Build order and checks: `task15_implementation_plan.md`.
+One PR covers Parts A–E (team decision, 2026-11-16), from branch `feature/task15-backend`.
 
 ## Acceptance Criteria
 

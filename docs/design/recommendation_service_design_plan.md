@@ -1,6 +1,6 @@
 # Recommendation Service: Design Plan (Tasks 15 and 16)
 
-**Status:** Design, agreed before implementation. Task 15 builds the backend (export and API); Task 16 builds the web UI.
+**Status:** Task 15 (export and API) implemented; the verified bundle is in `reports/results/ui/`. Task 16 builds the web UI.
 **Snapshot:** 2026-11-16, checked against `main` at `d46e282`, a full read of `src/` and `pipelines/google_subset/`, and the local `data/processed/` outputs.
 
 ---
@@ -88,7 +88,7 @@ Two facts follow from this table and shape the design:
 
 ## 6. UI Bundle (Export Output)
 
-Location: `reports/results/ui/` (committed if the total stays under 20 MB; otherwise shared on Drive with checksums, as for the Task 3 data). One folder per dataset:
+Location: `reports/results/ui/` (committed: about 12 MB with zstd-compressed Parquet, under the 20 MB limit). One folder per dataset:
 
 | File | Content |
 |---|---|
@@ -116,7 +116,7 @@ Common long format for `recommendations.parquet`:
 | `cpu_exceeded`, `memory_exceeded` | bool, nullable | `actual > recommended`; null when actual is null. Copied from the row-level violation flags where stored |
 | `is_latest` | bool | The workload's last test run |
 | `role_key` | string | Alibaba only; the unique row key used for every join |
-| `cpu_basis`, `memory_basis` | string | `history` or `request_fallback`, copied from the stored `uses_history_*` flag of the policy's safeguard (P95 for Google Hybrid, P99 for Alibaba Hybrid; the policy itself for P90/P95/P99; `request` for Request; `model` for ML) |
+| `cpu_basis`, `memory_basis` | string | `history` or `request_fallback`, copied from the stored `uses_history_*` flag of the policy's safeguard (P95 for Google Hybrid, P99 for Alibaba Hybrid; the policy itself for P90/P95/P99; `request` for Request; `model` for ML, and for Hybrid when its safeguard has no value, which happens on 2 latest Google runs with neither a request nor history) |
 | `cpu_history_count`, `memory_history_count` | int | Earlier completed runs, copied (`occ_hist_peak_*_count` for Google, `*_history_count` for Alibaba) |
 
 Units and semantics are stored once in `dataset.json`, not repeated per row; the API attaches them to every value it returns.
@@ -238,7 +238,7 @@ src/service/
     api.py                              # FastAPI app and routes
     schemas.py                          # response models
 web/                                    # Task 16 frontend
-reports/results/ui/                     # the bundle (or a pointer to Drive)
+reports/results/ui/                     # the bundle
 tests/test_ui_export.py
 tests/test_api.py
 tests/fixtures/ui_bundle/               # tiny hand-built bundle for API and UI tests

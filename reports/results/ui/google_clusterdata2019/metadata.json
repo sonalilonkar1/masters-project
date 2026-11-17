@@ -1,0 +1,58 @@
+{
+  "dataset_id": "google_clusterdata2019",
+  "bundle_status": "verified",
+  "source_mismatches": [],
+  "reference_files": [
+    "reports/results/google_subset/decision_manifest.json"
+  ],
+  "source_run_id": null,
+  "decision_manifest_sha256": "0669ca5c3cdec70a1013c886fbce4c0efc3746b936b7b0748f106523d40fa775",
+  "inputs": {
+    "data/processed/google_subset_v1/test_occurrences.parquet": {
+      "expected_sha256": "1a3c7a07893dbf3c35e1141157c27fd75dc28305e51861d85a5fbf0c946d5e53",
+      "sha256": "1a3c7a07893dbf3c35e1141157c27fd75dc28305e51861d85a5fbf0c946d5e53"
+    },
+    "data/processed/google_subset_v1/test_ml_predictions.parquet": {
+      "expected_sha256": "1e0f3684387f6a2e3677e31972f5c6e1d785f9cc5a7aa01feb6f7c6db7b33192",
+      "sha256": "1e0f3684387f6a2e3677e31972f5c6e1d785f9cc5a7aa01feb6f7c6db7b33192"
+    }
+  },
+  "check_files": {
+    "data/processed/google_subset_v1/final_test_row_level.parquet": "7d8741418e009dc8d5355cc9f378f8ca7b172fca0625d25786dcc4d1c744cebc"
+  },
+  "row_counts": {
+    "recommendations": 5117,
+    "workloads": 472,
+    "test_runs": 731
+  },
+  "latest_run_fallback_counts": {
+    "Mean": {
+      "cpu": 231,
+      "memory": 233
+    },
+    "P90": {
+      "cpu": 231,
+      "memory": 233
+    },
+    "P95": {
+      "cpu": 231,
+      "memory": 233
+    },
+    "P99": {
+      "cpu": 231,
+      "memory": 233
+    },
+    "Hybrid": {
+      "cpu": 229,
+      "memory": 231
+    }
+  },
+  "notes": {
+    "hybrid_safeguard": "P95",
+    "hybrid_safeguard_missing": {
+      "cpu": 2,
+      "memory": 2
+    },
+    "target_occurrence_id": "next run of the same workload by start time, checked against the stored target start time and peak"
+  }
+}

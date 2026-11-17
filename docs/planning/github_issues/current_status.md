@@ -19,9 +19,9 @@
 | Task | Issue | Priority | Status | What is left |
 |---|---|---|---|---|
 | Task 8: Alibaba GPU 2020 final verification | #113 | P1 | **PR #121 merged 2026-11-16.** `main` now holds the Nov 15 run (`4fdc7e96…`), which re-ran Tasks 4–7 and the final test in a different environment and replaced the Oct 30 results and run log | Follow-ups: record the rerun, update the report's Alibaba ML/Hybrid numbers, check the environment against the lock file; close #113 (table 4.1) |
-| Task 8 follow-up: share the Nov 15 Alibaba run artifacts | #130 | P1 | **Assigned to a teammate** (2026-11-16); Parquet files are git-ignored and only on the Task 8 owner's machine | Upload four `data/processed/alibaba_gpu_v2020_*` folders; 31/31 checksums must match (`task8_followup_share_nov15_artifacts.md`) |
+| Task 8 follow-up: share the Nov 15 Alibaba run artifacts | #130 | P1 | **Done** (2026-11-16): uploaded to Drive `CMPE 295A_B/alibaba_gpu_v2020_run_4fdc7e96/`; 31/31 checksums matched on the uploader's machine and again on a second machine | Close #130 |
 | Task 12: final cross-dataset reporting | #117 | P1 | **PR 1 merged (#123)**; outputs in `reports/results/cross_dataset_pr1/` are provisional | PR 2: verified status, final manifest, limitations, conclusions, README and reproducibility (table 4.2) |
-| Task 15: recommendation backend (UI export and read-only API) | #120 | P1 | **Not started**; no API code on `main`. Design in `docs/design/recommendation_service_design_plan.md` | Risk-level config, UI export, API, tests (table 4.3) |
+| Task 15: recommendation backend (UI export and read-only API) | #120 | P1 | **Done on `feature/task15-backend`** (2026-11-16); verified bundle from the Nov 15 run in `reports/results/ui/` | Open and merge the single PR; close #120 (table 4.3) |
 | Task 16: recommendation web UI | *new; file the issue* | P1 | **Not started**; split from Task 15 | Framework choice, views, tests, report Figures 8.1 and 8.2 (table 4.4) |
 | Task 10: Google subset corrections and rerun | #115 | P3 | **Not started** | Targets after split assignment, reselection, rerun of Notebooks 04–06, or a recorded decision to keep the current results with limitations (table 4.6) |
 | Task 14: Google evaluation follow-ups | #119 | P3 | **Not started** | Cross-split targets (through Task 10), confidence intervals, feature importance (table 4.5) |
@@ -78,15 +78,15 @@
 
 | # | Item | Status | Note |
 |---|---|---|---|
-| 1 | Design plan agreed | **Remaining** | `docs/design/recommendation_service_design_plan.md` |
-| 2 | Part A: `config/ui_risk_levels.json` (Restrictive → Hybrid, Balanced → P95, Efficient → P90) | **Remaining** | |
-| 3 | Part B: `scripts/export_ui_artifacts.py` writes the UI bundle with checksums and metadata | **Remaining** | Copy and reshape only; Google Hybrid re-applied by the existing rule and checked against stored values |
-| 4 | Part B: measure the bundle; commit if under 20 MB, else Drive with checksums | **Remaining** | |
-| 5 | Part C: read-only API under `/api/v1`, checksum check at start-up | **Remaining** | FastAPI proposed |
-| 6 | Part C: OpenAPI contract committed for Task 16 | **Remaining** | Unblocks Task 16 |
-| 7 | Part D: export tests, fixture bundle, API tests; dependencies in the lock file | **Remaining** | |
-| 8 | Final export from the Nov 15 Alibaba run now on `main` | **Remaining** | Needs the Nov 15 outputs locally (Drive) |
-| 9 | README: run the export and the API | **Remaining** | |
+| 1 | Design plan agreed | **Done** | `docs/design/recommendation_service_design_plan.md` |
+| 2 | Part A: `config/ui_risk_levels.json` (Restrictive → Hybrid, Balanced → P95, Efficient → P90) | **Done** | |
+| 3 | Part B: `scripts/export_ui_artifacts.py` writes the UI bundle with checksums and metadata | **Done** | Copy and reshape only; Google Hybrid re-applied by the existing rule and checked against stored values |
+| 4 | Part B: measure the bundle; commit if under 20 MB, else Drive with checksums | **Done** | 12 MB with zstd Parquet; committed |
+| 5 | Part C: read-only API under `/api/v1`, checksum check at start-up | **Done** | FastAPI |
+| 6 | Part C: OpenAPI contract committed for Task 16 | **Done** | Unblocks Task 16 |
+| 7 | Part D: export tests, fixture bundle, API tests; dependencies in the lock file | **Done** | |
+| 8 | Final export from the Nov 15 Alibaba run now on `main` | **Done** | 31/31 checksums matched; both datasets `verified` |
+| 9 | README: run the export and the API | **Done** | |
 
 ### 4.4 Task 16: Recommendation Web UI (no issue yet)
 

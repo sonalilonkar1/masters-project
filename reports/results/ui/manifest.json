@@ -1,0 +1,22 @@
+{
+  "bundle_schema_version": "1.0",
+  "bundle_status": "verified",
+  "datasets": {
+    "google_clusterdata2019": {
+      "bundle_status": "verified",
+      "source_run_id": null
+    },
+    "alibaba_gpu_v2020": {
+      "bundle_status": "verified",
+      "source_run_id": "4fdc7e96-789b-43a9-990f-20f189e9598b"
+    }
+  },
+  "export": {
+    "code_commit": "bcbf0bb37bf95248356fc2de204512da9faaf0df",
+    "code_dirty": false,
+    "timestamp_utc": "2026-11-17T06:12:02Z",
+    "python_version": "3.12.9",
+    "pandas_version": "2.3.3",
+    "pyarrow_version": "23.0.1"
+  }
+}
