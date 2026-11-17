@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import shutil
 from pathlib import Path
@@ -246,3 +247,26 @@ def test_bundle_folder_from_environment(monkeypatch):
     monkeypatch.setenv(api.BUNDLE_ENV, str(FIXTURE_DIR))
 
     assert api.create_app().state.bundle.path == FIXTURE_DIR
+
+
+# --- OpenAPI contract ----------------------------------------------------------------
+
+OPENAPI_PATH = REPO_ROOT / "docs" / "design" / "recommendation_api_openapi.json"
+
+
+def test_committed_openapi_matches_app():
+    spec = importlib.util.spec_from_file_location("export_openapi", REPO_ROOT / "scripts" / "export_openapi.py")
+    script = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(script)
+
+    assert OPENAPI_PATH.read_text() == script.openapi_text(), "run python3 scripts/export_openapi.py"
+
+
+def test_openapi_documents_the_common_error_body(client):
+    schema = client.get("/openapi.json").json()
+
+    for path in schema["paths"].values():
+        responses = path["get"]["responses"]
+        assert "422" not in responses
+        assert responses["400"]["content"]["application/json"]["schema"]["$ref"].endswith("/ErrorResponse")
+    assert "HTTPValidationError" not in schema["components"]["schemas"]

@@ -38,6 +38,14 @@ HISTORY_COMPARISON = (
 PERCENTILE_NAMES = {"P90": "90th", "P95": "95th", "P99": "99th"}
 
 
+ERROR_RESPONSES = {
+    400: {"model": schemas.ErrorResponse, "description": "Invalid or conflicting query parameters"},
+    404: {"model": schemas.ErrorResponse, "description": "Unknown dataset, workload or route"},
+    405: {"model": schemas.ErrorResponse, "description": "Only GET is supported"},
+    500: {"model": schemas.ErrorResponse, "description": "Unexpected server error"},
+}
+
+
 class ApiError(Exception):
     def __init__(self, status_code: int, code: str, message: str):
         self.status_code, self.code, self.message = status_code, code, message
@@ -93,7 +101,26 @@ def create_app(bundle_dir: Optional[Path] = None) -> FastAPI:
     app.state.bundle = bundle
     _add_error_handlers(app)
     _add_routes(app, bundle)
+    _document_errors_as_400(app)
     return app
+
+
+def _document_errors_as_400(app: FastAPI) -> None:
+    """Invalid parameters return 400 with the common error body, so drop FastAPI's default 422 schema."""
+    default_openapi = app.openapi
+
+    def openapi() -> dict:
+        if app.openapi_schema is None:
+            schema = default_openapi()
+            for path in schema["paths"].values():
+                for operation in path.values():
+                    operation["responses"].pop("422", None)
+            for name in ("HTTPValidationError", "ValidationError"):
+                schema.get("components", {}).get("schemas", {}).pop(name, None)
+            app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = openapi
 
 
 def _add_error_handlers(app: FastAPI) -> None:
@@ -223,7 +250,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
 
     # --- Routes ---
 
-    @app.get("/api/v1/health", response_model=schemas.Health)
+    @app.get("/api/v1/health", response_model=schemas.Health, responses=ERROR_RESPONSES)
     def health():
         manifest = bundle.manifest
         return {
@@ -244,7 +271,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
             ],
         }
 
-    @app.get("/api/v1/datasets", response_model=schemas.DatasetList)
+    @app.get("/api/v1/datasets", response_model=schemas.DatasetList, responses=ERROR_RESPONSES)
     def datasets():
         items = []
         for dataset_id, dataset in bundle.datasets.items():
@@ -265,7 +292,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
             )
         return {"datasets": items}
 
-    @app.get("/api/v1/risk-levels", response_model=schemas.RiskLevelList)
+    @app.get("/api/v1/risk-levels", response_model=schemas.RiskLevelList, responses=ERROR_RESPONSES)
     def risk_levels():
         config = bundle.risk_levels
         return {
@@ -280,7 +307,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
             ],
         }
 
-    @app.get("/api/v1/datasets/{dataset_id}/workloads", response_model=schemas.WorkloadPage)
+    @app.get("/api/v1/datasets/{dataset_id}/workloads", response_model=schemas.WorkloadPage, responses=ERROR_RESPONSES)
     def workloads(
         dataset_id: str,
         search: Optional[str] = Query(None, description="Case-insensitive match on workload ID or display name"),
@@ -315,7 +342,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
             "items": [{c: _value(row[c]) for c in columns} for _, row in page.iterrows()],
         }
 
-    @app.get("/api/v1/datasets/{dataset_id}/workloads/{workload_id:path}/recommendation", response_model=schemas.Recommendation)
+    @app.get("/api/v1/datasets/{dataset_id}/workloads/{workload_id:path}/recommendation", response_model=schemas.Recommendation, responses=ERROR_RESPONSES)
     def recommendation(
         dataset_id: str,
         workload_id: str,
@@ -358,7 +385,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
             },
         }
 
-    @app.get("/api/v1/datasets/{dataset_id}/workloads/{workload_id:path}/history", response_model=schemas.History)
+    @app.get("/api/v1/datasets/{dataset_id}/workloads/{workload_id:path}/history", response_model=schemas.History, responses=ERROR_RESPONSES)
     def history(
         dataset_id: str,
         workload_id: str,
@@ -401,7 +428,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
             "items": items,
         }
 
-    @app.get("/api/v1/datasets/{dataset_id}/policies", response_model=schemas.PolicyList)
+    @app.get("/api/v1/datasets/{dataset_id}/policies", response_model=schemas.PolicyList, responses=ERROR_RESPONSES)
     def policies(dataset_id: str):
         dataset = dataset_or_404(dataset_id)
         rows = {r["policy"]: r for r in dataset.policy_metrics["policies"]}

@@ -1,6 +1,6 @@
 # Task 15 Implementation Plan: Risk Levels, UI Export and Read-Only API
 
-**Status:** Approved with review corrections (2026-11-16). Delete this file when Task 15 is complete.
+**Status:** Steps 1–13 done (2026-11-16). Remaining: step 14 (development bundle from local data, done locally; size check) and step 15 (verified bundle, waiting on #130). Delete this file when Task 15 is complete.
 **Branch:** `feature/task15-backend` (one PR for all of Task 15)
 **Issue:** Task 15 (`task15_recommendation_backend_api.md`), Parts A–E. Column lists and endpoint details are in the issue and are not repeated here.
 
@@ -15,10 +15,10 @@
 | B | `scripts/export_ui_artifacts.py` | Thin CLI: `--out-dir`, `--allow-dirty`, `--force`, `--allow-unverified-source` |
 | C | `src/service/bundle.py` | Verify `SHA256SUMS`, load once, index by `(dataset, workload_id, policy)` |
 | C | `src/service/schemas.py`, `src/service/api.py` | Response models and the FastAPI app under `/api/v1`, `GET` only |
-| C | `docs/design/recommendation_api_openapi.json` | OpenAPI contract generated from the app, for Task 16 |
-| D | `tests/test_ui_contract.py`, `tests/test_ui_export.py`, `tests/test_api.py` | Tests on synthetic inputs and the fixture bundle; no pipeline data needed |
-| D | `tests/fixtures/ui_bundle/` | Small hand-built bundle covering both datasets and every edge case in the issue |
-| D | `requirements.txt`, `requirements-lock.txt` | Add `fastapi`, `uvicorn`, `httpx` |
+| C | `docs/design/recommendation_api_openapi.json`, `scripts/export_openapi.py` | OpenAPI contract generated from the app on the fixture bundle, for Task 16 |
+| D | `tests/test_ui_contract.py`, `tests/test_ui_risk_levels.py`, `tests/test_ui_export.py`, `tests/test_ui_fixture_bundle.py`, `tests/test_api.py`, `tests/ui_sources.py` | Tests on synthetic inputs and the fixture bundle; no pipeline data needed |
+| D | `tests/fixtures/ui_bundle/`, `tests/fixtures/make_ui_bundle.py` | Small synthetic bundle covering both datasets and every edge case in the issue |
+| D | `requirements.txt`, `requirements-lock.txt` | Add `fastapi`, `uvicorn`, `httpx2` (Starlette's test client; `httpx` stays for Jupyter) |
 | E | `README.md` | Obtain inputs, export (verified and development), start the API, run tests, regenerate OpenAPI |
 
 ## Build Order
