@@ -6,6 +6,7 @@
 **Related design:** `docs/design/recommendation_service_design_plan.md`
 **Related summary:** `docs/design/discussion_summary_2026-11-16.md`
 **Related planning document:** `docs/planning/295b_scope_and_done.md`
+**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `ccef27ea…`), built from the Nov 15 Alibaba run shared through #130. All acceptance criteria are met.
 
 ## Objective
 
@@ -17,7 +18,7 @@ Build the backend that allows a developer to:
 4. View the CPU and memory recommendation for the workload's next run.
 5. View the evidence behind the recommendation:
    - Original request values.
-   - Recommendation basis: history or request fallback per resource.
+   - Recommendation basis per resource: history, request fallback, or model (ML alone).
    - Policy test metrics.
    - Historical recommendation-versus-actual results.
 
@@ -37,7 +38,7 @@ The service presents existing results only. It must not train models, select pol
   - `reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv`
 
 - Per-run recommendation outputs are stored locally under `data/processed/`, which is git-ignored. Only their checksums are committed.
-- No recommendation service API currently exists.
+- The recommendation service is built in PR #131: export in `scripts/export_ui_artifacts.py` and `src/service/export.py`, API in `src/service/api.py`. Before that PR, no recommendation API existed.
 - **Agreed Alibaba run:** PR #121 (Task 8, merged 2026-11-16) re-ran Tasks 4–7 and the final test on 2026-11-15. The agreed results are the ones committed on `main`:
 
   | What `main` records | Where | Value |
@@ -46,7 +47,7 @@ The service presents existing results only. It must not train models, select pol
   | Decision manifest | same file | `d36964c0…` |
   | Input checksums | `reports/results/alibaba_gpu_2020/verification/artifact_manifest.json` | `final_test_predictions.parquet` `f01df084…`, `targets/test.parquet` `daaea11a…`, `baselines/recommendations_test.parquet` `1e3361f6…` |
 
-  Local copies made before 2026-11-15 hold the Oct 30 run and do **not** match these checksums. The matching files must be obtained from the teammate who ran Task 8 (shared drive).
+  Local copies made before 2026-11-15 hold the Oct 30 run and do **not** match these checksums. The matching files were shared through #130 on the team Drive (`CMPE 295A_B/alibaba_gpu_v2020_run_4fdc7e96/`) and verified 31 of 31 on a second machine.
 
 - **Agreed Google run:** the frozen manifest committed at `reports/results/google_subset/decision_manifest.json` (status `final`) pins every Google input by SHA-256, including `test_occurrences.parquet` and `test_ml_predictions.parquet`.
 
@@ -735,43 +736,43 @@ This task does not include:
 
 ## Dependencies
 
-- The agreed Alibaba files (Nov 15 run, matching the checksums on `main`) must be available locally before producing the final bundle. Development can start now with `--allow-unverified-source`.
+- The agreed Alibaba files (Nov 15 run, matching the checksums on `main`) must be available locally before producing the final bundle. They were shared through #130 (Drive `CMPE 295A_B/alibaba_gpu_v2020_run_4fdc7e96/`); `--allow-unverified-source` remains for development with other local copies.
 - The local Google inputs already match the committed Google manifest.
 - Corrected Google outputs must be exported again when Tasks 10 or 14 change published results; the new reference is then whatever is committed on `main`.
 - Task 16 depends on the committed OpenAPI contract and fixture bundle.
 
 ## Pull Request
 
-One PR covers Parts A–E (team decision, 2026-11-16), from branch `feature/task15-backend`.
+One PR covers Parts A–E (team decision, 2026-11-16): PR #131 from branch `feature/task15-backend`.
 
 ## Acceptance Criteria
 
-- [ ] The export produces a bundle for both datasets from inputs that match the checksums committed on `main`.
-- [ ] The final bundle is marked `verified`; a `development` bundle is never committed or published.
-- [ ] Reference checksums and the Alibaba `run_id` are read from committed files, not hard-coded.
-- [ ] The bundle includes version metadata, provenance, checksums, risk levels, policy rules, dataset metadata, workloads, recommendations, and policy metrics.
-- [ ] Every copied recommendation and metric equals its source.
-- [ ] Google Hybrid for unscored rows is generated only through the existing Hybrid rule.
-- [ ] Google Hybrid equals stored Hybrid values on all 259 scored rows.
-- [ ] CPU and memory target statuses are represented independently.
-- [ ] History identifies both the recommendation occurrence and the next target occurrence where available.
-- [ ] Recommendation basis is preserved per resource and policy from stored flags and counts.
-- [ ] Latest-run fallback counts match the source data, separately for CPU and memory.
-- [ ] The API loads only the bundle and does not read pipeline outputs.
-- [ ] The API verifies bundle checksums before starting and reports the bundle status.
-- [ ] All endpoints are read-only `GET` endpoints.
-- [ ] Every resource value includes a unit.
-- [ ] Alibaba CPU values are labelled as average usage, not peak.
-- [ ] Missing values are returned as `null`.
-- [ ] Invalid requests return structured `400` errors.
-- [ ] Unknown resources return structured `404` errors.
-- [ ] Policy metrics returned by the API equal the committed summary CSVs.
-- [ ] The OpenAPI contract is committed for Task 16.
-- [ ] Export tests pass.
-- [ ] API tests pass using the fixture bundle.
-- [ ] The full existing test suite passes.
-- [ ] README instructions allow another developer to obtain the agreed files, export the bundle and run the API locally.
-- [ ] The design document is updated if implementation decisions change.
+- [x] The export produces a bundle for both datasets from inputs that match the checksums committed on `main`.
+- [x] The final bundle is marked `verified`; a `development` bundle is never committed or published.
+- [x] Reference checksums and the Alibaba `run_id` are read from committed files, not hard-coded.
+- [x] The bundle includes version metadata, provenance, checksums, risk levels, policy rules, dataset metadata, workloads, recommendations, and policy metrics.
+- [x] Every copied recommendation and metric equals its source.
+- [x] Google Hybrid for unscored rows is generated only through the existing Hybrid rule.
+- [x] Google Hybrid equals stored Hybrid values on all 259 scored rows.
+- [x] CPU and memory target statuses are represented independently.
+- [x] History identifies both the recommendation occurrence and the next target occurrence where available.
+- [x] Recommendation basis is preserved per resource and policy from stored flags and counts.
+- [x] Latest-run fallback counts match the source data, separately for CPU and memory.
+- [x] The API loads only the bundle and does not read pipeline outputs.
+- [x] The API verifies bundle checksums before starting and reports the bundle status.
+- [x] All endpoints are read-only `GET` endpoints.
+- [x] Every resource value includes a unit.
+- [x] Alibaba CPU values are labelled as average usage, not peak.
+- [x] Missing values are returned as `null`.
+- [x] Invalid requests return structured `400` errors.
+- [x] Unknown resources return structured `404` errors.
+- [x] Policy metrics returned by the API equal the committed summary CSVs.
+- [x] The OpenAPI contract is committed for Task 16.
+- [x] Export tests pass.
+- [x] API tests pass using the fixture bundle.
+- [x] The full existing test suite passes.
+- [x] README instructions allow another developer to obtain the agreed files, export the bundle and run the API locally.
+- [x] The design document is updated if implementation decisions change.
 
 ## Completion Definition
 
