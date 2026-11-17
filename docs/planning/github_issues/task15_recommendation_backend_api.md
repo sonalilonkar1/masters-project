@@ -725,13 +725,9 @@ This task does not include:
 - Corrected Google outputs must be exported again when Tasks 10 or 14 change published results; the new reference is then whatever is committed on `main`.
 - Task 16 depends on the committed OpenAPI contract and fixture bundle.
 
-## Suggested Pull Requests
+## Pull Request
 
-| PR | Scope |
-|---|---|
-| PR 1 | Risk configuration, bundle schema, source verification, export implementation, validation, and export tests |
-| PR 2 | Bundle loader, FastAPI API, schemas, fixture bundle, API tests, and OpenAPI contract |
-| PR 3, if needed | Final verified bundle, README instructions, and integration verification |
+One PR covers Parts A–E (team decision, 2026-11-16). Build order and checks: `task15_implementation_plan.md`.
 
 ## Acceptance Criteria
 

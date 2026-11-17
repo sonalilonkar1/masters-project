@@ -19,6 +19,7 @@
 | Task | Issue | Priority | Status | What is left |
 |---|---|---|---|---|
 | Task 8: Alibaba GPU 2020 final verification | #113 | P1 | **PR #121 merged 2026-11-16.** `main` now holds the Nov 15 run (`4fdc7e96…`), which re-ran Tasks 4–7 and the final test in a different environment and replaced the Oct 30 results and run log | Follow-ups: record the rerun, update the report's Alibaba ML/Hybrid numbers, check the environment against the lock file; close #113 (table 4.1) |
+| Task 8 follow-up: share the Nov 15 Alibaba run artifacts | *new; file the issue* | P1 | **Not started**; Parquet files are git-ignored and only on the Task 8 owner's machine | Upload four `data/processed/alibaba_gpu_v2020_*` folders; 31/31 checksums must match (`task8_followup_share_nov15_artifacts.md`) |
 | Task 12: final cross-dataset reporting | #117 | P1 | **PR 1 merged (#123)**; outputs in `reports/results/cross_dataset_pr1/` are provisional | PR 2: verified status, final manifest, limitations, conclusions, README and reproducibility (table 4.2) |
 | Task 15: recommendation backend (UI export and read-only API) | #120 | P1 | **Not started**; no API code on `main`. Design in `docs/design/recommendation_service_design_plan.md` | Risk-level config, UI export, API, tests (table 4.3) |
 | Task 16: recommendation web UI | *new; file the issue* | P1 | **Not started**; split from Task 15 | Framework choice, views, tests, report Figures 8.1 and 8.2 (table 4.4) |
