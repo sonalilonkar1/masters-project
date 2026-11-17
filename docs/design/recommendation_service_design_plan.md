@@ -271,5 +271,5 @@ tests/fixtures/ui_bundle/               # tiny hand-built bundle for API and UI 
 | Alibaba bundle size | Over 20 MB cannot be committed | Measure after step 1; Drive with checksums otherwise |
 | Google results may be corrected (Task 10) | Bundle becomes stale | Re-run the export only; no code change |
 | Google Hybrid for unscored rows is re-applied, not stored | Could be read as a new result | Verified equality on scored rows; recorded in `metadata.json`; stated in the About view |
-| Most workloads have one test run | History chart is empty for half of them | Default sort by test runs; the UI says when a workload has no scored run yet |
+| Most workloads have no scored run (Google 389 of 472, Alibaba 15,512 of 25,232 on the Oct 30 files) | History chart is empty for most workloads | Default sort by test runs; the UI says when a workload has no scored run yet |
 | UI framework | Affects Task 16 only | Team decision at the start of Task 16 |

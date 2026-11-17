@@ -37,7 +37,7 @@ The UI reads everything from the Task 15 API. It computes no recommendations or 
 | Workloads | 472 | 25,232 | Paginated search, never a full list |
 | Latest recommendation falls back to the request | CPU 231, memory 233 of 472 | CPU 19,342, memory 19,341 of 25,232 (Oct 30 files) | Explain the fallback per resource; default to workloads with history |
 | Test runs that use history | 67% | 56% | Most activity comes from recurring workloads |
-| Workloads with one test run | About half | About half | History chart may be empty |
+| Workloads with no scored run (one test run, or no next run observed) | 389 of 472 (82%) | 15,512 of 25,232 (61%, Oct 30 files) | History chart is empty for most workloads; the empty state is the common case |
 | `min_runs` (history needed) | 1 | 10 | Shown in the fallback message |
 | CPU meaning | Peak, normalized `ncu` | Average usage, `percent_of_vcpu` | Alibaba CPU label everywhere |
 | Memory meaning | Peak, normalized | Peak, `gb` | Alibaba memory shown first |
