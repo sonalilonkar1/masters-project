@@ -596,3 +596,130 @@ def test_alibaba_duplicate_or_unmatched_runs_are_refused():
         export_alibaba(predictions, pd.concat([targets, targets.iloc[[0]]]), baselines, summary)
     with pytest.raises(ExportValidationError, match="cover different runs"):
         export_alibaba(predictions, targets, baselines.iloc[1:], summary)
+
+
+# --- Bundle contents -------------------------------------------------------------
+
+
+def test_google_workloads_summary():
+    recommendations = export_google(*google_sources()).recommendations
+    workloads = export.build_workloads(recommendations, "google_clusterdata2019", "Hybrid").set_index("workload_id")
+
+    assert list(workloads.index) == ["u||A", "u||B"]
+    a = workloads.loc["u||A"]
+    assert (a["test_run_count"], a["scored_run_count"]) == (3, 2)
+    assert (a["first_start_time_us"], a["last_start_time_us"]) == (100, 300)
+    assert a["latest_occurrence_id"] == "a3" and a["latest_uses_history"] and a["has_scored_history"]
+    b = workloads.loc["u||B"]
+    assert not b["latest_uses_history"] and not b["has_scored_history"]  # Hybrid basis is "model", not history
+    assert a["display_name"] == "u||A"
+
+
+def test_alibaba_display_name_reads_as_group_and_task():
+    recommendations = export_alibaba(*alibaba_sources()).recommendations
+    workloads = export.build_workloads(recommendations, "alibaba_gpu_v2020", "Hybrid")
+
+    assert list(workloads["display_name"]) == ["G / A", "G / B"]
+    assert list(workloads["latest_occurrence_id"]) == ["G||J3", "G||J4"]
+
+
+def test_fallback_counts_match_source_flags():
+    occurrences, ml_predictions, row_level = google_sources()
+    result = export_google(occurrences, ml_predictions, row_level)
+    counts = export.bundle_fallback_counts(result.recommendations)
+
+    assert counts["P95"] == {"cpu": 1, "memory": 1}  # b1 has no history
+    assert counts["Hybrid"] == {"cpu": 0, "memory": 0}  # b1's Hybrid has no safeguard: basis "model"
+    export.check_fallback_counts(
+        counts, export.google_source_fallback_counts(occurrences), "P95", result.notes["hybrid_safeguard_missing"]
+    )
+
+
+def test_alibaba_fallback_counts_match_source_flags():
+    predictions, targets, baselines, summary = alibaba_sources()
+    counts = export.bundle_fallback_counts(export_alibaba(predictions, targets, baselines, summary).recommendations)
+
+    assert counts["P99"] == {"cpu": 1, "memory": 1}  # J4 has no history; J3 has 11 earlier runs
+    export.check_fallback_counts(counts, export.alibaba_source_fallback_counts(targets, baselines), "P99", {})
+
+
+def test_fallback_count_difference_is_refused():
+    occurrences, ml_predictions, row_level = google_sources()
+    counts = export.bundle_fallback_counts(export_google(occurrences, ml_predictions, row_level).recommendations)
+    counts["P90"]["memory"] += 1
+
+    with pytest.raises(ExportValidationError, match="latest-run fallback for P90"):
+        export.check_fallback_counts(counts, export.google_source_fallback_counts(occurrences), "P95", {"cpu": 1, "memory": 1})
+
+
+def write_summary(path: Path, rows: list[str]) -> Path:
+    path.write_text("policy,row_count,cpu_violation_pct,memory_violation_pct,any_resource_metric_reported\n" + "\n".join(rows) + "\n")
+    return path
+
+
+def test_policy_metrics_copy_exactly(tmp_path):
+    rows = [f"{name},10,{i}.125,,False" for i, name in enumerate(POLICY_NAMES)]
+    rows[-1] = "Hybrid,10,3.621296401407651,3.17799014823054,False"
+    metrics = export.build_policy_metrics(write_summary(tmp_path / "summary.csv", rows), "alibaba_gpu_v2020")
+
+    hybrid = metrics["policies"][-1]
+    assert hybrid == {
+        "policy": "Hybrid", "row_count": 10, "cpu_violation_pct": 3.621296401407651,
+        "memory_violation_pct": 3.17799014823054, "any_resource_metric_reported": False, "policy_id": "hybrid",
+    }
+    assert metrics["policies"][0]["memory_violation_pct"] is None  # empty cell stays null, not 0
+
+
+def test_policy_metrics_wrong_policies_refused(tmp_path):
+    rows = [f"{name},10,1.0,1.0,False" for name in POLICY_NAMES if name != "Mean"]
+
+    with pytest.raises(ExportValidationError, match="expected"):
+        export.build_policy_metrics(write_summary(tmp_path / "summary.csv", rows), "google_clusterdata2019")
+
+
+def test_committed_summaries_copy_exactly():
+    root = Path(__file__).resolve().parents[1]
+    for dataset_id, path in (("google_clusterdata2019", export.GOOGLE_SUMMARY_CSV), ("alibaba_gpu_v2020", export.ALIBABA_SUMMARY_CSV)):
+        metrics = export.build_policy_metrics(root / path, dataset_id)
+        assert [row["policy"] for row in metrics["policies"]] == list(POLICY_NAMES)
+
+
+def test_rules_from_committed_records():
+    rules = export.build_rules(Path(__file__).resolve().parents[1])
+
+    assert rules["google_clusterdata2019"]["min_runs"] == 1
+    assert rules["google_clusterdata2019"]["hybrid_safeguard_policy"] == "P95"
+    assert rules["alibaba_gpu_v2020"]["min_runs"] == 10
+    assert rules["alibaba_gpu_v2020"]["hybrid_safeguard_policy"] == "P99"
+
+
+def test_dataset_info_and_risk_levels():
+    recommendations = export_alibaba(*alibaba_sources()).recommendations
+    workloads = export.build_workloads(recommendations, "alibaba_gpu_v2020", "Hybrid")
+    info = export.build_dataset_info("alibaba_gpu_v2020", recommendations, workloads)
+
+    assert info["resources"]["cpu"]["semantics"] == "next_occurrence_lifetime_average"
+    assert info["primary_resource"] == "memory"
+    assert info["population"] == {
+        "test_runs": 4, "workloads": 2, "scored_runs_cpu": 1, "scored_runs_memory": 2, "workloads_with_history_latest": 1,
+    }
+    risk_levels = export.build_risk_levels()
+    assert risk_levels["datasets"]["google_clusterdata2019"]["restrictive"] == {"policy": "Hybrid", "policy_id": "hybrid"}
+
+
+def test_metadata_records_status_and_mismatches(alibaba_repo):
+    (alibaba_repo / ALIBABA_INPUTS[2]).write_bytes(b"older run")
+    reference, mismatches = verify_dataset_sources("alibaba_gpu_v2020", alibaba_repo)
+    result = export_alibaba(*alibaba_sources())
+    workloads = export.build_workloads(result.recommendations, "alibaba_gpu_v2020", "Hybrid")
+
+    metadata = export.build_metadata(
+        reference, mismatches, source_status(mismatches, True), {}, {}, result, workloads,
+        export.bundle_fallback_counts(result.recommendations),
+    )
+
+    assert metadata["bundle_status"] == "development"
+    assert metadata["source_mismatches"][0]["path"] == ALIBABA_INPUTS[2]
+    assert metadata["source_run_id"] == RUN_ID
+    assert metadata["row_counts"] == {"recommendations": 28, "workloads": 2, "test_runs": 4}
+    json.dumps(metadata)  # serialisable as is

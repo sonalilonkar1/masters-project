@@ -11,6 +11,7 @@ committed files at export time, so a future agreed run needs no code change.
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 from dataclasses import dataclass
@@ -23,11 +24,16 @@ from src.evaluation.metrics import cpu_violation, memory_violation
 from src.policies.hybrid import hybrid_recommendation
 from src.service.contract import (
     ALIBABA,
+    DATASETS,
     GOOGLE,
+    POLICY_IDS,
     POLICY_NAMES,
     RECOMMENDATION_COLUMNS,
+    WORKLOAD_COLUMNS,
     validate_frame,
 )
+from src.service.risk_levels import DEFAULT_CONFIG_PATH as DEFAULT_RISK_LEVEL_CONFIG
+from src.service.risk_levels import load_risk_level_config
 
 ALIBABA_ARTIFACT_MANIFEST = "reports/results/alibaba_gpu_2020/verification/artifact_manifest.json"
 ALIBABA_RUN_RECORD = "reports/results/alibaba_gpu_2020/final_test/run_record.json"
@@ -559,3 +565,238 @@ def export_alibaba(
         "exceeded": "actual > recommended (src/evaluation/metrics.py), checked against final_test_policy_comparison.csv",
     }
     return DatasetExport(recommendations=recommendations, notes=notes)
+
+
+# --- Bundle contents -------------------------------------------------------------
+
+GOOGLE_SUMMARY_CSV = "reports/results/google_subset/tables/final_test_policy_comparison.csv"
+ALIBABA_SUMMARY_CSV = "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv"
+ALIBABA_ML_DECISION_MANIFEST = "reports/results/alibaba_gpu_2020/ml/decision_manifest.json"
+FALLBACK_POLICIES = ("Mean", "P90", "P95", "P99", "Hybrid")
+
+DATASET_CAVEATS = {
+    GOOGLE: [
+        "CPU and memory are normalized by the trace publisher: values can be compared between policies "
+        "but cannot be converted to cores or gigabytes.",
+        "User and job names are hashed in the trace, so workload names are identifiers, not readable names.",
+    ],
+    ALIBABA: [
+        "CPU is the average usage of a run, not its peak: a run can stay within a CPU recommendation on "
+        "average and still exceed it during short bursts.",
+        "Memory is the peak of a run and is the primary resource.",
+        "Only completed runs with full measurements are included.",
+    ],
+}
+COMMON_CAVEAT = (
+    "Results replay the historical test period once: each recommendation is compared with what the next "
+    "run of the same workload actually used. They are not measurements from a live cluster."
+)
+
+
+def workload_display_name(dataset_id: str, workload_id: str) -> str:
+    """Google keys are hashed identifiers shown as they are; Alibaba keys read as group / task."""
+    return workload_id.replace("||", " / ") if dataset_id == ALIBABA else workload_id
+
+
+def build_workloads(recommendations: pd.DataFrame, dataset_id: str, default_policy: str) -> pd.DataFrame:
+    """One row per workload, summarised from the recommendations of the default risk level's policy."""
+    rows = recommendations[recommendations["policy"] == default_policy]
+    scored = rows["cpu_target_status"].eq("available") | rows["memory_target_status"].eq("available")
+    latest = rows[rows["is_latest"]].set_index("workload_id")
+    grouped = rows.assign(scored=scored).groupby("workload_id", sort=True)
+
+    workloads = pd.DataFrame(
+        {
+            "test_run_count": grouped.size().astype("int64"),
+            "scored_run_count": grouped["scored"].sum().astype("int64"),
+            "first_start_time_us": grouped["start_time_us"].min().astype("int64"),
+            "last_start_time_us": grouped["start_time_us"].max().astype("int64"),
+        }
+    )
+    workloads["latest_occurrence_id"] = latest["occurrence_id"].reindex(workloads.index).astype("string")
+    workloads["latest_uses_history"] = (
+        latest["cpu_basis"].eq("history") | latest["memory_basis"].eq("history")
+    ).reindex(workloads.index).astype(bool)
+    workloads["has_scored_history"] = workloads["scored_run_count"] > 0
+    workloads = workloads.reset_index()
+    workloads["workload_id"] = workloads["workload_id"].astype("string")
+    workloads.insert(1, "display_name", workloads["workload_id"].map(lambda key: workload_display_name(dataset_id, key)).astype("string"))
+    if not (latest["start_time_us"].reindex(workloads["workload_id"]).to_numpy() == workloads["last_start_time_us"].to_numpy()).all():
+        raise ExportValidationError(f"{dataset_id}: a latest run does not have the workload's last start time")
+
+    workloads = workloads[[spec.name for spec in WORKLOAD_COLUMNS]]
+    validate_frame(workloads, WORKLOAD_COLUMNS, f"{dataset_id} workloads")
+    return workloads
+
+
+def bundle_fallback_counts(recommendations: pd.DataFrame) -> dict:
+    """Latest runs whose recommendation keeps the request, per policy and resource."""
+    latest = recommendations[recommendations["is_latest"]]
+    counts = {}
+    for policy in FALLBACK_POLICIES:
+        rows = latest[latest["policy"] == policy]
+        counts[policy] = {resource: int(rows[f"{resource}_basis"].eq("request_fallback").sum()) for resource in RESOURCES}
+    return counts
+
+
+def google_source_fallback_counts(occurrences: pd.DataFrame) -> dict:
+    """The same counts taken directly from the Google uses_history flags of runs without a next run."""
+    latest = occurrences[occurrences["target_next_occurrence_start_time_us"].isna()]
+    return {
+        policy: {resource: int((~latest[f"uses_history_{resource}_{suffix}"].astype(bool)).sum()) for resource in RESOURCES}
+        for policy, suffix in GOOGLE_HISTORY_POLICIES.items()
+    }
+
+
+def alibaba_source_fallback_counts(targets: pd.DataFrame, baselines: pd.DataFrame) -> dict:
+    """The same counts taken directly from the Task 6 flags of runs without a next run in Task 4."""
+    latest_keys = targets.loc[targets["memory_target_status"].eq("no_next_occurrence"), "role_key"]
+    latest = baselines[baselines["role_key"].isin(latest_keys)]
+    return {
+        policy: {resource: int((~latest[f"uses_history_{resource}_{suffix}"].astype(bool)).sum()) for resource in RESOURCES}
+        for policy, suffix in ALIBABA_HISTORY_POLICIES.items()
+    }
+
+
+def check_fallback_counts(bundle_counts: dict, source_counts: dict, hybrid_safeguard: str, hybrid_missing: dict) -> None:
+    """History policies must match the source flags; Hybrid must match its safeguard less rows without one."""
+    for policy, expected in source_counts.items():
+        if bundle_counts[policy] != expected:
+            raise ExportValidationError(f"latest-run fallback for {policy}: bundle {bundle_counts[policy]}, source {expected}")
+    for resource in RESOURCES:
+        expected = source_counts[hybrid_safeguard][resource] - hybrid_missing.get(resource, 0)
+        if bundle_counts["Hybrid"][resource] != expected:
+            raise ExportValidationError(f"latest-run Hybrid {resource} fallback {bundle_counts['Hybrid'][resource]}, expected {expected}")
+
+
+def _csv_value(text: str):
+    """A summary-CSV cell as JSON: empty -> null, True/False -> bool, numbers exactly as parsed."""
+    if text == "":
+        return None
+    if text in ("True", "False"):
+        return text == "True"
+    for parse in (int, float):
+        try:
+            return parse(text)
+        except ValueError:
+            pass
+    return text
+
+
+def build_policy_metrics(summary_csv: Path, dataset_id: str) -> dict:
+    """The committed summary CSV copied field by field; nothing is recomputed."""
+    with open(summary_csv, encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    policies = [row["policy"] for row in rows]
+    if policies != list(POLICY_NAMES):
+        raise ExportValidationError(f"{summary_csv}: policies {policies}, expected {list(POLICY_NAMES)}")
+    metrics = [{key: _csv_value(value) for key, value in row.items()} for row in rows]
+    for row, copied in zip(rows, metrics):
+        for key, value in row.items():
+            back = "" if copied[key] is None else str(copied[key])
+            if back != value and not (isinstance(copied[key], float) and float(value) == copied[key]):
+                raise ExportValidationError(f"{summary_csv}: {row['policy']}.{key} did not copy exactly")
+    for row in metrics:
+        row["policy_id"] = POLICY_IDS[row["policy"]]
+    return {"dataset_id": dataset_id, "source": str(summary_csv), "policies": metrics}
+
+
+def build_rules(repo: Path) -> dict:
+    """Locked rules per dataset, copied from the committed decision records."""
+    google = _load_json(repo / GOOGLE_DECISION_MANIFEST)["decisions"]
+    if "P95" not in google["hybrid_rule"] or GOOGLE_HYBRID_SAFEGUARD != "p95":
+        raise ExportValidationError(f"Google Hybrid rule {google['hybrid_rule']!r} does not use P95")
+    run_record = _load_json(repo / ALIBABA_RUN_RECORD)
+    alibaba_ml = _load_json(repo / ALIBABA_ML_DECISION_MANIFEST)
+    if run_record["selected_baseline_policy"].lower() != ALIBABA_HYBRID_SAFEGUARD:
+        raise ExportValidationError(f"Alibaba selected baseline {run_record['selected_baseline_policy']} is not the Hybrid safeguard")
+
+    return {
+        GOOGLE: {
+            "min_runs": google["baseline_min_runs"],
+            "selected_baseline_policy": google["selected_baseline_policy"],
+            "hybrid_safeguard_policy": "P95",
+            "hybrid_rule": google["hybrid_rule"],
+            "hybrid_fallback": google["hybrid_fallback"],
+            "ml_models": google["ml_selected_models"],
+            "source": GOOGLE_DECISION_MANIFEST,
+        },
+        ALIBABA: {
+            "min_runs": run_record["selected_min_runs"],
+            "selected_baseline_policy": run_record["selected_baseline_policy"],
+            "hybrid_safeguard_policy": run_record["selected_baseline_policy"],
+            "hybrid_rule": alibaba_ml["hybrid_rule"],
+            "hybrid_fallback": "ML prediction where the safeguard is unavailable",
+            "ml_models": run_record["selected_models"],
+            "source": f"{ALIBABA_RUN_RECORD}, {ALIBABA_ML_DECISION_MANIFEST}",
+        },
+    }
+
+
+def build_dataset_info(dataset_id: str, recommendations: pd.DataFrame, workloads: pd.DataFrame) -> dict:
+    spec = DATASETS[dataset_id]
+    runs = recommendations[recommendations["policy"] == POLICY_NAMES[0]]
+    return {
+        "dataset_id": dataset_id,
+        "display_name": spec.display_name,
+        "resources": {
+            resource: {"unit": r.unit, "semantics": r.semantics, "description": r.description}
+            for resource, r in (("cpu", spec.cpu), ("memory", spec.memory))
+        },
+        "primary_resource": spec.primary_resource,
+        "evaluation_scope": "One-time final test: each test run's recommendation is compared with the next run of the same workload.",
+        "population": {
+            "test_runs": int(len(runs)),
+            "workloads": int(len(workloads)),
+            "scored_runs_cpu": int(runs["cpu_target_status"].eq("available").sum()),
+            "scored_runs_memory": int(runs["memory_target_status"].eq("available").sum()),
+            "workloads_with_history_latest": int(workloads["latest_uses_history"].sum()),
+        },
+        "caveats": [*DATASET_CAVEATS[dataset_id], COMMON_CAVEAT],
+    }
+
+
+def build_risk_levels(config_path: Path = DEFAULT_RISK_LEVEL_CONFIG) -> dict:
+    """The validated risk-level configuration with policy IDs added."""
+    config = load_risk_level_config(config_path)
+    return {
+        "default_risk_level": config.default_risk_level,
+        "risk_levels": [
+            {"risk_level": level.risk_level, "label": level.label, "description": level.description}
+            for level in config.risk_levels
+        ],
+        "datasets": {
+            dataset_id: {level: {"policy": policy, "policy_id": POLICY_IDS[policy]} for level, policy in mapping.items()}
+            for dataset_id, mapping in config.datasets.items()
+        },
+    }
+
+
+def build_metadata(
+    reference: SourceReference,
+    mismatches: list[Mismatch],
+    status: str,
+    input_checksums: dict,
+    check_files: dict,
+    export: DatasetExport,
+    workloads: pd.DataFrame,
+    fallback_counts: dict,
+) -> dict:
+    """Per-dataset provenance; the export commit and timestamp are added by the command-line script."""
+    return {
+        "dataset_id": reference.dataset_id,
+        "bundle_status": status,
+        "source_mismatches": [vars(mismatch) for mismatch in mismatches],
+        "reference_files": list(reference.reference_files),
+        "source_run_id": reference.run_id,
+        "decision_manifest_sha256": reference.decision_manifest_sha256,
+        "inputs": input_checksums,
+        "check_files": check_files,
+        "row_counts": {
+            "recommendations": int(len(export.recommendations)),
+            "workloads": int(len(workloads)),
+            "test_runs": int(len(export.recommendations) // len(POLICY_NAMES)),
+        },
+        "latest_run_fallback_counts": fallback_counts,
+        "notes": export.notes,
+    }
