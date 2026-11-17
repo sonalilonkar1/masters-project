@@ -1,4 +1,5 @@
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import pandas as pd
 import pytest
 
 from src.service import export
+from src.service.bundle import CHECKSUM_FILE, BundleIntegrityError, verify_bundle
 from src.service.contract import POLICY_NAMES, RECOMMENDATION_COLUMNS, validate_frame
 from src.service.export import (
     ALIBABA_ARTIFACT_MANIFEST,
@@ -723,3 +725,197 @@ def test_metadata_records_status_and_mismatches(alibaba_repo):
     assert metadata["source_run_id"] == RUN_ID
     assert metadata["row_counts"] == {"recommendations": 28, "workloads": 2, "test_runs": 4}
     json.dumps(metadata)  # serialisable as is
+
+
+# --- Writing the bundle and the command-line script ------------------------------
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+_spec = importlib.util.spec_from_file_location("export_ui_artifacts", REPO_ROOT / "scripts" / "export_ui_artifacts.py")
+cli = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(cli)
+
+
+def synthetic_contents(status="verified"):
+    """A complete bundle built from the synthetic Google and Alibaba sources."""
+    datasets = {}
+    for dataset_id, result in (
+        ("google_clusterdata2019", export_google(*google_sources())),
+        ("alibaba_gpu_v2020", export_alibaba(*alibaba_sources())),
+    ):
+        workloads = export.build_workloads(result.recommendations, dataset_id, "Hybrid")
+        datasets[dataset_id] = export.DatasetBundle(
+            dataset_info=export.build_dataset_info(dataset_id, result.recommendations, workloads),
+            policy_metrics={"dataset_id": dataset_id, "policies": []},
+            workloads=workloads,
+            recommendations=result.recommendations,
+            metadata={"bundle_status": status, "source_run_id": None, "source_mismatches": [],
+                      "row_counts": {"workloads": len(workloads), "recommendations": len(result.recommendations)}},
+        )
+    manifest = export.build_manifest(datasets, {"code_commit": "abc", "code_dirty": False, "timestamp_utc": "2026-11-16T00:00:00Z"})
+    return export.BundleContents(manifest=manifest, risk_levels=export.build_risk_levels(), rules={}, datasets=datasets)
+
+
+EXPECTED_BUNDLE_FILES = sorted(
+    ["manifest.json", "risk_levels.json", "rules.json"]
+    + [f"{d}/{name}" for d in ("alibaba_gpu_v2020", "google_clusterdata2019")
+       for name in ("dataset.json", "metadata.json", "policy_metrics.json", "recommendations.parquet", "workloads.parquet")]
+)
+
+
+def test_write_bundle_layout_checksums_and_round_trip(tmp_path):
+    contents = synthetic_contents()
+    out = tmp_path / "ui"
+
+    checksum = export.write_bundle(contents, out)
+
+    assert verify_bundle(out) == checksum
+    listed = [line.split("  ")[1] for line in (out / CHECKSUM_FILE).read_text().splitlines()]
+    assert listed == EXPECTED_BUNDLE_FILES
+    written = pd.read_parquet(out / "alibaba_gpu_v2020" / "recommendations.parquet")
+    pd.testing.assert_frame_equal(written, contents.datasets["alibaba_gpu_v2020"].recommendations)
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["ui"]  # no staging folder left
+
+
+def test_write_bundle_is_reproducible(tmp_path):
+    first = export.write_bundle(synthetic_contents(), tmp_path / "a")
+    second = export.write_bundle(synthetic_contents(), tmp_path / "b")
+
+    assert first == second
+
+
+def test_manifest_status_is_development_if_any_dataset_is(tmp_path):
+    contents = synthetic_contents()
+    contents.datasets["alibaba_gpu_v2020"].metadata["bundle_status"] = "development"
+
+    manifest = export.build_manifest(contents.datasets, {})
+
+    assert manifest["bundle_status"] == "development"
+    assert manifest["datasets"]["google_clusterdata2019"]["bundle_status"] == "verified"
+
+
+def test_failed_write_leaves_nothing_and_keeps_existing_bundle(tmp_path):
+    out = tmp_path / "ui"
+    export.write_bundle(synthetic_contents(), out)
+    before = (out / CHECKSUM_FILE).read_text()
+    broken = synthetic_contents()
+    broken.rules = {"value": float("nan")}  # not valid JSON
+
+    with pytest.raises(ValueError):
+        export.write_bundle(broken, out, force=True)
+
+    assert (out / CHECKSUM_FILE).read_text() == before
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["ui"]
+
+
+def test_force_replaces_only_after_success(tmp_path):
+    out = tmp_path / "ui"
+    export.write_bundle(synthetic_contents(), out)
+    contents = synthetic_contents()
+    contents.rules = {"replaced": True}
+
+    with pytest.raises(FileExistsError):
+        export.write_bundle(contents, out)
+    export.write_bundle(contents, out, force=True)
+
+    assert json.loads((out / "rules.json").read_text()) == {"replaced": True}
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["ui"]
+
+
+@pytest.mark.parametrize("change", ["modify", "delete", "add"])
+def test_verify_bundle_detects_changes(tmp_path, change):
+    out = tmp_path / "ui"
+    export.write_bundle(synthetic_contents(), out)
+    if change == "modify":
+        (out / "rules.json").write_text('{"min_runs": 2}\n')
+    elif change == "delete":
+        (out / "google_clusterdata2019" / "workloads.parquet").unlink()
+    else:
+        (out / "notes.txt").write_text("extra")
+
+    expected = {"modify": "changed: rules.json", "delete": "missing: google_clusterdata2019/workloads.parquet",
+                "add": "not listed in SHA256SUMS: notes.txt"}[change]
+    with pytest.raises(BundleIntegrityError, match=expected):
+        verify_bundle(out)
+
+
+def test_verify_bundle_without_checksum_file(tmp_path):
+    out = tmp_path / "ui"
+    export.write_bundle(synthetic_contents(), out)
+    (out / CHECKSUM_FILE).unlink()
+
+    with pytest.raises(BundleIntegrityError, match="missing"):
+        verify_bundle(out)
+
+
+def fake_builder(status="verified", error=None):
+    def build(repo, allow_unverified_source, export_info):
+        if error is not None:
+            raise error
+        return synthetic_contents(status)
+    return build
+
+
+def clean_git(repo):
+    return "abc123", False
+
+
+def run_cli(tmp_path, out=None, **options):
+    options.setdefault("builder", fake_builder())
+    options.setdefault("git", clean_git)
+    return cli.run_export(out, repo=tmp_path, **options)
+
+
+def test_cli_writes_verified_bundle_to_reports(tmp_path, capsys):
+    assert run_cli(tmp_path) == cli.EXIT_OK
+
+    verify_bundle(tmp_path / "reports/results/ui")
+    assert "Bundle status: verified" in capsys.readouterr().out
+
+
+def test_cli_development_defaults_to_ui_dev(tmp_path, capsys):
+    assert run_cli(tmp_path, allow_unverified_source=True, builder=fake_builder("development")) == cli.EXIT_OK
+
+    assert (tmp_path / "data/processed/ui_dev/manifest.json").is_file()
+    assert "WARNING: development bundle" in capsys.readouterr().out
+
+
+def test_cli_development_inside_reports_is_refused(tmp_path, capsys):
+    code = run_cli(tmp_path, tmp_path / "reports/results/ui", allow_unverified_source=True)
+
+    assert code == cli.EXIT_REFUSED
+    assert "may not be written inside reports/" in capsys.readouterr().out
+
+
+def test_cli_refuses_dirty_tree_unless_allowed(tmp_path):
+    dirty = lambda repo: ("abc123", True)  # noqa: E731
+
+    assert run_cli(tmp_path, git=dirty) == cli.EXIT_REFUSED
+    assert run_cli(tmp_path, git=dirty, allow_dirty=True) == cli.EXIT_OK
+
+
+def test_cli_refuses_existing_output_unless_forced(tmp_path):
+    assert run_cli(tmp_path) == cli.EXIT_OK
+    assert run_cli(tmp_path) == cli.EXIT_REFUSED
+    assert run_cli(tmp_path, force=True) == cli.EXIT_OK
+
+
+def test_cli_refuses_output_inside_inputs_or_symlink(tmp_path):
+    assert run_cli(tmp_path, tmp_path / "data/processed/google_subset_v1/ui") == cli.EXIT_REFUSED
+    (tmp_path / "target").mkdir()
+    (tmp_path / "link").symlink_to(tmp_path / "target")
+    assert run_cli(tmp_path, tmp_path / "link") == cli.EXIT_REFUSED
+
+
+def test_cli_source_mismatch_is_refused(tmp_path, capsys):
+    code = run_cli(tmp_path, builder=fake_builder(error=SourceVerificationError("1 input(s) do not match")))
+
+    assert code == cli.EXIT_REFUSED
+    assert "REFUSED: 1 input(s)" in capsys.readouterr().out
+    assert not (tmp_path / "reports").exists()
+
+
+def test_cli_validation_failure_writes_nothing(tmp_path):
+    code = run_cli(tmp_path, builder=fake_builder(error=ExportValidationError("Hybrid differs")))
+
+    assert code == cli.EXIT_FAILED
+    assert not (tmp_path / "reports").exists()

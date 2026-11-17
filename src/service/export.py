@@ -14,11 +14,15 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import platform
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import uuid4
 
 import numpy as np
 import pandas as pd
+import pyarrow
 
 from src.evaluation.metrics import cpu_violation, memory_violation
 from src.policies.hybrid import hybrid_recommendation
@@ -32,6 +36,8 @@ from src.service.contract import (
     WORKLOAD_COLUMNS,
     validate_frame,
 )
+from src.service.bundle import verify_bundle, write_checksums
+from src.service.contract import BUNDLE_SCHEMA_VERSION
 from src.service.risk_levels import DEFAULT_CONFIG_PATH as DEFAULT_RISK_LEVEL_CONFIG
 from src.service.risk_levels import load_risk_level_config
 
@@ -352,7 +358,13 @@ def _finish(recommendations: pd.DataFrame, dataset_id: str) -> pd.DataFrame:
     latest = recommendations[recommendations["is_latest"] & (recommendations["policy"] == POLICY_NAMES[0])]
     if latest["workload_id"].duplicated().any() or latest["workload_id"].nunique() != recommendations["workload_id"].nunique():
         raise ExportValidationError(f"{dataset_id}: expected exactly one latest run per workload")
-    return recommendations
+
+    # A fixed row order makes the written files, and so their checksums, reproducible.
+    policy_rank = recommendations["policy"].map({name: rank for rank, name in enumerate(POLICY_NAMES)})
+    order = recommendations.assign(_policy_rank=policy_rank).sort_values(
+        ["workload_id", "start_time_us", "occurrence_id", "role_key", "_policy_rank"], kind="mergesort", na_position="first"
+    )
+    return order.drop(columns="_policy_rank").reset_index(drop=True)
 
 
 def export_google(occurrences: pd.DataFrame, ml_predictions: pd.DataFrame, row_level: pd.DataFrame) -> DatasetExport:
@@ -800,3 +812,174 @@ def build_metadata(
         "latest_run_fallback_counts": fallback_counts,
         "notes": export.notes,
     }
+
+
+# --- Building and writing the bundle ---------------------------------------------
+
+GOOGLE_DATA = "data/processed/google_subset_v1"
+ALIBABA_FINAL_TEST_SUMMARY = "data/processed/alibaba_gpu_v2020_final_test/final_test_policy_comparison.csv"
+# Folders the bundle must never be written into.
+INPUT_FOLDERS = (
+    GOOGLE_DATA,
+    "data/processed/alibaba_gpu_v2020_final_test",
+    "data/processed/alibaba_gpu_v2020_targets",
+    "data/processed/alibaba_gpu_v2020_baselines",
+    "reports/results/google_subset",
+    "reports/results/alibaba_gpu_2020",
+)
+
+
+@dataclass
+class DatasetBundle:
+    dataset_info: dict
+    policy_metrics: dict
+    workloads: pd.DataFrame
+    recommendations: pd.DataFrame
+    metadata: dict
+
+
+@dataclass
+class BundleContents:
+    manifest: dict
+    risk_levels: dict
+    rules: dict
+    datasets: dict[str, DatasetBundle]
+
+
+def _input_checksums(reference: SourceReference, mismatches: list[Mismatch]) -> dict:
+    found = {m.path: m.found for m in mismatches if m.reason in ("missing", "checksum")}
+    return {item.path: {"expected_sha256": item.sha256, "sha256": found.get(item.path, item.sha256)} for item in reference.inputs}
+
+
+def _assemble(
+    reference, mismatches, status, export, summary_csv, check_files, source_counts, safeguard, default_policy
+) -> DatasetBundle:
+    dataset_id = reference.dataset_id
+    workloads = build_workloads(export.recommendations, dataset_id, default_policy)
+    fallback_counts = bundle_fallback_counts(export.recommendations)
+    check_fallback_counts(fallback_counts, source_counts, safeguard, export.notes["hybrid_safeguard_missing"])
+    metadata = build_metadata(
+        reference, mismatches, status, _input_checksums(reference, mismatches), check_files, export, workloads, fallback_counts
+    )
+    return DatasetBundle(
+        dataset_info=build_dataset_info(dataset_id, export.recommendations, workloads),
+        policy_metrics=build_policy_metrics(summary_csv, dataset_id),
+        workloads=workloads,
+        recommendations=export.recommendations,
+        metadata=metadata,
+    )
+
+
+def build_bundle(repo: Path, allow_unverified_source: bool, export_info: dict) -> BundleContents:
+    """Verify sources, export both datasets and build every bundle file in memory."""
+    repo = Path(repo)
+    risk_levels = build_risk_levels()
+    rules = build_rules(repo)
+    datasets = {}
+
+    reference, mismatches = verify_dataset_sources(GOOGLE, repo)
+    status = source_status(mismatches, allow_unverified_source)
+    occurrences = pd.read_parquet(repo / GOOGLE_INPUTS[0])
+    google = export_google(occurrences, pd.read_parquet(repo / GOOGLE_INPUTS[1]), pd.read_parquet(repo / GOOGLE_ROW_LEVEL))
+    datasets[GOOGLE] = _assemble(
+        reference, mismatches, status, google, repo / GOOGLE_SUMMARY_CSV,
+        {GOOGLE_ROW_LEVEL: file_sha256(repo / GOOGLE_ROW_LEVEL)},
+        google_source_fallback_counts(occurrences), "P95", _default_policy(risk_levels, GOOGLE),
+    )
+
+    reference, mismatches = verify_dataset_sources(ALIBABA, repo)
+    status = source_status(mismatches, allow_unverified_source)
+    targets = pd.read_parquet(repo / ALIBABA_INPUTS[2])
+    baselines = pd.read_parquet(repo / ALIBABA_INPUTS[3])
+    alibaba = export_alibaba(
+        pd.read_parquet(repo / ALIBABA_INPUTS[0]), targets, baselines, pd.read_csv(repo / ALIBABA_FINAL_TEST_SUMMARY)
+    )
+    datasets[ALIBABA] = _assemble(
+        reference, mismatches, status, alibaba, repo / ALIBABA_SUMMARY_CSV,
+        {ALIBABA_FINAL_TEST_SUMMARY: file_sha256(repo / ALIBABA_FINAL_TEST_SUMMARY)},
+        alibaba_source_fallback_counts(targets, baselines), "P99", _default_policy(risk_levels, ALIBABA),
+    )
+
+    return BundleContents(
+        manifest=build_manifest(datasets, export_info), risk_levels=risk_levels, rules=rules, datasets=datasets
+    )
+
+
+def _default_policy(risk_levels: dict, dataset_id: str) -> str:
+    return risk_levels["datasets"][dataset_id][risk_levels["default_risk_level"]]["policy"]
+
+
+def build_manifest(datasets: dict[str, DatasetBundle], export_info: dict) -> dict:
+    statuses = {dataset_id: bundle.metadata["bundle_status"] for dataset_id, bundle in datasets.items()}
+    return {
+        "bundle_schema_version": BUNDLE_SCHEMA_VERSION,
+        "bundle_status": "verified" if all(s == "verified" for s in statuses.values()) else "development",
+        "datasets": {
+            dataset_id: {"bundle_status": status, "source_run_id": datasets[dataset_id].metadata["source_run_id"]}
+            for dataset_id, status in statuses.items()
+        },
+        "export": {
+            **export_info,
+            "python_version": platform.python_version(),
+            "pandas_version": pd.__version__,
+            "pyarrow_version": pyarrow.__version__,
+        },
+    }
+
+
+def _bundle_files(contents: BundleContents) -> dict[str, object]:
+    """Relative path -> dict (written as JSON) or DataFrame (written as Parquet)."""
+    files = {"manifest.json": contents.manifest, "risk_levels.json": contents.risk_levels, "rules.json": contents.rules}
+    for dataset_id, bundle in contents.datasets.items():
+        files[f"{dataset_id}/dataset.json"] = bundle.dataset_info
+        files[f"{dataset_id}/policy_metrics.json"] = bundle.policy_metrics
+        files[f"{dataset_id}/workloads.parquet"] = bundle.workloads
+        files[f"{dataset_id}/recommendations.parquet"] = bundle.recommendations
+        files[f"{dataset_id}/metadata.json"] = bundle.metadata
+    return files
+
+
+def _write_and_check(path: Path, content) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(content, pd.DataFrame):
+        content.to_parquet(path, index=False)
+        pd.testing.assert_frame_equal(pd.read_parquet(path), content, check_exact=True)
+    else:
+        path.write_text(json.dumps(content, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+        if json.loads(path.read_text(encoding="utf-8")) != content:
+            raise ExportValidationError(f"{path.name} did not read back as written")
+
+
+def write_bundle(contents: BundleContents, out_dir: Path, force: bool = False) -> str:
+    """Write through a staging folder next to out_dir, check it, then move it into place.
+
+    Returns the bundle checksum. On any failure nothing is left behind and an
+    existing bundle is kept.
+    """
+    out_dir = Path(out_dir)
+    if out_dir.exists() and not force:
+        raise FileExistsError(f"{out_dir} already exists")
+    out_dir.parent.mkdir(parents=True, exist_ok=True)
+    staging = out_dir.parent / f".{out_dir.name}.staging-{uuid4().hex}"
+    previous = out_dir.parent / f".{out_dir.name}.previous-{uuid4().hex}"
+    try:
+        staging.mkdir()
+        for relative, content in _bundle_files(contents).items():
+            _write_and_check(staging / relative, content)
+        write_checksums(staging)
+        checksum = verify_bundle(staging)
+
+        if out_dir.exists():
+            out_dir.rename(previous)
+        try:
+            staging.rename(out_dir)
+        except OSError:
+            if previous.exists():
+                previous.rename(out_dir)
+            raise
+        if previous.exists():
+            shutil.rmtree(previous)
+        return checksum
+    finally:
+        if staging.exists():
+            shutil.rmtree(staging)
