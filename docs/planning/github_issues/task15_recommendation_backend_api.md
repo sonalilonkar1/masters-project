@@ -66,7 +66,8 @@ The service presents existing results only. It must not train models, select pol
 | Unique row key | `occurrence_id` | `role_key` |
 | CPU semantics | Peak CPU in normalized `ncu` | Average usage in `percent_of_vcpu` |
 | Memory semantics | Peak normalized memory | Peak memory in `gb` |
-| Latest run falls back to request for memory | 233 of 472 | 19,341 of 25,232 |
+| Latest run falls back to request: CPU | 231 of 472 | 19,342 of 25,232 (Oct 30 files; re-check on Nov 15) |
+| Latest run falls back to request: memory | 233 of 472 | 19,341 of 25,232 (Oct 30 files; re-check on Nov 15) |
 
 ### Why the recommendation basis matters
 
@@ -110,8 +111,11 @@ Implement:
 
 ```text
 scripts/export_ui_artifacts.py
+src/service/contract.py
 src/service/export.py
 ```
+
+`contract.py` fixes the bundle format in one place before any export code: column names, types and nullability, target-status and basis values, policy names, dataset IDs, units and semantics, and the API error format. The export validates against it and the API reads from it.
 
 The export must produce:
 
@@ -345,8 +349,9 @@ Each `metadata.json` must include:
 - Bundle version.
 - Schema version.
 - Bundle status: `verified` or `development`.
+- `source_mismatches`: every input whose checksum or run fields differ from the reference (empty for a `verified` bundle).
 - Row counts.
-- Latest-run fallback counts.
+- Latest-run fallback counts, separately for CPU and memory, each compared with the count from the source `uses_history_*` flags.
 - Note explaining the Google Hybrid re-application.
 - Note explaining derived fields.
 
@@ -366,6 +371,8 @@ Default behavior:
 - Refuse to run when any input checksum or the Alibaba `run_id` does not match the committed reference (see Source of Truth).
 - `--allow-unverified-source` (development only) allows non-matching inputs, such as older local copies. The bundle is then marked `development` in `manifest.json` and every `metadata.json`, and lists every mismatch.
 - A `development` bundle must never be committed or published; the API reports its status through `/health`.
+- With `--allow-unverified-source`, the default output is `data/processed/ui_dev/` (git-ignored), and any `--out-dir` inside `reports/` is refused.
+- Write to a hidden staging folder next to the output (same parent, so the final rename is atomic), validate, write checksums, then rename into place. On any failure the staging folder is deleted and no partial output remains. With `--force`, the old output is removed only after the new one is in place.
 - Refuse to run with a dirty Git tree unless `--allow-dirty` is supplied.
 - Refuse to overwrite an existing output directory unless `--force` is supplied.
 - Refuse to run when required source files are missing.
@@ -396,8 +403,10 @@ Serve the API under:
 The bundle must be loaded once at startup and indexed by:
 
 ```text
-(workload_id, policy)
+(dataset, workload_id, policy)
 ```
+
+The dataset is part of the key even though workload IDs do not currently repeat across datasets.
 
 The API must never read pipeline outputs directly.
 
@@ -568,9 +577,9 @@ Use:
 
 At startup:
 
-- Read `SHA256SUMS`.
+- Read `SHA256SUMS`, which lists every bundle file except itself (`manifest.json`, `risk_levels.json`, `rules.json`, and every dataset's JSON and Parquet files).
 - Verify every listed bundle file.
-- Fail startup if any file is missing or modified.
+- Fail startup if any file is missing or modified, or if the bundle folder contains a file that is not listed.
 - Report bundle version, status and checksum through `/health`.
 
 #### OpenAPI Contract
@@ -608,11 +617,13 @@ Test:
 - Target occurrence and timestamp are correct where available.
 - CPU and memory target statuses are independent.
 - Basis per resource and policy matches the stored flags.
-- Latest-run fallback counts match the source data.
+- Latest-run fallback counts match the source data, separately for CPU and memory.
 - Alibaba one-to-one joins on `role_key` are enforced.
 - An input whose checksum differs from the committed reference is rejected.
 - An Alibaba `run_record.json` whose `run_id` or manifest checksum differs from `main`'s is rejected.
-- `--allow-unverified-source` produces a bundle marked `development` that lists every mismatch.
+- `--allow-unverified-source` produces a bundle marked `development` that lists every mismatch in `source_mismatches`.
+- `--allow-unverified-source` with an output folder inside `reports/` is refused.
+- A failed validation leaves no output folder and no staging folder.
 - Reference checksums are read from the committed files, not hard-coded.
 - Dirty-tree export is rejected unless `--allow-dirty` is provided.
 - Existing output is rejected unless `--force` is provided.
@@ -741,7 +752,7 @@ One PR covers Parts A–E (team decision, 2026-11-16). Build order and checks: `
 - [ ] CPU and memory target statuses are represented independently.
 - [ ] History identifies both the recommendation occurrence and the next target occurrence where available.
 - [ ] Recommendation basis is preserved per resource and policy from stored flags and counts.
-- [ ] Latest-run fallback counts match the source data.
+- [ ] Latest-run fallback counts match the source data, separately for CPU and memory.
 - [ ] The API loads only the bundle and does not read pipeline outputs.
 - [ ] The API verifies bundle checksums before starting and reports the bundle status.
 - [ ] All endpoints are read-only `GET` endpoints.

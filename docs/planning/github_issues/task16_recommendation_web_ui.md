@@ -35,7 +35,7 @@ The UI reads everything from the Task 15 API. It computes no recommendations or 
 | Fact | Google | Alibaba | UI consequence |
 |---|---|---|---|
 | Workloads | 472 | 25,232 | Paginated search, never a full list |
-| Latest recommendation falls back to the request (memory) | 233 (49.4%) | 19,341 (76.7%) | Explain the fallback; default to workloads with history |
+| Latest recommendation falls back to the request | CPU 231, memory 233 of 472 | CPU 19,342, memory 19,341 of 25,232 (Oct 30 files) | Explain the fallback per resource; default to workloads with history |
 | Test runs that use history | 67% | 56% | Most activity comes from recurring workloads |
 | Workloads with one test run | About half | About half | History chart may be empty |
 | `min_runs` (history needed) | 1 | 10 | Shown in the fallback message |
@@ -169,7 +169,7 @@ Each view lists the API it uses.
 
 ### Part F: Report and Demo
 
-- [ ] Screenshots from a bundle built with `--final` (Nov 15 Alibaba run) replace the Figure 8.1 and 8.2 placeholders in `docs/project_report/chapter_8_operations_and_reproducibility/`.
+- [ ] Screenshots from the verified bundle (`bundle_status: verified`, Nov 15 Alibaba run; never a `development` bundle) replace the Figure 8.1 and 8.2 placeholders in `docs/project_report/chapter_8_operations_and_reproducibility/`.
 - [ ] §8.3 changes from "planned" to "implemented" and names the frameworks.
 - [ ] Check that Chapter 2 §2.2.6 / Figure 2.1 and Chapter 4 §4.4 / Figure 4.4 still match what was built; update the Chapter 8 source map.
 - [ ] Rebuild the report (`assemble_report.py`, `build_latex.py`).
@@ -195,7 +195,7 @@ This task does not include:
 ## Dependencies
 
 - Task 15 OpenAPI contract committed and fixture bundle available: needed to start.
-- Task 15 final bundle (Nov 15 Alibaba run, built with `--final`): needed for the final screenshots.
+- Task 15 verified bundle (Nov 15 Alibaba run, `bundle_status: verified`): needed for the final screenshots.
 
 ## Blocks
 
