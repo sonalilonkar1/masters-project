@@ -154,7 +154,7 @@ def validate_frame(df: pd.DataFrame, columns: tuple[ColumnSpec, ...], table: str
             problems.append(f"{spec.name}: expected {spec.dtype}, got {series.dtype}")
             continue
         present = series.dropna()
-        if spec.dtype == "string" and not present.map(lambda value: isinstance(value, str)).all():
+        if spec.dtype == "string" and not all(isinstance(value, str) for value in present):
             problems.append(f"{spec.name}: non-string values")
         if not spec.nullable and len(present) != len(series):
             problems.append(f"{spec.name}: {len(series) - len(present)} nulls in a non-nullable column")

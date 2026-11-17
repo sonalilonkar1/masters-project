@@ -196,3 +196,9 @@ def test_non_string_in_string_column_rejected():
 
     with pytest.raises(BundleContractError, match="display_name: non-string"):
         validate_frame(frame, WORKLOAD_COLUMNS, "workloads")
+
+
+def test_string_dtype_columns_are_accepted():
+    frame = workload_frame().astype({"workload_id": "string", "display_name": "string", "latest_occurrence_id": "string"})
+
+    validate_frame(frame, WORKLOAD_COLUMNS, "workloads")

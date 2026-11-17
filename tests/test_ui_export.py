@@ -2,9 +2,12 @@ import hashlib
 import json
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import pytest
 
 from src.service import export
+from src.service.contract import POLICY_NAMES, RECOMMENDATION_COLUMNS, validate_frame
 from src.service.export import (
     ALIBABA_ARTIFACT_MANIFEST,
     ALIBABA_INPUTS,
@@ -12,7 +15,9 @@ from src.service.export import (
     ALIBABA_RUN_RECORD,
     GOOGLE_DECISION_MANIFEST,
     GOOGLE_INPUTS,
+    ExportValidationError,
     SourceVerificationError,
+    export_google,
     source_status,
     verify_dataset_sources,
 )
@@ -246,3 +251,183 @@ def test_development_mode_keeps_every_mismatch(alibaba_repo):
 def test_unknown_dataset():
     with pytest.raises(ValueError, match="unknown dataset"):
         verify_dataset_sources("azure_vm", Path("."))
+
+
+# --- Google export -------------------------------------------------------------
+
+def google_sources():
+    """Workload A runs three times (histories 0, 1, 2); workload B runs once with no request.
+
+    Recommendations are chosen so every basis case appears: A's first run falls
+    back to its request, later runs use history, and B has no safeguard at all.
+    """
+    occurrences = pd.DataFrame(
+        {
+            "occurrence_key": ["a1", "a2", "a3", "b1"],
+            "occurrence_id": ["a1", "a2", "a3", "b1"],
+            "recurrence_key": ["u||A", "u||A", "u||A", "u||B"],
+            "execution_start_time_us": pd.array([100, 200, 300, 150], dtype="Int64"),
+            "occurrence_peak_cpu_ncu": [0.10, 0.30, 0.20, 0.05],
+            "occurrence_peak_memory_normalized": [0.01, 0.03, 0.02, 0.005],
+            "occ_hist_peak_cpu_count": [0, 1, 2, 0],
+            "occ_hist_peak_memory_count": [0, 1, 2, 0],
+            "target_next_occurrence_start_time_us": pd.array([200, 300, None, None], dtype="Int64"),
+            "target_cpu_next_occurrence_peak_ncu": [0.30, 0.20, np.nan, np.nan],
+            "target_memory_next_occurrence_peak_normalized": [0.03, 0.02, np.nan, np.nan],
+            "rec_cpu_request": [0.50, 0.50, 0.50, np.nan],
+            "rec_memory_request": [0.04, 0.04, 0.04, np.nan],
+        }
+    )
+    for resource, history in (("cpu", [0.10, 0.25]), ("memory", [0.01, 0.025])):
+        request = occurrences[f"rec_{resource}_request"]
+        for suffix in ("mean", "p90", "p95", "p99"):
+            occurrences[f"uses_history_{resource}_{suffix}"] = occurrences[f"occ_hist_peak_{resource}_count"] >= 1
+            occurrences[f"rec_{resource}_{suffix}"] = [request[0], *history, request[3]]
+
+    ml_predictions = pd.DataFrame(
+        {
+            "occurrence_id": ["b1", "a1", "a2", "a3"],
+            "ml_pred_cpu": [0.07, 0.12, 0.40, 0.15],
+            "ml_pred_memory": [0.006, 0.02, 0.01, 0.03],
+        }
+    )
+    return occurrences, ml_predictions, stored_row_level(occurrences, ml_predictions)
+
+
+def stored_row_level(occurrences, ml_predictions):
+    """What the final test stored for the scored rows (a1 and a2), computed independently."""
+    frame = occurrences.merge(ml_predictions, on="occurrence_id")
+    rows = []
+    for _, row in frame[frame["target_next_occurrence_start_time_us"].notna()].iterrows():
+        for policy in POLICY_NAMES:
+            record = {"occurrence_id": row["occurrence_id"], "recurrence_key": row["recurrence_key"], "policy_name": policy}
+            for resource in ("cpu", "memory"):
+                if policy == "ML":
+                    value = row[f"ml_pred_{resource}"]
+                elif policy == "Hybrid":
+                    value = max(row[f"ml_pred_{resource}"], row[f"rec_{resource}_p95"])
+                else:
+                    value = row[f"rec_{resource}_{policy.lower() if policy != 'Request' else 'request'}"]
+                actual = row["target_cpu_next_occurrence_peak_ncu" if resource == "cpu" else "target_memory_next_occurrence_peak_normalized"]
+                record[f"recommended_{resource}"] = value
+                record[f"{resource}_violation"] = float(actual > value)
+            rows.append(record)
+    return pd.DataFrame(rows)
+
+
+def row(recommendations, occurrence_id, policy):
+    match = recommendations[(recommendations["occurrence_id"] == occurrence_id) & (recommendations["policy"] == policy)]
+    assert len(match) == 1
+    return match.iloc[0]
+
+
+def test_google_export_shape_and_contract():
+    result = export_google(*google_sources())
+    recommendations = result.recommendations
+
+    assert len(recommendations) == 4 * len(POLICY_NAMES)
+    assert list(recommendations["policy"].unique()) == list(POLICY_NAMES)
+    validate_frame(recommendations, RECOMMENDATION_COLUMNS, "google")
+    assert recommendations["role_key"].isna().all()
+
+
+def test_google_target_identity_and_status():
+    recommendations = export_google(*google_sources()).recommendations
+
+    first = row(recommendations, "a1", "P95")
+    assert first["target_occurrence_id"] == "a2"
+    assert first["target_start_time_us"] == 200
+    assert first["cpu_target_status"] == "available"
+    last = row(recommendations, "a3", "P95")
+    assert pd.isna(last["target_occurrence_id"]) and pd.isna(last["actual_cpu"])
+    assert last["cpu_target_status"] == "no_next_occurrence"
+
+
+def test_google_one_latest_run_per_workload():
+    recommendations = export_google(*google_sources()).recommendations
+    latest = recommendations[recommendations["is_latest"]]
+
+    assert sorted(latest["occurrence_id"].unique()) == ["a3", "b1"]
+    assert latest.groupby("policy").size().eq(2).all()
+
+
+def test_google_basis_and_history_counts():
+    recommendations = export_google(*google_sources()).recommendations
+
+    assert row(recommendations, "a1", "P95")["cpu_basis"] == "request_fallback"
+    assert row(recommendations, "a1", "P95")["recommended_cpu"] == 0.50
+    assert row(recommendations, "a2", "P90")["memory_basis"] == "history"
+    assert row(recommendations, "a2", "P90")["memory_history_run_count"] == 1
+    assert row(recommendations, "a2", "Request")["cpu_basis"] == "request"
+    assert pd.isna(row(recommendations, "a2", "Request")["cpu_history_run_count"])
+    assert row(recommendations, "a2", "ML")["cpu_basis"] == "model"
+    assert row(recommendations, "a2", "Hybrid")["cpu_basis"] == "history"
+
+
+def test_google_hybrid_applies_rule_including_unscored_rows():
+    recommendations = export_google(*google_sources()).recommendations
+
+    assert row(recommendations, "a2", "Hybrid")["recommended_cpu"] == 0.40  # ML above P95
+    assert row(recommendations, "a3", "Hybrid")["recommended_cpu"] == 0.25  # unscored latest run, P95 above ML
+
+
+def test_google_hybrid_without_safeguard_is_ml_with_model_basis():
+    result = export_google(*google_sources())
+    hybrid = row(result.recommendations, "b1", "Hybrid")
+
+    assert hybrid["recommended_cpu"] == 0.07
+    assert hybrid["cpu_basis"] == "model" and hybrid["memory_basis"] == "model"
+    assert pd.isna(row(result.recommendations, "b1", "P95")["recommended_cpu"])
+    assert result.notes["hybrid_safeguard_missing"] == {"cpu": 1, "memory": 1}
+
+
+def test_google_exceeded_copied_and_null_when_unscored():
+    occurrences, ml_predictions, row_level = google_sources()
+    # A stored flag that disagrees with actual > recommended proves it is copied, not recomputed.
+    pick = (row_level["occurrence_id"] == "a2") & (row_level["policy_name"] == "Mean")
+    row_level.loc[pick, "cpu_violation"] = 1.0 - row_level.loc[pick, "cpu_violation"]
+
+    recommendations = export_google(occurrences, ml_predictions, row_level).recommendations
+
+    assert row(recommendations, "a2", "Mean")["cpu_exceeded"] == bool(row_level.loc[pick, "cpu_violation"].iloc[0])
+    assert pd.isna(row(recommendations, "a3", "P95")["cpu_exceeded"])
+
+
+def test_google_null_request_keeps_null_not_zero():
+    recommendations = export_google(*google_sources()).recommendations
+
+    assert pd.isna(row(recommendations, "b1", "Request")["request_cpu"])
+    assert pd.isna(row(recommendations, "b1", "Request")["recommended_cpu"])
+
+
+def test_google_stored_hybrid_mismatch_is_refused():
+    occurrences, ml_predictions, row_level = google_sources()
+    row_level.loc[row_level["policy_name"] == "Hybrid", "recommended_memory"] += 0.001
+
+    with pytest.raises(ExportValidationError, match=r"memory recommendations differ .*Hybrid"):
+        export_google(occurrences, ml_predictions, row_level)
+
+
+def test_google_target_not_matching_next_run_is_refused():
+    occurrences, ml_predictions, row_level = google_sources()
+    occurrences.loc[0, "target_next_occurrence_start_time_us"] = 250
+
+    with pytest.raises(ExportValidationError, match="start times differ"):
+        export_google(occurrences, ml_predictions, row_level)
+
+
+def test_google_target_value_not_matching_next_peak_is_refused():
+    occurrences, ml_predictions, row_level = google_sources()
+    occurrences.loc[0, "target_cpu_next_occurrence_peak_ncu"] = 0.99
+
+    with pytest.raises(ExportValidationError, match="cpu targets differ"):
+        export_google(occurrences, ml_predictions, row_level)
+
+
+def test_google_duplicate_or_unmatched_predictions_are_refused():
+    occurrences, ml_predictions, row_level = google_sources()
+
+    with pytest.raises(ExportValidationError, match="duplicate"):
+        export_google(occurrences, pd.concat([ml_predictions, ml_predictions.iloc[[0]]]), row_level)
+    with pytest.raises(ExportValidationError, match="different occurrences"):
+        export_google(occurrences, ml_predictions.iloc[1:], row_level)
