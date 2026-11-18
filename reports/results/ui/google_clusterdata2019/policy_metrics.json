@@ -1,6 +1,6 @@
 {
   "dataset_id": "google_clusterdata2019",
-  "source": "/Users/meghanakoti/masterproject/masters-project/reports/results/google_subset/tables/final_test_policy_comparison.csv",
+  "source": "reports/results/google_subset/tables/final_test_policy_comparison.csv",
   "policies": [
     {
       "policy": "Request",

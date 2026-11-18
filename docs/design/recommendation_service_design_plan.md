@@ -142,7 +142,7 @@ Read-only JSON over HTTP, served from the bundle. Base path `/api/v1`.
 | `GET /datasets/{dataset}/workloads?search=&has_history=&sort=&limit=&offset=` | Paginated workload list; `search` matches the ID or display name; `has_history=true` (UI default) keeps workloads whose latest recommendation uses history; `sort` = `test_runs` (default, descending) or `id` | Workload lookup |
 | `GET /datasets/{dataset}/workloads/{workload_id}/recommendation?risk=` or `?policy=` | Latest recommendation, request, the rule that produced it, and the policy's test metrics | Recommendation panel |
 | `GET /datasets/{dataset}/workloads/{workload_id}/history?policy=` | All test runs in time order: recommendation, actual, exceeded | History chart |
-| `GET /datasets/{dataset}/policies` | All seven policies' test metrics, with risk levels marked | Policy comparison |
+| `GET /datasets/{dataset}/policies` | Test metrics of every policy the dataset has (all seven in the current bundle), with risk levels marked | Policy comparison |
 | `GET /health` | Status, bundle version, commit, checksum, source run IDs | Footer, monitoring |
 
 Default sort by test-run count matters for the demo: half the workloads in both datasets have a single test run, so the first page should show workloads with a real history.
@@ -178,7 +178,7 @@ The exact request and response schemas are in `docs/design/recommendation_api_op
     ],
     "any_resource": null
   },
-  "bundle": {"bundle_status": "verified", "dataset_status": "verified", "source_run_id": "4fdc7e96-…", "bundle_checksum": "ccef27ea…"}
+  "bundle": {"bundle_status": "verified", "dataset_status": "verified", "source_run_id": "4fdc7e96-…", "bundle_checksum": "97e9418d…"}
 }
 ```
 
@@ -189,10 +189,11 @@ API rules:
 - Only `GET`. No endpoint writes files or runs pipeline code.
 - Every numeric value travels with `unit`; every CPU value on Alibaba with `semantics: average_usage` and its label. A value without a unit is a bug.
 - Missing values are `null`, never 0, never omitted.
-- Errors share one body, `{"error": {"code": "...", "message": "..."}}`: unknown dataset, workload or route → `404 not_found`; invalid or conflicting query (`risk` and `policy` together, unknown risk level or policy, bad sort or pagination) → `400 invalid_parameter` (FastAPI's default 422 is replaced); any method other than `GET` → `405 method_not_allowed`; unexpected failure → `500 internal_error`.
+- Errors share one body, `{"error": {"code": "...", "message": "..."}}`: unknown dataset, workload or route, or a `?policy=` the dataset does not have → `404 not_found`; invalid or conflicting query (`risk` and `policy` together, unknown or empty risk level or policy, bad sort or pagination) → `400 invalid_parameter` (FastAPI's default 422 is replaced); any method other than `GET` → `405 method_not_allowed`; unexpected failure → `500 internal_error`.
 - Memory is listed before CPU on Alibaba (primary resource), matching the report.
 - No response combines datasets.
-- At start-up the API verifies every bundle file against `SHA256SUMS` and refuses to start on a mismatch.
+- At start-up the API verifies every bundle file against `SHA256SUMS` and refuses to start on a mismatch. It also refuses a dataset whose recommendations and policy metrics list different policies, or whose risk level maps to a policy it does not have.
+- Google `caveats` in `dataset.json` include the Task 12 limitations (F3/F4, F7/F8, subset scale, small validation population); the UI shows them.
 - The API publishes its contract as OpenAPI; Task 16 develops against it.
 
 Performance: the largest table is about 485,000 rows (69,285 Alibaba runs × 7 policies). It is loaded once into memory and indexed by `(dataset, workload_id, policy)`; every endpoint is a dictionary lookup or a slice. No database is needed.

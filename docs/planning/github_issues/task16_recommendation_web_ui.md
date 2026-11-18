@@ -31,7 +31,7 @@ The UI reads everything from the Task 15 API. It computes no recommendations or 
   - Read-only API under `/api/v1`: `src/service/api.py`.
   - API contract: `docs/design/recommendation_api_openapi.json`, generated from the app. The response schemas in this file are the source of truth for field names.
   - Fixture bundle: `tests/fixtures/ui_bundle/`, which lets the API run without pipeline data. It covers history, request fallback, no scored run, null requests and actuals, differing CPU and memory bases and target statuses, and a workload ID containing `/`.
-  - Verified bundle: `reports/results/ui/` (checksum `ccef27ea…`, `bundle_status: verified`), built from the Nov 15 Alibaba run (`4fdc7e96…`) on `main`. Use it for the final screenshots.
+  - Verified bundle: `reports/results/ui/` (checksum `97e9418d…`, `bundle_status: verified`), built from the Nov 15 Alibaba run (`4fdc7e96…`) on `main`. Use it for the final screenshots.
 - Run the API locally:
 
   ```bash
@@ -145,7 +145,7 @@ Each view lists the API it uses. Field names below are from the OpenAPI contract
 `GET /api/v1/datasets/{dataset}/policies`
 
 - [ ] Violation rate against average waste for all seven policies on the selected dataset, one chart per resource; any-resource view for Google only (`any_resource` is null on Alibaba).
-- [ ] The three risk levels marked on their policies (`risk_levels`); `available_datasets` checked before showing a policy.
+- [ ] The three risk levels marked on their policies (`risk_levels`); `available_datasets` checked before showing a policy. `/policies` lists only the dataset's policies, and `?policy=` for one it lacks returns `404`.
 - [ ] Table under the chart with the same values and their valid-row counts.
 - [ ] No chart or table combines the two datasets.
 
@@ -153,7 +153,7 @@ Each view lists the API it uses. Field names below are from the OpenAPI contract
 
 `GET /api/v1/datasets`, `GET /api/v1/health`
 
-- [ ] Dataset descriptions, units and semantics, and dataset `caveats`.
+- [ ] Dataset descriptions, units and semantics, and every dataset `caveat`, including Google's F3/F4 and F7/F8 limitations.
 - [ ] The one-time final test, and that results are historical replay, not a live cluster.
 - [ ] The request fallback and why most workloads use it.
 - [ ] The Hybrid rule for each dataset from the recommendation response's `rule` (Google: larger of ML and P95; ML alone when there is no request and no history).

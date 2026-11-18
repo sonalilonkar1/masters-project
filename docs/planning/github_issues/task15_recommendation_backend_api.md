@@ -6,7 +6,7 @@
 **Related design:** `docs/design/recommendation_service_design_plan.md`
 **Related summary:** `docs/design/discussion_summary_2026-11-16.md`
 **Related planning document:** `docs/planning/295b_scope_and_done.md`
-**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `ccef27ea…`), built from the Nov 15 Alibaba run shared through #130. All acceptance criteria are met.
+**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `97e9418d…`), built from the Nov 15 Alibaba run shared through #130. All acceptance criteria are met.
 
 ## Objective
 
@@ -575,7 +575,7 @@ Return:
 Use:
 
 - `400` for invalid or conflicting query parameters.
-- `404` for unknown datasets, workloads, or policies.
+- `404` for unknown datasets or workloads, or a `?policy=` the dataset does not have.
 - `500` only for unexpected server errors.
 
 #### Checksum Verification

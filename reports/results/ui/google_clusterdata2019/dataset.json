@@ -25,6 +25,10 @@
   "caveats": [
     "CPU and memory are normalized by the trace publisher: values can be compared between policies but cannot be converted to cores or gigabytes.",
     "User and job names are hashed in the trace, so workload names are identifiers, not readable names.",
+    "Some test targets come from runs outside the test split and the validation data was contaminated (findings F3 and F4), so these are not leakage-safe final results.",
+    "Abnormal or incomplete records and aggregation across machines remain limitations (findings F7 and F8).",
+    "The data is a subset of the trace, which limits how far the results generalize to the full ClusterData2019 trace.",
+    "The validation population is small, which limits confidence in the choice of model and policy.",
     "Results replay the historical test period once: each recommendation is compared with what the next run of the same workload actually used. They are not measurements from a live cluster."
   ]
 }

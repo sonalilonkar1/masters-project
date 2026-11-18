@@ -1,6 +1,6 @@
 {
   "dataset_id": "alibaba_gpu_v2020",
-  "source": "/Users/meghanakoti/masterproject/masters-project/reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
+  "source": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
   "policies": [
     {
       "policy": "Request",
