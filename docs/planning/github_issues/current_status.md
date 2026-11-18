@@ -23,7 +23,7 @@
 | Task 12: final cross-dataset reporting | #117 (open) | P1 | **PR 1 (#123) and PR 2 (#129) merged**; final bundle in `reports/results/cross_dataset_final/` is `DECISION_PENDING` | Google, Azure and Alibaba 2018 decisions; Task 10 before/after comparison (table 4.2) |
 | Task 15: recommendation backend (UI export and read-only API) | #120 | P1 | **Done on `feature/task15-backend`** (2026-11-16); verified bundle from the Nov 15 run in `reports/results/ui/` | Merge PR #131; close #120 (table 4.3) |
 | Task 16: recommendation web UI | *new; file the issue* | P1 | **Not started**; split from Task 15 | Framework choice, views, tests, report Figures 8.1 and 8.2 (table 4.4) |
-| Task 10: Google subset corrections and rerun | #115 | P3 | **Not started** | Targets after split assignment, reselection, rerun of Notebooks 04–06, or a recorded decision to keep the current results with limitations (table 4.6) |
+| Task 10: Google subset corrections and rerun | #115 | P3 | **PR 1 in progress** on `task10-google-split-isolation` (`3c964ba`): split-isolated targets, Notebooks 04–05 rerun, before/after audit. Notebook 06 waits on D-3 | Review and merge PR 1; record D-3; then the downstream updates in [task10_downstream_updates.md](task10_downstream_updates.md) (table 4.6) |
 | Task 14: Google evaluation follow-ups | #119 | P3 | **Not started** | Cross-split targets (through Task 10), confidence intervals, feature importance (table 4.5) |
 | Task 9: Alibaba 2018 adapter demonstration | #114 | P2 | Adapter updated for 0.2.0 (PR #92); **no outcome recorded** | Framework run, validated output, one recorded outcome (table 4.7) |
 | Task 11: Azure VM dataset integration | #116 | P4 | Stage 1 study in `docs/data/azure_vm_traceadvisor_feasibility.md` (2026-10-29); old `src/adapters/azure_vm.py` (2026-10-14) | Record the go or stop decision; Stage 2 only on go (table 4.8) |
@@ -121,6 +121,8 @@ Task 8 history/environment repairs and manuscript updates remain separate work.
 | 5 | Label all new results as post-report follow-ups | **Remaining** | Published results and manifests unchanged |
 
 ### 4.6 Task 10: Google Subset Corrections and Rerun (#115)
+
+After Task 10, the Google results in Task 12, the Task 15 UI bundle, Task 16 and the report must be updated. The steps for each D-3 outcome are in [task10_downstream_updates.md](task10_downstream_updates.md).
 
 | # | Item (task file section) | Status | Note |
 |---|---|---|---|
