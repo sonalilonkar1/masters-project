@@ -6,7 +6,7 @@
 **Related design:** `docs/design/recommendation_service_design_plan.md`
 **Related summary:** `docs/design/discussion_summary_2026-11-16.md`
 **Related planning document:** `docs/planning/295b_scope_and_done.md`
-**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `08b9d529…`), built from the Nov 15 Alibaba run shared through #130. All acceptance criteria are met.
+**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `08b9d529…`), built from the Nov 15 Alibaba run shared through #130. Second review round fixed on 2026-11-18. All acceptance criteria are met.
 
 ## Objective
 
@@ -161,7 +161,7 @@ Include:
 - Primary resource.
 - Evaluation scope.
 - Population sizes.
-- Dataset caveats.
+- Dataset caveats, including the Task 12 Google limitations (F3/F4, F7/F8, subset scale, small validation population).
 - Notes explaining that the data represents historical test replay, not live execution.
 
 #### `policy_metrics.json`
@@ -175,6 +175,7 @@ Copy the committed summary CSVs field by field, including:
 - Valid-row denominators.
 - Per-resource units.
 - Metric definitions where needed.
+- The source CSV path, repository-relative.
 
 Metrics must not be recomputed.
 
@@ -322,6 +323,8 @@ Google Hybrid may be applied to latest unscored rows because stored Hybrid value
 
 The export must verify that recomputed Hybrid values equal the stored Hybrid values for all 259 scored rows.
 
+Stored Google violation flags are copied only after checking that each equals actual > recommended (`src/evaluation/metrics.py`), and that the flags reproduce the violation rates and valid counts in the committed summary CSV.
+
 No other recommendations or metrics may be recalculated.
 
 #### Alibaba Export
@@ -424,7 +427,7 @@ The API must never read pipeline outputs directly.
 | `GET /api/v1/datasets/{dataset}/workloads` | Return a paginated workload list |
 | `GET /api/v1/datasets/{dataset}/workloads/{workload_id}/recommendation` | Return the latest recommendation and evidence |
 | `GET /api/v1/datasets/{dataset}/workloads/{workload_id}/history` | Return recommendation-versus-next-run history |
-| `GET /api/v1/datasets/{dataset}/policies` | Return all seven policy metrics |
+| `GET /api/v1/datasets/{dataset}/policies` | Return the metrics of every policy the dataset has (all seven in the current bundle) |
 | `GET /api/v1/health` | Return service, bundle status (`verified` or `development`), checksum, commit, and source-run status |
 
 #### Workload Endpoint
@@ -463,7 +466,8 @@ Rules:
 - Exactly one of `risk` or `policy` may be supplied.
 - If neither is supplied, use the default risk level.
 - Supplying both returns `400`.
-- Unknown risk levels or policies return `400`.
+- Unknown or empty risk levels or policies return `400`; an empty `risk=` does not fall back to the default.
+- A known policy the dataset does not have returns `404`.
 
 The response must include:
 
@@ -520,7 +524,7 @@ The response must make clear that the recommendation from one occurrence is eval
 
 #### Policy Comparison Endpoint
 
-Return all seven policies:
+Return every policy the dataset has; the current bundle has all seven for both datasets:
 
 ```text
 request
@@ -585,6 +589,7 @@ At startup:
 - Read `SHA256SUMS`, which lists every bundle file except itself (`manifest.json`, `risk_levels.json`, `rules.json`, and every dataset's JSON and Parquet files).
 - Verify every listed bundle file.
 - Fail startup if any file is missing or modified, or if the bundle folder contains a file that is not listed.
+- Fail startup if a dataset's recommendations and policy metrics list different policies, or a risk level maps to a policy the dataset does not have.
 - Report bundle version, status and checksum through `/health`.
 
 #### OpenAPI Contract
@@ -634,6 +639,8 @@ Test:
 - Existing output is rejected unless `--force` is provided.
 - Missing source files are rejected.
 - Checksums and metadata are generated.
+- A stored Google violation flag that differs from actual > recommended, or flags that disagree with the summary CSV, are rejected.
+- No bundle file contains a machine-local path.
 
 Verification tests use small synthetic inputs and reference files, so they run without the real pipeline outputs.
 
@@ -678,6 +685,9 @@ Test:
 - `/health` reports the bundle status.
 - No non-GET routes.
 - No cross-dataset responses.
+- Empty `risk=` and `policy=` return `400`.
+- A policy missing from one dataset: `/policies` lists only that dataset's policies and `?policy=` returns `404`.
+- Start-up fails when policies are inconsistent within a dataset.
 
 #### Dependencies
 
@@ -704,7 +714,7 @@ Update the README with:
 
 - Required dependencies.
 - How to obtain the agreed source files and check them against `main`.
-- Final export instructions, and development export with `--allow-unverified-source`.
+- Final export instructions (`--force` replaces the committed bundle), and development export with `--allow-unverified-source`.
 - API startup instructions.
 - API base URL.
 - Bundle location.
@@ -738,7 +748,7 @@ This task does not include:
 
 - The agreed Alibaba files (Nov 15 run, matching the checksums on `main`) must be available locally before producing the final bundle. They were shared through #130 (Drive `CMPE 295A_B/alibaba_gpu_v2020_run_4fdc7e96/`); `--allow-unverified-source` remains for development with other local copies.
 - The local Google inputs already match the committed Google manifest.
-- Corrected Google outputs must be exported again when Tasks 10 or 14 change published results; the new reference is then whatever is committed on `main`.
+- Corrected Google outputs must be exported again when Tasks 10 or 14 change published results; the new reference is then whatever is committed on `main`. The steps are in `task10_downstream_updates.md`.
 - Task 16 depends on the committed OpenAPI contract and fixture bundle.
 
 ## Pull Request
@@ -766,6 +776,9 @@ One PR covers Parts A–E (team decision, 2026-11-16): PR #131 from branch `feat
 - [x] Missing values are returned as `null`.
 - [x] Invalid requests return structured `400` errors.
 - [x] Unknown resources return structured `404` errors.
+- [x] A policy a dataset does not have returns a structured `404`, never a `500`.
+- [x] Google violation flags are checked against actual > recommended and the summary CSV.
+- [x] Google dataset caveats include the Task 12 limitations.
 - [x] Policy metrics returned by the API equal the committed summary CSVs.
 - [x] The OpenAPI contract is committed for Task 16.
 - [x] Export tests pass.
