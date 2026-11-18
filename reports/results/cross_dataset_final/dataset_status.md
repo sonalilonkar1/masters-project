@@ -1,0 +1,6 @@
+| dataset_id | completion | report_status | reason | metadata_source |
+| --- | --- | --- | --- | --- |
+| google_clusterdata2019 | pipeline_artifacts_available | decision_pending | Existing frozen Google results are displayed with F3/F4 contamination and F7/F8 limitations. Reporting treatment is governed by the validated dataset decision record. | reports/results/google_subset/n04_metadata.json |
+| alibaba_gpu_v2020 | pipeline_artifacts_available | published_evidence_validated | Authoritative published November 15 Alibaba run. Published reporting bytes and metadata are validated; unavailable physical artifacts, inference reproduction and historical execution are not independently reproduced. | reports/results/alibaba_gpu_2020/ml/decision_manifest.json |
+| alibaba_clustertrace2018 | decision_pending | decision_pending | Task 9 demonstration outcome and validated sample metadata are not supplied. No next-occurrence or recommendation results are reported. | — |
+| azure_public_vm_v2 | decision_pending | decision_pending | Existing feasibility analysis supports deferring integration. Dataset V1/V2 identity needs reconciliation; observed memory and official recurrence are unavailable. No Task 11 Stage 2 results are reported. | — |

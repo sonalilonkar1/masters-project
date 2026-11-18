@@ -19,7 +19,7 @@
 | Task | Issue | Priority | Status | What is left |
 |---|---|---|---|---|
 | Task 8: Alibaba GPU 2020 final verification | #113 | P1 | **PR #121 merged 2026-11-16.** `main` now holds the Nov 15 run (`4fdc7e96…`), which re-ran Tasks 4–7 and the final test in a different environment and replaced the Oct 30 results and run log | Follow-ups: record the rerun, update the report's Alibaba ML/Hybrid numbers, check the environment against the lock file; close #113 (table 4.1) |
-| Task 12: final cross-dataset reporting | #117 | P1 | **PR 1 merged (#123)**; outputs in `reports/results/cross_dataset_pr1/` are provisional | PR 2: verified status, final manifest, limitations, conclusions, README and reproducibility (table 4.2) |
+| Task 12: final cross-dataset reporting | #117 (open) | P1 | **PR 1 merged (#123)**; historical outputs preserved. PR 2 open with review feedback (#129) | Review PR #129; dataset decisions and the Task 10 before/after comparison remain pending |
 | Task 15: recommendation backend (UI export and read-only API) | #120 | P1 | **Not started**; no API code on `main`. Design in `docs/design/recommendation_service_design_plan.md` | Risk-level config, UI export, API, tests (table 4.3) |
 | Task 16: recommendation web UI | *new; file the issue* | P1 | **Not started**; split from Task 15 | Framework choice, views, tests, report Figures 8.1 and 8.2 (table 4.4) |
 | Task 10: Google subset corrections and rerun | #115 | P3 | **Not started** | Targets after split assignment, reselection, rerun of Notebooks 04–06, or a recorded decision to keep the current results with limitations (table 4.6) |
@@ -57,20 +57,30 @@
 
 ### 4.2 Task 12 PR 2: Final Cross-Dataset Reporting (#117)
 
+PR #129 on `task12-final-reporting-pr2-integrated` is open. It adds the separate
+`cross_dataset_final/` bundle with published Task 8 provenance, limitations,
+conclusions and reporting-only reproduction instructions. PR #131 is also open
+and edits this status file.
+Google retention, Azure go/stop and Alibaba 2018 outcomes remain `decision_pending`.
+Issue #117 remains open while those decisions and the Task 10 before/after
+comparison await evidence.
+Task 8 history/environment repairs and manuscript updates remain separate work.
+
+
 | # | Item (task file section) | Status | Note |
 |---|---|---|---|
 | 1 | Reporting script, configuration, input-integrity and provenance checks | Done in PR 1 | `scripts/build_final_cross_dataset_report.py` |
 | 2 | Per-dataset results tables and figures (§3) | Done in PR 1, provisional | Alibaba memory first; CPU labeled average usage |
 | 3 | Contract comparison and comparable/non-comparable table (§2, §4) | Done in PR 1 | `contract_comparison`, `comparability` |
 | 4 | Dataset completion status (§1) | Provisional in PR 1 | Final once Tasks 9, 10 and 11 have recorded outcomes |
-| 5 | Move from provisional to verified status for Alibaba | **Remaining** | Needs Task 8 merged; checksums alone are not enough (task file, Current Project State) |
+| 5 | Link Alibaba reporting to the accepted Task 8 run | Implemented in PR #129 | Task 8 (#121) is merged. The bundle preserves its verification limits |
 | 6 | Google results final, or kept with documented limitations | **Remaining** | Needs Task 10 decision |
 | 7 | Alibaba 2018 and Azure scope statements (§3) | **Remaining** | Needs Task 9 and Task 11 outcomes |
-| 8 | Limitations per dataset (§5) | **Remaining** | |
+| 8 | Limitations per dataset (§5) | Implemented in PR #129 | Included in the final bundle |
 | 9 | Adapter integration evidence: same contract, framework and evaluator per dataset (§6) | **Remaining** | Task 13 adapter can be cited for Google |
-| 10 | Final artifact manifest covering every reported artifact (§7) | **Remaining** | Extends the Task 8 manifest |
-| 11 | Fresh-environment reproduction from `requirements.txt` (§7) | **Remaining** | |
-| 12 | Conclusions per dataset and overall; README and runbook (§8) | **Remaining** | |
+| 10 | Final artifact manifest covering the reporting bundle (§7) | Implemented in PR #129 | Includes the published Task 8 evidence linkage |
+| 11 | Reproduction in the locked Python 3.12 environment (§7) | Implemented in PR #129 | Use `requirements-lock.txt` |
+| 12 | Conclusions per dataset and overall; README and runbook (§8) | Implemented in PR #129 | Dataset decisions remain pending |
 | 13 | Required tests: traceability, identical regeneration, CPU label check, no cross-dataset ranking, full `pytest` | Partly done in PR 1 | Recheck after PR 2 changes |
 
 ### 4.3 Task 15: Recommendation Backend (#120)
