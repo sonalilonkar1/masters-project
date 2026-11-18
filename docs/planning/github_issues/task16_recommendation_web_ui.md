@@ -118,7 +118,7 @@ Each view lists the API it uses. Field names below are from the OpenAPI contract
 `GET /api/v1/risk-levels`, `GET /api/v1/datasets/{dataset}/workloads/{workload_id}/recommendation?risk=`
 
 - [ ] Risk selector Restrictive / Balanced / Efficient; Restrictive by default (`default_risk_level`); each option shows its one-line `description` from the API.
-- [ ] Recommended value next to the original request for each entry in `resources` (`recommended`, `request`, `unit`), in the order the API returns them (memory first on Alibaba).
+- [ ] Recommended value next to the original request for each entry in `resources` (`recommended`, `request`, `unit`), in the order the API returns them (memory first on Alibaba); the resource named by `primary_resource` is emphasized (memory on Alibaba, none on Google).
 - [ ] Basis per resource from `resources[].basis.type`, with N from `basis.history_run_count` and `min_runs` from `rule.min_runs`:
   - `history`: "Based on N earlier runs".
   - `request_fallback`: "Only N earlier runs (needs `min_runs`): we keep your request".
@@ -144,7 +144,7 @@ Each view lists the API it uses. Field names below are from the OpenAPI contract
 `GET /api/v1/datasets/{dataset}/policies`
 
 - [ ] Violation rate against average waste for all seven policies on the selected dataset, one chart per resource; any-resource view for Google only (`any_resource` is null on Alibaba).
-- [ ] The three risk levels marked on their policies (`risk_levels`).
+- [ ] The three risk levels marked on their policies (`risk_levels`); `available_datasets` checked before showing a policy.
 - [ ] Table under the chart with the same values and their valid-row counts.
 - [ ] No chart or table combines the two datasets.
 
@@ -162,7 +162,7 @@ Each view lists the API it uses. Field names below are from the OpenAPI contract
 
 - [ ] Every value shown with its unit.
 - [ ] `null` shown as "not available", never 0 and never blank.
-- [ ] Alibaba CPU labelled "Average usage, not peak" wherever it appears (`label` from the API); Alibaba memory shown before CPU.
+- [ ] Alibaba CPU labelled "Average usage, not peak" wherever it appears, using the `semantics` and `label` the API returns on every resource (recommendation, history and policy metrics); Alibaba memory shown before CPU.
 - [ ] Google values shown in normalized units with a short explanation; never converted to cores or GiB.
 - [ ] Percentages and quantities rounded for display only; the API value is used in tooltips.
 - [ ] No view combines or ranks datasets.

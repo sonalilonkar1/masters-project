@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.service import api
-from src.service.bundle import BundleIntegrityError, verify_bundle
+from src.service.bundle import BundleIntegrityError, verify_bundle, write_checksums
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "ui_bundle"
@@ -115,6 +115,7 @@ def test_recommendation_defaults_to_restrictive(client):
     assert (body["risk_level"], body["policy"], body["policy_id"]) == ("restrictive", "Hybrid", "hybrid")
     assert body["latest_run"] == {"occurrence_id": "G||J3", "role_key": "G||J3||A", "start_time_us": 200}
     assert [r["resource"] for r in body["resources"]] == ["memory", "cpu"]
+    assert body["primary_resource"] == "memory"
     memory = resource(body, "memory")
     assert memory["unit"] == "gb" and memory["basis"] == {"type": "history", "history_run_count": 11}
     assert resource(body, "cpu")["label"] == "Average usage, not peak"
@@ -131,6 +132,8 @@ def test_recommendation_evidence_is_the_policy_row(client):
     assert evidence["policy"] == "P95" and evidence["risk_levels"] == ["balanced"]
     assert resource(evidence, "memory")["violation_pct"] == p95["memory_violation_pct"]
     assert resource(evidence, "cpu")["valid_violation_count"] == p95["valid_cpu_violation_count"]
+    assert (resource(evidence, "cpu")["semantics"], resource(evidence, "cpu")["label"]) == ("average_usage", "Average usage, not peak")
+    assert evidence["available_datasets"] == [GOOGLE, ALIBABA]
     assert evidence["any_resource"] is None
     assert body["rule"]["min_runs"] == 10 and "95th percentile" in body["rule"]["description"]
 
@@ -148,6 +151,7 @@ def test_recommendation_workload_id_with_slash(client):
     unencoded = client.get(f"/api/v1/datasets/{GOOGLE}/workloads/u/2||B/recommendation").json()
 
     assert body["workload_id"] == unencoded["workload_id"] == "u/2||B"
+    assert body["primary_resource"] is None  # Google has no primary resource
     # No request and no history: Hybrid is the ML value alone, with basis "model".
     assert resource(body, "cpu")["basis"]["type"] == "model"
     assert resource(body, "cpu")["recommended"] is not None
@@ -191,6 +195,9 @@ def test_history_pairs_each_run_with_the_next(client):
     assert [i["occurrence_id"] for i in items] == ["G||J1", "G||J2", "G||J3"]
     assert (items[0]["target_occurrence_id"], items[0]["target_start_time_us"]) == ("G||J2", 200)
     assert [r["resource"] for r in items[0]["resources"]] == ["memory", "cpu"]
+    for item in items:
+        assert (resource(item, "cpu")["semantics"], resource(item, "cpu")["label"]) == ("average_usage", "Average usage, not peak")
+        assert (resource(item, "memory")["semantics"], resource(item, "memory")["unit"]) == ("peak", "gb")
     cpu = resource(items[1], "cpu")
     assert cpu["target_status"] == "next_occurrence_ineligible_resource"
     assert cpu["actual"] is None and cpu["exceeded"] is None
@@ -214,8 +221,28 @@ def test_policies_all_seven_with_risk_levels(client):
     marked = {p["policy"]: p["risk_levels"] for p in body["policies"]}
     assert marked == {"Request": [], "Mean": [], "P90": ["efficient"], "P95": ["balanced"], "P99": [], "ML": [], "Hybrid": ["restrictive"]}
     assert body["policies"][0]["any_resource"]["violation_pct"] is not None  # Google reports any-resource
+    assert all(p["available_datasets"] == [GOOGLE, ALIBABA] for p in body["policies"])
+    assert all(r["semantics"] == "peak" for p in body["policies"] for r in p["resources"])
     alibaba = client.get(url(ALIBABA) + "/policies").json()
     assert all(p["any_resource"] is None for p in alibaba["policies"])
+    for policy in alibaba["policies"]:
+        assert (resource(policy, "cpu")["semantics"], resource(policy, "cpu")["label"]) == ("average_usage", "Average usage, not peak")
+        assert policy["available_datasets"] == [GOOGLE, ALIBABA]
+
+
+def test_available_datasets_follow_the_bundle(tmp_path):
+    bundle = tmp_path / "ui"
+    shutil.copytree(FIXTURE_DIR, bundle)
+    metrics_path = bundle / ALIBABA / "policy_metrics.json"
+    metrics = json.loads(metrics_path.read_text())
+    metrics["policies"] = [row for row in metrics["policies"] if row["policy"] != "ML"]
+    metrics_path.write_text(json.dumps(metrics))
+    write_checksums(bundle)
+
+    policies = TestClient(api.create_app(bundle)).get(url(GOOGLE) + "/policies").json()["policies"]
+
+    available = {p["policy"]: p["available_datasets"] for p in policies}
+    assert available["ML"] == [GOOGLE] and available["Hybrid"] == [GOOGLE, ALIBABA]
 
 
 # --- routes, errors and startup ------------------------------------------------------

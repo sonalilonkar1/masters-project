@@ -1056,6 +1056,15 @@
             "type": "string",
             "title": "Unit"
           },
+          "semantics": {
+            "type": "string",
+            "title": "Semantics",
+            "description": "peak or average_usage"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
           "recommended": {
             "anyOf": [
               {
@@ -1099,6 +1108,8 @@
         "required": [
           "resource",
           "unit",
+          "semantics",
+          "label",
           "recommended",
           "actual",
           "exceeded",
@@ -1197,6 +1208,14 @@
             "type": "array",
             "title": "Risk Levels"
           },
+          "available_datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Datasets",
+            "description": "Datasets in the bundle whose final-test results include this policy"
+          },
           "row_count": {
             "type": "integer",
             "title": "Row Count"
@@ -1225,6 +1244,7 @@
           "policy",
           "policy_id",
           "risk_levels",
+          "available_datasets",
           "row_count",
           "resources",
           "any_resource"
@@ -1301,6 +1321,18 @@
           "latest_run": {
             "$ref": "#/components/schemas/LatestRun"
           },
+          "primary_resource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Resource",
+            "description": "Resource to emphasize (memory on Alibaba); null when the dataset has none"
+          },
           "resources": {
             "items": {
               "$ref": "#/components/schemas/RecommendedResource"
@@ -1332,6 +1364,7 @@
           "policy",
           "policy_id",
           "latest_run",
+          "primary_resource",
           "resources",
           "same_for_all_risk_levels",
           "rule",
@@ -1448,6 +1481,16 @@
             "type": "string",
             "title": "Unit"
           },
+          "semantics": {
+            "type": "string",
+            "title": "Semantics",
+            "description": "peak or average_usage"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Short display label, e.g. 'Average usage, not peak'"
+          },
           "violation_pct": {
             "anyOf": [
               {
@@ -1522,6 +1565,8 @@
         "required": [
           "resource",
           "unit",
+          "semantics",
+          "label",
           "violation_pct",
           "valid_violation_count",
           "average_utilization",

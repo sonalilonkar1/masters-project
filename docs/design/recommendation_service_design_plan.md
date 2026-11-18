@@ -160,6 +160,7 @@ The exact request and response schemas are in `docs/design/recommendation_api_op
   "policy": "Hybrid",
   "policy_id": "hybrid",
   "latest_run": {"occurrence_id": "…", "role_key": "…", "start_time_us": 6450729000000},
+  "primary_resource": "memory",
   "resources": [
     {"resource": "memory", "unit": "gb", "semantics": "peak", "label": "Peak usage",
      "recommended": 6.36, "request": 19.55, "basis": {"type": "history", "history_run_count": 17289}},
@@ -170,10 +171,10 @@ The exact request and response schemas are in `docs/design/recommendation_api_op
   "rule": {"policy": "Hybrid", "description": "Larger of the ML prediction and the P99 of the workload's earlier runs …",
            "min_runs": 10, "safeguard_policy": "P99", "ml_model": {"cpu": "hist_gradient_boosting", "memory": "hist_gradient_boosting"}, "source": "…"},
   "policy_evidence": {
-    "policy": "Hybrid", "risk_levels": ["restrictive"], "row_count": 44053,
+    "policy": "Hybrid", "risk_levels": ["restrictive"], "available_datasets": ["google_clusterdata2019", "alibaba_gpu_v2020"], "row_count": 44053,
     "resources": [
-      {"resource": "memory", "unit": "gb", "violation_pct": 3.18, "valid_violation_count": 44053, "average_waste": 8.70, "…": "…"},
-      {"resource": "cpu", "unit": "percent_of_vcpu", "violation_pct": 3.62, "valid_violation_count": 44045, "average_waste": 327.47, "…": "…"}
+      {"resource": "memory", "unit": "gb", "semantics": "peak", "label": "Peak usage", "violation_pct": 3.18, "valid_violation_count": 44053, "average_waste": 8.70, "…": "…"},
+      {"resource": "cpu", "unit": "percent_of_vcpu", "semantics": "average_usage", "label": "Average usage, not peak", "violation_pct": 3.62, "valid_violation_count": 44045, "average_waste": 327.47, "…": "…"}
     ],
     "any_resource": null
   },
@@ -181,7 +182,7 @@ The exact request and response schemas are in `docs/design/recommendation_api_op
 }
 ```
 
-`policy_evidence` is the policy's dataset-wide final-test result, not a score for this workload. The history endpoint returns one item per test run with `occurrence_id`, `start_time_us`, `target_occurrence_id`, `target_start_time_us` and, per resource, `recommended`, `actual`, `exceeded` and `target_status`.
+`policy_evidence` is the policy's dataset-wide final-test result, not a score for this workload. The history endpoint returns one item per test run with `occurrence_id`, `start_time_us`, `target_occurrence_id`, `target_start_time_us` and, per resource, `unit`, `semantics`, `label`, `recommended`, `actual`, `exceeded` and `target_status`. Every policy in `/policies` and in `policy_evidence` lists its `available_datasets`, computed from the bundle. `primary_resource` is `memory` on Alibaba and null on Google.
 
 API rules:
 

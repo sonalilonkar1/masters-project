@@ -72,6 +72,12 @@ def _resource_order(dataset: LoadedDataset) -> list[str]:
     return [primary, *[r for r in RESOURCES if r != primary]] if primary else list(RESOURCES)
 
 
+def _resource_label(dataset: LoadedDataset, resource: str) -> dict:
+    """Resource name, unit, semantics and label: carried by every resource value the API returns."""
+    info = _resource_info(dataset, resource)
+    return {k: info[k] for k in ("resource", "unit", "semantics", "label")}
+
+
 def _resource_info(dataset: LoadedDataset, resource: str) -> dict:
     spec = dataset.info["resources"][resource]
     average = "average" in spec["semantics"]
@@ -144,6 +150,11 @@ def _add_error_handlers(app: FastAPI) -> None:
 
 
 def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
+    available_datasets = {
+        policy: [d for d in bundle.datasets if any(row["policy"] == policy for row in bundle.datasets[d].policy_metrics["policies"])]
+        for policy in POLICY_NAMES
+    }
+
     def dataset_or_404(dataset_id: str) -> LoadedDataset:
         if dataset_id not in bundle.datasets:
             raise ApiError(404, "not_found", f"Unknown dataset {dataset_id!r}; expected one of {list(DATASET_IDS)}")
@@ -177,8 +188,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
         for resource in _resource_order(dataset):
             resources.append(
                 {
-                    "resource": resource,
-                    "unit": dataset.info["resources"][resource]["unit"],
+                    **_resource_label(dataset, resource),
                     "violation_pct": row.get(f"{resource}_violation_pct"),
                     "valid_violation_count": row.get(f"valid_{resource}_violation_count"),
                     "average_utilization": row.get(f"average_{resource}_utilization"),
@@ -197,6 +207,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
             "policy": row["policy"],
             "policy_id": POLICY_IDS[row["policy"]],
             "risk_levels": risk_levels_of(dataset_id, row["policy"]),
+            "available_datasets": available_datasets[row["policy"]],
             "row_count": row["row_count"],
             "resources": resources,
             "any_resource": any_resource,
@@ -365,9 +376,10 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
                 "role_key": _value(row["role_key"]),
                 "start_time_us": _value(row["start_time_us"]),
             },
+            "primary_resource": dataset.info["primary_resource"],
             "resources": [
                 {
-                    **{k: v for k, v in _resource_info(dataset, r).items() if k in ("resource", "unit", "semantics", "label")},
+                    **_resource_label(dataset, r),
                     "recommended": _value(row[f"recommended_{r}"]),
                     "request": _value(row[f"request_{r}"]),
                     "basis": {"type": row[f"{r}_basis"], "history_run_count": _value(row[f"{r}_history_run_count"])},
@@ -406,8 +418,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
                 "target_start_time_us": _value(row["target_start_time_us"]),
                 "resources": [
                     {
-                        "resource": r,
-                        "unit": dataset.info["resources"][r]["unit"],
+                        **_resource_label(dataset, r),
                         "recommended": _value(row[f"recommended_{r}"]),
                         "actual": _value(row[f"actual_{r}"]),
                         "exceeded": _value(row[f"{r}_exceeded"]),

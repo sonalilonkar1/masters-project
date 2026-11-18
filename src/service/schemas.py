@@ -125,6 +125,8 @@ class Rule(BaseModel):
 class ResourceMetrics(BaseModel):
     resource: str
     unit: str
+    semantics: str = Field(description="peak or average_usage")
+    label: str = Field(description="Short display label, e.g. 'Average usage, not peak'")
     violation_pct: Optional[float]
     valid_violation_count: Optional[int]
     average_utilization: Optional[float] = Field(description="Ratio of actual to recommended usage")
@@ -142,6 +144,7 @@ class PolicyMetrics(BaseModel):
     policy: str
     policy_id: str
     risk_levels: list[str]
+    available_datasets: list[str] = Field(description="Datasets in the bundle whose final-test results include this policy")
     row_count: int
     resources: list[ResourceMetrics]
     any_resource: Optional[AnyResourceMetrics] = Field(description="Google only")
@@ -162,6 +165,7 @@ class Recommendation(BaseModel):
     policy: str
     policy_id: str
     latest_run: LatestRun
+    primary_resource: Optional[str] = Field(description="Resource to emphasize (memory on Alibaba); null when the dataset has none")
     resources: list[RecommendedResource]
     same_for_all_risk_levels: bool
     rule: Rule
@@ -172,6 +176,8 @@ class Recommendation(BaseModel):
 class HistoryResource(BaseModel):
     resource: str
     unit: str
+    semantics: str = Field(description="peak or average_usage")
+    label: str
     recommended: Optional[float]
     actual: Optional[float] = Field(description="Usage of the next run; null when not observed")
     exceeded: Optional[bool]
