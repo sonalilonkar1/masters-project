@@ -1,0 +1,64 @@
+{
+  "before": {
+    "policy": "P99",
+    "min_runs": 1,
+    "validation_population": 329,
+    "metrics": {
+      "valid_any_resource_violation_count": 328,
+      "cpu_violation_pct": 16.76829268292683,
+      "memory_violation_pct": 17.073170731707318,
+      "any_resource_violation_pct": 21.951219512195124,
+      "average_cpu_waste": 19.041132760047915,
+      "average_memory_waste": 3.3458750387808163
+    }
+  },
+  "after": {
+    "policy": "P99",
+    "min_runs": 1,
+    "validation_population": 225,
+    "metrics": {
+      "valid_any_resource_violation_count": 224,
+      "cpu_violation_pct": 12.946428571428573,
+      "memory_violation_pct": 15.625,
+      "any_resource_violation_pct": 18.303571428571427,
+      "average_cpu_waste": 25.039882293982167,
+      "average_memory_waste": 4.493953958920069
+    }
+  },
+  "ml_selected_models": {
+    "before": {
+      "cpu": "random_forest",
+      "memory": "random_forest"
+    },
+    "after": {
+      "cpu": "random_forest",
+      "memory": "random_forest"
+    }
+  },
+  "ml_locked_params_unchanged": true,
+  "ml_training_rows": {
+    "before": {
+      "cpu/train_period_only": 1672,
+      "cpu/all_available": 2010,
+      "memory/train_period_only": 1649,
+      "memory/all_available": 1983
+    },
+    "after": {
+      "cpu/train_period_only": 1672,
+      "cpu/all_available": 1672,
+      "memory/train_period_only": 1649,
+      "memory/all_available": 1649
+    }
+  },
+  "ml_refit_rows": {
+    "before": {
+      "cpu": 2108,
+      "memory": 2082
+    },
+    "after": {
+      "cpu": 1898,
+      "memory": 1874
+    }
+  },
+  "split_boundaries_unchanged": true
+}
