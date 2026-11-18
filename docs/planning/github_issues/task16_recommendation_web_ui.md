@@ -127,6 +127,7 @@ Each view lists the API it uses. Field names below are from the OpenAPI contract
 - [ ] When `same_for_all_risk_levels` is true, the selector shows "Risk levels give the same answer for this workload until it has enough history".
 - [ ] Rule from `rule.description`, with `rule.safeguard_policy` and `rule.ml_model` where present.
 - [ ] Policy test evidence from `policy_evidence.resources[]` (`violation_pct`, `average_waste`, valid counts), for example "At this level, memory recommendations were exceeded in X% of test runs; average waste Y GB". Labelled as dataset-wide, not specific to this workload.
+- [ ] Next to that evidence, the same numbers for keeping the original request, from the `Request` row of `GET /api/v1/datasets/{dataset}/policies`, for example "Keeping your request: memory exceeded in 3.16% of test runs; average waste 22.3 GB". Shown for every risk level and resource, so the user sees the trade-off rather than assuming a level is always safer than the request: on Alibaba memory, Hybrid (3.18%, 8.70 GB) has about the same violation rate as the request (3.16%) with 61% less waste, while on Alibaba CPU and on Google it has far fewer violations. No wording in the UI may claim a risk level is safer than the request; only the numbers are compared.
 - [ ] Source line in small print: `bundle.source_run_id`, `bundle.bundle_checksum` and `bundle.bundle_status`.
 
 #### 4. Workload history
@@ -183,6 +184,7 @@ Each view lists the API it uses. Field names below are from the OpenAPI contract
 - [ ] Smoke test that each view loads against the API running on the Task 15 fixture bundle.
 - [ ] Rendering checks: units present, Alibaba CPU label, memory first on Alibaba, "not available" for nulls.
 - [ ] Basis checks on the fixture: the fallback message appears; `same_for_all_risk_levels` shows the "same answer" note; the Google workload `u/2||B` shows the ML-only (`model`) message.
+- [ ] Request comparison check: the recommendation panel shows the `Request` policy's violation rate and waste from the fixture's `/policies` response next to the selected level's evidence.
 - [ ] History checks: points with a null `actual` are not plotted as zero; the empty state appears for a workload without scored runs.
 - [ ] Error checks: a `404` workload and an unreachable API show their messages.
 - [ ] Dependencies added to `requirements.txt` and `requirements-lock.txt`, or a documented frontend toolchain if Part A chooses one; the full existing suite still passes.
@@ -236,6 +238,7 @@ This task does not include:
 - [ ] The workload list defaults to workloads with history and can show all workloads.
 - [ ] Every recommendation shows its basis per resource (history, request fallback or model); fallback workloads show the explanation and the "same answer" note.
 - [ ] Risk-level evidence in the UI equals `final_test_policy_comparison.csv` for each dataset (via the API).
+- [ ] The recommendation panel shows the evidence for keeping the request next to the selected level's evidence, and no text claims a risk level is safer than the request.
 - [ ] The history chart pairs each recommendation with the next run's usage and never plots a missing value as zero.
 - [ ] The policy comparison shows all seven policies with the risk levels marked, per dataset.
 - [ ] Missing values show as "not available"; Alibaba CPU is labelled average usage everywhere it appears.
