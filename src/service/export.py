@@ -611,8 +611,8 @@ DATASET_CAVEATS = {
         "but cannot be converted to cores or gigabytes.",
         "User and job names are hashed in the trace, so workload names are identifiers, not readable names.",
         # The Task 12 limitations for Google (reports/results/cross_dataset_final/limitations.md).
-        "Some test targets come from runs outside the test split and the validation data was contaminated "
-        "(findings F3 and F4), so these are not leakage-safe final results.",
+        "Some training and validation targets came from runs in a later split, so validation and the model and "
+        "policy selection made on it were contaminated (findings F3 and F4); these are not leakage-safe final results.",
         "Abnormal or incomplete records and aggregation across machines remain limitations (findings F7 and F8).",
         "The data is a subset of the trace, which limits how far the results generalize to the full ClusterData2019 trace.",
         "The validation population is small, which limits confidence in the choice of model and policy.",
