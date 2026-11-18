@@ -178,7 +178,7 @@ The exact request and response schemas are in `docs/design/recommendation_api_op
     ],
     "any_resource": null
   },
-  "bundle": {"bundle_status": "verified", "dataset_status": "verified", "source_run_id": "4fdc7e96-…", "bundle_checksum": "97e9418d…"}
+  "bundle": {"bundle_status": "verified", "dataset_status": "verified", "source_run_id": "4fdc7e96-…", "bundle_checksum": "08b9d529…"}
 }
 ```
 

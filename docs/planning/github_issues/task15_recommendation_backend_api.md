@@ -6,7 +6,7 @@
 **Related design:** `docs/design/recommendation_service_design_plan.md`
 **Related summary:** `docs/design/discussion_summary_2026-11-16.md`
 **Related planning document:** `docs/planning/295b_scope_and_done.md`
-**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `97e9418d…`), built from the Nov 15 Alibaba run shared through #130. All acceptance criteria are met.
+**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `08b9d529…`), built from the Nov 15 Alibaba run shared through #130. All acceptance criteria are met.
 
 ## Objective
 
