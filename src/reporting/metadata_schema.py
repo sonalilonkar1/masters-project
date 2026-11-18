@@ -25,7 +25,7 @@ DECISION = dict.fromkeys(('dataset_id', 'decision_status', 'outcome', 'decision_
 
 SPEC = {'completion': str, 'decision_status': str, 'decision_outcome': str,
         'decision_record': str, 'decision_evidence': [str],
-        'evidence?': [str], 'followup_evidence?': [str], 'reason?': str, 'annotation?': str,
+        'evidence?': [str], 'followup_evidence?': [str], 'reason?': str, 'annotation?': str, 'limitations?': [str],
         'unverified_annotations?': ANNOTATIONS,
         **{name + '?': str for name in ('decision_summary', 'approval_reference', 'metadata', 'results', 'sensitivity',
             'verification_manifest', 'verification_manifest_sha256', 'run_record', 'run_log', 'run_log_sha256',

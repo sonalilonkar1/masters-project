@@ -60,6 +60,22 @@ REPORTING_CONTEXT = {'alibaba_clustertrace2018': 'Task 9 demonstration outcome a
                            'validated dataset decision record.'}
 
 
+# Task 12 §5 limitations are reviewed reporting text, like REPORTING_CONTEXT.
+DATASET_LIMITATIONS = {
+    "google_clusterdata2019": [
+        "Subset scale limits how far the Google results generalize to the full ClusterData2019 trace.",
+        "The small validation population limits confidence in model and policy selection.",
+    ],
+    "alibaba_gpu_v2020": [
+        "Eligibility rules introduce selection bias by restricting evaluation to roles that meet recurrence, telemetry and other inclusion requirements.",
+        "Low sensor coverage on multi-instance roles limits what the observed usage captures for those roles.",
+        "The roughly 50-day telemetry window limits assessment of longer-term behavior.",
+        "Same-second targets can include occurrences with identical timestamps, limiting claims about strictly later occurrences.",
+        "CPU targets represent lifetime average usage and do not measure peak demand.",
+    ],
+}
+
+
 def reporting_context(dataset):
     return REPORTING_CONTEXT[dataset]
 
@@ -136,6 +152,7 @@ def limitations_text(config, upstream, order, decisions):
              completion_statement(decisions_complete(decisions)), ""]
     for dataset in order:
         lines += [f"## {dataset}", "", reporting_context(dataset), ""]
+        lines.extend(f"- {item}" for item in config["datasets"][dataset].get("limitations", []))
         evidence = upstream.get(dataset, {})
         for item in evidence.get("unverified_items", []):
             lines.append(f"- **UNVERIFIED:** {item['item']} — {item['reason']}")
@@ -157,6 +174,8 @@ def validate_final_configuration(config):
             "final configuration must state all four datasets")
     for dataset, spec in datasets.items():
         require(isinstance(spec, dict), f"{dataset}: invalid specification")
+        require(spec.get("limitations", []) == DATASET_LIMITATIONS.get(dataset, []),
+                f"{dataset}: dataset limitations disagree with reviewed reporting text")
         allowed = {"accepted_published_run"} if dataset == ALIBABA else {"decision_pending", "documented_outcome"}
         require(spec.get("decision_status") in allowed, f"{dataset}: invalid decision status")
         safe_path(spec.get("decision_record"))
@@ -334,13 +353,12 @@ def validate_google_evidence(spec, read_json, read_input):
 def trace_metric_cells(contents, config, read_input):
     """Independently check rendered cells against source rows, not their declared mapping.
 
-    Source CSV decoding matches the reporting pandas reader; output decimal text
-    must round-trip to that exact decoded value. No tolerance or imputation is used.
+    Read source cells as text and check the exact decimal strings, independently
+    of the generator's pandas parser.
     Canonical rendering separately enforces byte-exact tables and Markdown copies.
     """
     import csv
     import io
-    import pandas as pd
     from src.canonical.schema import DEFAULT_CAPABILITY_REGISTRY
 
     metrics = {"violation_pct": ("{r}_violation_pct", "valid_{r}_violation_count", "%"),
@@ -348,25 +366,31 @@ def trace_metric_cells(contents, config, read_input):
                "average_waste": ("average_{r}_waste", "valid_{r}_waste_count", None),
                "average_shortfall": ("average_{r}_shortfall", "valid_{r}_shortfall_count", None)}
     policies = {"Request", "Mean", "P90", "P95", "P99", "ML", "Hybrid"}
-    frames, expected = {}, set()
+    sources, expected = {}, set()
     for dataset in ("google_clusterdata2019", ALIBABA):
         for kind in ("results", "sensitivity"):
             path = config["datasets"][dataset].get(kind)
             if not path:
                 continue
             raw, ref = read_input(path)
-            frame = pd.read_csv(io.BytesIO(raw))
-            frames[(dataset, kind)] = (frame, path, ref["sha256"])
-            for _, source in frame.iterrows():
+            reader = csv.DictReader(io.StringIO(raw.decode("utf-8")))
+            columns = set(reader.fieldnames or [])
+            rows = {}
+            for index, source in enumerate(reader, start=2):
                 cut = source["sensitivity"] if kind == "sensitivity" else "all"
+                row_key = (cut, source["policy"])
+                require(row_key not in rows, "ambiguous metric source row")
+                rows[row_key] = (index, source)
                 for resource in ("cpu", "memory", "any_resource"):
                     for metric, (column, _, _) in metrics.items():
-                        if column.format(r=resource) in frame:
+                        if column.format(r=resource) in columns:
                             expected.add((dataset, cut, resource, source["policy"], metric))
+            sources[(dataset, kind)] = (rows, columns, path, ref["sha256"])
     seen, primary, rendered, conclusions = set(), set(), 0, 0
-    def number(text, value, label):
-        require((text == "" if pd.isna(value) else text != "" and float(text) == float(value)),
-                f"metric source-cell mismatch: {label}")
+
+    def check_cell(text, value, label):
+        require(text == value, f"metric source-cell mismatch: {label}")
+
     for name, text in contents.items():
         if not name.endswith(".csv"):
             continue
@@ -383,36 +407,32 @@ def trace_metric_cells(contents, config, read_input):
             kind = "results" if cut == "all" else "sensitivity"
             if name == f"{dataset}/{kind}.csv":
                 primary.add(key)
-            frame, path, checksum = frames[(dataset, kind)]
-            selected = frame[frame.policy.eq(policy)]
-            if kind == "sensitivity":
-                selected = selected[selected.sensitivity.eq(cut)]
-            require(len(selected) == 1, "ambiguous metric source row")
-            index, source = next(selected.iterrows())
+            rows, columns, path, checksum = sources[(dataset, kind)]
+            index, source = rows[(cut, policy)]
             column, denominator, unit = metrics[metric]
             column, denominator = column.format(r=resource), denominator.format(r=resource)
             require(row["source_path"] == path and row["source_sha256"] == checksum
-                    and row["source_csv_row"] == str(int(index) + 2)
+                    and row["source_csv_row"] == str(index)
                     and row["source_column"] == column, "metric source-cell mapping mismatch")
-            number(row["value"], source[column], key)
-            require(row["denominator_column"] == (denominator if denominator in frame else ""),
+            check_cell(row["value"], source[column], key)
+            require(row["denominator_column"] == (denominator if denominator in columns else ""),
                     "metric denominator mapping mismatch")
-            number(row["denominator"], source.get(denominator), "denominator")
-            require(row["denominator_status"] == ("reported" if pd.notna(source.get(denominator)) else "not reported by source"),
+            check_cell(row["denominator"], source.get(denominator, ""), "denominator")
+            require(row["denominator_status"] == ("reported" if source.get(denominator, "") else "not reported by source"),
                     "metric denominator missing-value mismatch")
             for field, source_field in (("population_rows", "row_count"), ("source_n_groups", "n_groups"),
                                         ("source_n_common_occurrences", "n_common_occurrences")):
-                number(row[field], source.get(source_field), field)
+                check_cell(row[field], source.get(source_field, ""), field)
             unit = unit or getattr(DEFAULT_CAPABILITY_REGISTRY[dataset], f"{resource}_unit")
             require(row["unit"] == unit, "metric unit mismatch")
     require(seen == primary == expected, "incomplete generated metric population")
     for row in csv.DictReader(io.StringIO(contents["conclusion_evidence.csv"])):
-        frame, path, checksum = frames[(row["dataset_id"], "results")]
+        rows, _, path, checksum = sources[(row["dataset_id"], "results")]
         column = f"{row['resource']}_violation_pct"
         require(row["source_path"] == path and row["source_sha256"] == checksum
                 and row["source_column"] == column, "conclusion source mapping mismatch")
         for policy in ("Request", "Hybrid"):
-            number(row[f"{policy.lower()}_violation_pct"], frame.loc[frame.policy.eq(policy), column].iloc[0], "conclusion")
+            check_cell(row[f"{policy.lower()}_violation_pct"], rows[("all", policy)][1][column], "conclusion")
             conclusions += 1
     return {"unique_source_metric_cells": len(expected), "rendered_metric_cells": rendered,
             "conclusion_metric_cells": conclusions}

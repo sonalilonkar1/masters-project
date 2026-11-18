@@ -8,6 +8,8 @@ Final project completion remains pending documented dataset decisions.
 
 Existing frozen Google results are displayed with F3/F4 contamination and F7/F8 limitations. Reporting treatment is governed by the validated dataset decision record.
 
+- Subset scale limits how far the Google results generalize to the full ClusterData2019 trace.
+- The small validation population limits confidence in model and policy selection.
 - external_physical_artifact_bytes: UNVERIFIED: not inspected by reporting
 - historical_exactly_once_execution: not independently observed
 - scientific_inference_reproduction: UNVERIFIED
@@ -19,6 +21,11 @@ Existing frozen Google results are displayed with F3/F4 contamination and F7/F8 
 
 Authoritative published November 15 Alibaba run. Published reporting bytes and metadata are validated; unavailable physical artifacts, inference reproduction and historical execution are not independently reproduced.
 
+- Eligibility rules introduce selection bias by restricting evaluation to roles that meet recurrence, telemetry and other inclusion requirements.
+- Low sensor coverage on multi-instance roles limits what the observed usage captures for those roles.
+- The roughly 50-day telemetry window limits assessment of longer-term behavior.
+- Same-second targets can include occurrences with identical timestamps, limiting claims about strictly later occurrences.
+- CPU targets represent lifetime average usage and do not measure peak demand.
 - **UNVERIFIED:** Task 4 split isolation / history timing / target-value consistency on test rows — Task 8 deliberately does not reopen test target values. Test-side value-level checks are therefore inherited from the frozen Task 4 artifact checksums and metadata, not independently recomputed here.
 - **UNVERIFIED:** Task 7 model-prediction reproduction on the real test feature rows — The verifier checks the locked model checksums, feature-order lock, saved prediction artifact checksum and run provenance, but does not rerun model inference in Task 8.
 - external_physical_artifact_bytes: UNVERIFIED: not inspected by reporting

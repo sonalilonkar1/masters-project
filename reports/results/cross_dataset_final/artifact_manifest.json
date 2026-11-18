@@ -83,6 +83,13 @@
           "docs/design/discussion_summary_2026-11-16.md",
           "docs/planning/github_issues/current_status.md"
         ],
+        "limitations": [
+          "Eligibility rules introduce selection bias by restricting evaluation to roles that meet recurrence, telemetry and other inclusion requirements.",
+          "Low sensor coverage on multi-instance roles limits what the observed usage captures for those roles.",
+          "The roughly 50-day telemetry window limits assessment of longer-term behavior.",
+          "Same-second targets can include occurrences with identical timestamps, limiting claims about strictly later occurrences.",
+          "CPU targets represent lifetime average usage and do not measure peak demand."
+        ],
         "metadata": "reports/results/alibaba_gpu_2020/ml/decision_manifest.json",
         "reason": "Authoritative published November 15 Alibaba run. Published reporting bytes and metadata are validated; unavailable physical artifacts, inference reproduction and historical execution are not independently reproduced.",
         "results": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
@@ -130,6 +137,10 @@
           "results": "3a83f94ffc5e67675d85b7ff33ce6867e2067d0a6ca9231c825fffdd22c19219",
           "run_record": "a933ac23889c9229650b98da71f714532ce21ff52ec30ae2d1f6aa3da25c2c39"
         },
+        "limitations": [
+          "Subset scale limits how far the Google results generalize to the full ClusterData2019 trace.",
+          "The small validation population limits confidence in model and policy selection."
+        ],
         "metadata": "reports/results/google_subset/n04_metadata.json",
         "producer_dataset_id": "google_subset_v1",
         "reason": "Existing frozen Google results are displayed with F3/F4 contamination and F7/F8 limitations. Reporting treatment is governed by the validated dataset decision record.",
@@ -176,9 +187,9 @@
     }
   ],
   "environment": {
-    "matplotlib": "3.10.0",
-    "numpy": "2.4.4",
-    "pandas": "3.0.2",
+    "matplotlib": "3.11.2",
+    "numpy": "2.5.4",
+    "pandas": "2.3.3",
     "pyarrow": "23.0.1",
     "python": "3.12.13"
   },
@@ -363,7 +374,7 @@
         "path": "scripts/build_final_cross_dataset_report.py",
         "path_base": "executing_checkout",
         "role": "generator",
-        "sha256": "e845fcda5136930f142df3caf7550ffe2b9258d5a971b0b74e1f9d335300f3ee"
+        "sha256": "186d5a098c97adefaff2d0af491a5dab10aba172d76787e7fbb2b523846291e7"
       },
       {
         "path": "src/canonical/schema.py",
@@ -375,7 +386,7 @@
         "path": "src/reporting/artifact_provenance.py",
         "path_base": "executing_checkout",
         "role": "published_evidence_validator",
-        "sha256": "a469a43a29e431e67d1d224ccc0258bd2649e0e4b9ed495094feefbe558da36d"
+        "sha256": "ae5b0898775aeee130b546c491c0c052e8c4327cd28521be5cec67bf86bc9166"
       },
       {
         "path": "src/reporting/summary_validation.py",
@@ -387,7 +398,7 @@
         "path": "src/reporting/metadata_schema.py",
         "path_base": "executing_checkout",
         "role": "report_metadata_schema",
-        "sha256": "88d92f8c9e853e010d4df95b7628cdae349b15944fcf6649e912e20a353cacb4"
+        "sha256": "41d32436537c94c0509e9e48934c1b2295ffb8b0ee99e9fbb982794679cbeb50"
       },
       {
         "path": "scripts/verify_alibaba_gpu_2020_artifacts.py",
@@ -407,43 +418,43 @@
   "outputs": [
     {
       "path": "alibaba_gpu_v2020/01_memory.csv",
-      "sha256": "d7601d5735aee5da783995faa942aa106488e964853cb7ee038d6e2d09a9bff1"
+      "sha256": "e4ff2446887eac07f92afd22fbcbc064f98cc743db232c58aeebe9b3d0df32d1"
     },
     {
       "path": "alibaba_gpu_v2020/01_memory.md",
-      "sha256": "a3ca875d0485de6089160f6cd93cbe73c05416de975cfed7a67708e98547f650"
+      "sha256": "31e51774a443b589e8546d77ee8e572ea9c77c899546cd530fa49d235e4616c7"
     },
     {
       "path": "alibaba_gpu_v2020/01_memory.svg",
-      "sha256": "be7a2a826ec2d2188dc5d07720b90485f4424d06ca2ebe90c6816f72ef91ce7c"
+      "sha256": "c0110baabe9729c7348b0a69636c38b6bb1ad8f2746086554716a9cee7c56c0d"
     },
     {
       "path": "alibaba_gpu_v2020/02_cpu.csv",
-      "sha256": "7db395f7bc5bf25c4916bc7dad823acf26d744f04111d879b2ea4a590ee0bf47"
+      "sha256": "e36c4028bc307e2e1ce0788f559b905c0e029f0580eeed6333243e71f336cf82"
     },
     {
       "path": "alibaba_gpu_v2020/02_cpu.md",
-      "sha256": "39fd76557b582c11234100a1ce0b377bfc82ac5705ace2e30cb554673ca77fab"
+      "sha256": "3424a3268a0f41f7834b04d6193e8cf6400979715f29086afb90891fe85028e4"
     },
     {
       "path": "alibaba_gpu_v2020/02_cpu.svg",
-      "sha256": "bb3863002dc83a84d7d5fb71c68abab4ed1677ab17cebec4f7779823ff8f6306"
+      "sha256": "d54c29162fff41799624b6194a5a9a1575537ffdbe8daa2623a4399c56262e0e"
     },
     {
       "path": "alibaba_gpu_v2020/results.csv",
-      "sha256": "4fa3fa22b09119280b237a9161ba2c61742aefc3d31e0d22b532418c30dd5a77"
+      "sha256": "b6076a59332c152d1a2259abcd1885bd98bd90b1fb0de4ca5221269f4b0c2dfd"
     },
     {
       "path": "alibaba_gpu_v2020/results.md",
-      "sha256": "a4caf5a65b097e22633fbba2247c51fac123fd1d3080cce01e977aade0672359"
+      "sha256": "9c79df73590e211e5d5c9ce7146ab894d729ba32e5874fdde9df9e6c095e27f3"
     },
     {
       "path": "alibaba_gpu_v2020/sensitivity.csv",
-      "sha256": "712e34e0f950a800befe4e4435c3812b96d21f27a78a92daea8ad13a21bc7dcc"
+      "sha256": "d9975e33ffcc37f13224a9614dc3387423a81a434cc67fc635228cd8da6d04fa"
     },
     {
       "path": "alibaba_gpu_v2020/sensitivity.md",
-      "sha256": "9352a79015c155140d79f657e2953d2f49da468514fdd28f8323fcc7f0fce59f"
+      "sha256": "162372730211ed235348d8dac0185801d8d0f574fbb91a255ad9b4a4379e31b8"
     },
     {
       "path": "comparability.csv",
@@ -455,11 +466,11 @@
     },
     {
       "path": "conclusion_evidence.csv",
-      "sha256": "43cee31336bb59c48d83ac2abfd21a08b795417ea599fa42d8e4890371d08f33"
+      "sha256": "5a1015d3a7d6a87b11f26089160e595dff78aa87004ea448da7c84351287ec29"
     },
     {
       "path": "conclusion_evidence.md",
-      "sha256": "f5c62a5896442d61898af1824df4c89ebeadb70c78c603cc499c9e2e6681655e"
+      "sha256": "a72229e7380faceb9a6475dee8246e2207ce573595111bd4fbdde037ab4a39e7"
     },
     {
       "path": "conclusions.md",
@@ -491,63 +502,63 @@
     },
     {
       "path": "google_clusterdata2019/01_cpu.csv",
-      "sha256": "6cfb437575631958a192c3fa2f6f107baccd339e351c53cb1fbc6e2e5fdd4f70"
+      "sha256": "6ccff355c9e2f16a275b23738267aea165c4a99ce48dcce8af61134235f6575f"
     },
     {
       "path": "google_clusterdata2019/01_cpu.md",
-      "sha256": "3c293f33d53a446106ea27cd3c34441360c47be995f70111c9264abe390658b4"
+      "sha256": "bfc863730bbb2904b70cdddf0834a6d116055b133bce06c71cd749aeaf64e09d"
     },
     {
       "path": "google_clusterdata2019/01_cpu.svg",
-      "sha256": "7997c57a436bef5d56a0ac692af15a6446b52cf7a7e0f6304e3211e984c90160"
+      "sha256": "3024118da27dbe81a5c26404e25dca6c3e9f21ccaa30c51f2bd4f04d3a1fc82c"
     },
     {
       "path": "google_clusterdata2019/02_memory.csv",
-      "sha256": "cd3c1bf9ca449275eabaaa531ed5480616a2df5e9f45501f6e9a396dd938a32a"
+      "sha256": "b77911b6aa5d7541ee4adc00a8eca9f024e50367620d67129746105918b44ca8"
     },
     {
       "path": "google_clusterdata2019/02_memory.md",
-      "sha256": "30cb11114493100daef5579f4d60ea3b487c944387954de6f30d15fcf6559fb4"
+      "sha256": "490fe58c3085c755c3a2b956389cf1ae3de655217f174ba46c8a91aa827dbf0a"
     },
     {
       "path": "google_clusterdata2019/02_memory.svg",
-      "sha256": "4e57d4a6991a170a17b58f060f4e1a0c6d3167acb835d8f105806dabe112e6a0"
+      "sha256": "9d3f742cf4a1b67a61b030eae59e48ccc0aa5cee8520dfef14e8e1a0184f27ae"
     },
     {
       "path": "google_clusterdata2019/03_any_resource.csv",
-      "sha256": "595ce28ffdd8f6eed80c590dd4ba3f3deae20e30d6010aa68206a50ab410805f"
+      "sha256": "6293d0b1807ea1132fef1cd6bce3fa16d7c99f035d42329def20d1d0c9bbc095"
     },
     {
       "path": "google_clusterdata2019/03_any_resource.md",
-      "sha256": "8f7d536b338bc865bff7c8c297f7388c553dbbfeb7b73462858d9a7702a54736"
+      "sha256": "8f5b5d21cb927941c5e4c882a9344fa560cad697dd2c5f63d040e11706ba00b8"
     },
     {
       "path": "google_clusterdata2019/03_any_resource.svg",
-      "sha256": "5b7082f30ae65bff155a10997691ca330e794ce439bd4be9325998fdbbc0cb02"
+      "sha256": "3a142123a289dd8559105f1785c24710e8def50d78ecf867662e745347a78832"
     },
     {
       "path": "google_clusterdata2019/results.csv",
-      "sha256": "7bebfe8ae2da7bb1dd09f55db5c3c0fe78e8e601021874b1c5cd53f4906c345e"
+      "sha256": "ba16160603d97965f23191ca6ec2d29facd94aff80a1e4d3eb6d1607fa3c42ec"
     },
     {
       "path": "google_clusterdata2019/results.md",
-      "sha256": "5601c486f2ab1613bcc0c12ca5c85b7e7442c24ac5fbf042bac1cdde4c91bb38"
+      "sha256": "1a3bd1cf2d6a9006d797ab229b378d21b2252992f4aa2643d58a78ec473edee8"
     },
     {
       "path": "limitations.md",
-      "sha256": "7f69395f4cf5203b1c9f62fd1880fe576002db4132a36eb1d1065ee99e96e926"
+      "sha256": "aa7102d308496a19e7b9f3e705fec56f0de98733543d30448b2cb07c289713cd"
     },
     {
       "path": "report.md",
-      "sha256": "c5b49c1e6781ce29173705c27dd794feba94edf80d2d4a422d6917b914f8ea94"
+      "sha256": "4c3710cb4f442b7e1eb479533053ca756ef587847d4a30c6124ced9f0a4de179"
     },
     {
       "path": "report_provenance.json",
-      "sha256": "80cf01eb354920767ffeaec12e61775e3c61bf98152a0522512bf5024ecb9fd4"
+      "sha256": "17a82f676817ee147ed03a1555682f0f476dd2bf1eef77b47ba1541b315751d5"
     },
     {
       "path": "report_sources.csv",
-      "sha256": "57b17ba2f7e4e9f11f0f731af4e76fc705ad8a8ca622b5a8366da7e16fd5d74f"
+      "sha256": "639d7241ac3b3b7c879246e87330077dcac698720ea118c5adeab7b47fa90892"
     },
     {
       "path": "reporting_decisions.csv",
@@ -626,7 +637,7 @@
     {
       "path": "docs/planning/github_issues/current_status.md",
       "path_base": "input_artifact_root",
-      "sha256": "7f94d600512351e27b9d693b3854fb588fc6bba73937e6f74d7ed77ae2a2ab85"
+      "sha256": "d84c1b70796153a15c1e0ab2f56a9c39513a9f24fa21c1717bdac27a9b8c5323"
     },
     {
       "path": "docs/planning/github_issues/task10_google_subset_corrections_and_rerun.md",

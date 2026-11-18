@@ -5,6 +5,10 @@
       "metadata": "reports/results/google_subset/n04_metadata.json",
       "results": "reports/results/google_subset/tables/final_test_policy_comparison.csv",
       "reason": "Existing frozen Google results are displayed with F3/F4 contamination and F7/F8 limitations. Reporting treatment is governed by the validated dataset decision record.",
+      "limitations": [
+        "Subset scale limits how far the Google results generalize to the full ClusterData2019 trace.",
+        "The small validation population limits confidence in model and policy selection."
+      ],
       "evidence": [
         "reports/results/google_subset/final_test_run_metadata.json",
         "reports/results/google_subset/decision_manifest.json",
@@ -35,6 +39,13 @@
       "results": "reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv",
       "sensitivity": "reports/results/alibaba_gpu_2020/final_test/final_test_sensitivity.csv",
       "reason": "Authoritative published November 15 Alibaba run. Published reporting bytes and metadata are validated; unavailable physical artifacts, inference reproduction and historical execution are not independently reproduced.",
+      "limitations": [
+        "Eligibility rules introduce selection bias by restricting evaluation to roles that meet recurrence, telemetry and other inclusion requirements.",
+        "Low sensor coverage on multi-instance roles limits what the observed usage captures for those roles.",
+        "The roughly 50-day telemetry window limits assessment of longer-term behavior.",
+        "Same-second targets can include occurrences with identical timestamps, limiting claims about strictly later occurrences.",
+        "CPU targets represent lifetime average usage and do not measure peak demand."
+      ],
       "evidence": [
         "reports/results/alibaba_gpu_2020/final_test/run_record.json",
         "reports/results/alibaba_gpu_2020/final_test/metadata.json",

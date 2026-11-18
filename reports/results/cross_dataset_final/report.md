@@ -12,6 +12,9 @@ Final project completion remains pending documented dataset decisions.
 
 Existing frozen Google results are displayed with F3/F4 contamination and F7/F8 limitations. Reporting treatment is governed by the validated dataset decision record.
 
+- Subset scale limits how far the Google results generalize to the full ClusterData2019 trace.
+- The small validation population limits confidence in model and policy selection.
+
 Task 10 before/after comparison: **pending approved artifacts**. Earlier results may contain cross-split targets and contaminated validation (F3/F4); they are not leakage-safe final results.
 
 ### cpu: peak outcomes
@@ -29,6 +32,12 @@ Status: **decision_pending**. [Table](google_clusterdata2019/03_any_resource.md)
 ## alibaba_gpu_v2020
 
 Authoritative published November 15 Alibaba run. Published reporting bytes and metadata are validated; unavailable physical artifacts, inference reproduction and historical execution are not independently reproduced.
+
+- Eligibility rules introduce selection bias by restricting evaluation to roles that meet recurrence, telemetry and other inclusion requirements.
+- Low sensor coverage on multi-instance roles limits what the observed usage captures for those roles.
+- The roughly 50-day telemetry window limits assessment of longer-term behavior.
+- Same-second targets can include occurrences with identical timestamps, limiting claims about strictly later occurrences.
+- CPU targets represent lifetime average usage and do not measure peak demand.
 
 ### memory: peak outcomes
 

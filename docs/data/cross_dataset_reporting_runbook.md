@@ -4,8 +4,8 @@
 
 This workflow reads small, published scientific summaries and provenance files.
 It never trains, loads models, reproduces inference, reads target Parquet values,
-or runs a frozen evaluator. The current final-format bundle is reporting-valid,
-but **project completion remains pending** Google, Azure and Alibaba 2018 decisions.
+or runs a frozen evaluator. The current final-format bundle is reporting-valid. **Project completion remains
+pending** Google, Azure and Alibaba 2018 decisions.
 See [reporting decisions](cross_dataset_reporting_decisions.md).
 
 Current entry point: `reports/results/cross_dataset_final/report.md`.
@@ -33,9 +33,14 @@ digests are checked without claiming correction of F3/F4 contamination.
 
 ## Generate and validate
 
-From the repository root, use an existing suitable Python environment:
+From the repository root, create and activate the locked Python 3.12 environment.
+The bundle was rendered with Matplotlib 3.11.2.
 
 ```bash
+python3.12 -m venv /tmp/traceadvisor-task12-venv
+source /tmp/traceadvisor-task12-venv/bin/activate
+python -m pip install -r requirements-lock.txt
+
 env -u PYTHONPATH python scripts/build_final_cross_dataset_report.py \
   --config config/cross_dataset_report_final.json \
   --out-dir /tmp/traceadvisor-task12-report-a --strict
@@ -74,8 +79,8 @@ inputs, then compares their complete contents and the complete output inventory.
 A separate cell checker derives policy/resource/metric mappings directly from
 the authoritative CSVs and checks all 399 unique source metric cells, their 518
 rendered metric rows (including resource-table copies), and 8 conclusion values.
-Values must match the exact pandas-decoded source value, including structural
-nulls; there is no numerical tolerance, imputation or new scientific computation.
+Published values preserve the exact decimal text from each CSV cell, including
+empty cells. A separate numeric parse enforces the existing aggregate contracts.
 Denominators, population/group counts, units, source rows/columns and hashes are
 reconciled independently. Canonical comparisons also cover source inventories,
 Markdown tables and figures. Repairing receipts cannot authorize changed values.
@@ -115,8 +120,7 @@ The artifact manifest covers all other files; it deliberately does not hash itse
 
 ## Reproducibility environment
 
-Minimum dependencies are in `requirements.txt`; record the environment actually
-used in `report_provenance.json` rather than claiming an untested clean install.
+Use `requirements-lock.txt` to regenerate and validate the tracked reporting bundle.
 Python, pandas, NumPy, PyArrow and Matplotlib versions are recorded. Executed
 generator, helper modules, Task 8 CSV contract and capability definitions are
 hashed independently of the selected input-artifact root.

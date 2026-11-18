@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from scripts import build_final_cross_dataset_report as report
-from src.reporting.artifact_provenance import validate_bundle
+from src.reporting.artifact_provenance import digest, trace_metric_cells, validate_bundle
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -32,6 +32,10 @@ def test_final_reporting_preserves_identity_limitations_and_pending_decisions(tm
     text = (out / "limitations.md").read_text()
     for limitation in evidence["unverified_items"]:
         assert limitation["item"] in text and limitation["reason"] in text
+    summary = (out / "report.md").read_text()
+    for dataset in (report.ALIBABA, report.GOOGLE):
+        for limitation in config()["datasets"][dataset]["limitations"]:
+            assert limitation in text and limitation in summary
     assert "Run history" in text and "lock file" in text
     statuses = pd.read_csv(out / "dataset_status.csv").set_index("dataset_id")
     assert statuses.loc[report.ALIBABA, "report_status"] == "published_evidence_validated"
@@ -368,6 +372,24 @@ def test_all_metric_cells_traced_and_svg_forgery_rejected(tmp_path, quick_figure
     rewrite_bundle(out, lambda manifest, receipt: None)
     with pytest.raises(ValueError, match='canonical reporting'):
         validate_bundle(out, ROOT, ROOT)
+
+
+def test_metric_trace_rejects_rounded_source_text(tmp_path, quick_figures):
+    out = tmp_path / "out"
+    cfg = config()
+    report.build_report(cfg, ROOT, out)
+    contents = {p.relative_to(out).as_posix(): p.read_text() for p in out.rglob("*.csv")}
+    name = f"{report.ALIBABA}/results.csv"
+    exact = "0.19704480677699449"
+    assert exact in contents[name]
+    contents[name] = contents[name].replace(exact, "0.1970448067769944", 1)
+
+    def read_input(path):
+        raw = (ROOT / path).read_bytes()
+        return raw, {"sha256": digest(raw)}
+
+    with pytest.raises(ValueError, match="metric source-cell mismatch"):
+        trace_metric_cells(contents, cfg, read_input)
 
 
 @pytest.mark.parametrize('target', ['manifest', 'receipt', 'both'])

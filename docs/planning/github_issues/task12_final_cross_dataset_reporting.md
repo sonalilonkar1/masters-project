@@ -30,8 +30,9 @@ Produce the final project-level report from frozen, verified artifacts: per-data
 
 - PR 1 (#123) and Task 8 (#121) are merged. `cross_dataset_pr1/` is historical;
   its original comparison digest `de560f…` is not the current Alibaba input.
-- PR 2 is implemented locally on `task12-final-reporting-pr2`, not yet pushed or
-  independently reviewed. The separate `cross_dataset_final/` bundle uses
+- PR #129 is open on `task12-final-reporting-pr2-integrated`. The review is
+  recorded in [the PR #129 review](pr129_task12_review.md). The separate
+  `cross_dataset_final/` bundle uses
   decision `d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac`,
   run `4fdc7e96-789b-43a9-990f-20f189e9598b`, execution
   `ea6aa08458aace364cd33529ce77de894bcd76ad`.
@@ -44,9 +45,8 @@ Produce the final project-level report from frozen, verified artifacts: per-data
   `decision_pending`; no undocumented team decision is treated as approved.
 - Final-format generation succeeds with `project_completion: false`;
   `--require-complete` refuses completion while those decisions are pending.
-- Issue #117 is currently closed despite remaining PR 2 review and decision work.
-  `task12_issue117_reopening_comment.md` is an unsent proposal; no issue change
-  has been authorized or performed.
+- Issue #117 remains open while dataset decisions and the Task 10 before/after
+  comparison await evidence.
 - See `docs/data/cross_dataset_reporting_runbook.md` for reporting-only commands,
   evidence access, reproducibility and remaining limitations.
 

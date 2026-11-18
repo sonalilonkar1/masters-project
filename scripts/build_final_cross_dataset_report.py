@@ -287,7 +287,12 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False, requi
 
     def read_csv(path):
         raw, receipt = read_input(path)
-        return pd.read_csv(io.BytesIO(raw)), receipt
+        numeric = pd.read_csv(io.BytesIO(raw), float_precision="round_trip" if final_mode else None)
+        # Validate numeric contracts separately from the exact source text we publish.
+        rendered = numeric
+        if final_mode:
+            rendered = pd.read_csv(io.BytesIO(raw), dtype=str, keep_default_na=False, na_values=[""])
+        return numeric, rendered, receipt
 
     def table(name, frame):
         contents[name + ".csv"] = frame.to_csv(index=False, na_rep="", float_format="%.17g", lineterminator="\n")
@@ -355,6 +360,8 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False, requi
                 evidence_rows.append({"dataset_id": dataset, "claim": claim,
                                       "status": upstream_evidence.get(dataset, {}).get(claim, "not applicable: no scientific results")})
         sections += [f"## {dataset}", "", reason, ""]
+        if final_mode and spec.get("limitations"):
+            sections += [*(f"- {item}" for item in spec["limitations"]), ""]
         if dataset == GOOGLE:
             google_decision = ("Task 10 before/after comparison: **pending approved artifacts**. "
                                if not final_mode or decision_rows[-1]["decision_status"] == "decision_pending" else
@@ -395,11 +402,11 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False, requi
         else:
             if mode != "pipeline_artifacts_available" or metadata_ref is None:
                 raise ReportError(f"{dataset}: results require pipeline status and metadata")
-            frame, result_ref = read_csv(result_path)
+            frame, rendered, result_ref = read_csv(result_path)
             validate_summary(frame, dataset, final_population=upstream_evidence.get(dataset, {}).get("final_population_size"))
             if final_mode:
+                indexed = rendered.set_index("policy")
                 for resource in (("memory", "cpu") if dataset == ALIBABA else ("cpu", "memory")):
-                    indexed = frame.set_index("policy")
                     column = f"{resource}_violation_pct"
                     conclusion_rows.append({"dataset_id": dataset, "resource": resource,
                                             "request_violation_pct": indexed.loc["Request", column],
@@ -422,7 +429,7 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False, requi
                     needed.append(ref)
                 if any(entries.get(ref["path"]) != ref["sha256"] for ref in needed):
                     raise ReportError(f"{dataset}: upstream manifest does not match all reported artifacts")
-            table_rows = result_rows(frame, dataset, result_ref, status)
+            table_rows = result_rows(rendered, dataset, result_ref, status)
             table(f"{dataset}/results", table_rows)
             resources = ("memory", "cpu") if dataset == ALIBABA else ("cpu", "memory", "any_resource")
             for i, resource in enumerate(resources, 1):
@@ -437,9 +444,9 @@ def build_report(config: dict, root: Path, out_dir: Path, *, strict=False, requi
             if spec.get("sensitivity"):
                 if dataset != ALIBABA:
                     raise ReportError("Only Alibaba sensitivity tables are supported in PR 1")
-                sensitivity, ref = read_csv(spec["sensitivity"])
+                sensitivity, rendered_sensitivity, ref = read_csv(spec["sensitivity"])
                 validate_summary(sensitivity, dataset, sensitivity=True, comparison=frame)
-                table(f"{dataset}/sensitivity", result_rows(sensitivity, dataset, ref, status, True))
+                table(f"{dataset}/sensitivity", result_rows(rendered_sensitivity, dataset, ref, status, True))
                 sections += [f"[Sensitivity results]({dataset}/sensitivity.md): same-second, "
                              "multi-instance and group-weighted source summaries.", ""]
             elif dataset == ALIBABA:

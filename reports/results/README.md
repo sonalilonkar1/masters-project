@@ -1,6 +1,6 @@
 # Results
 
-Final results of the TraceAdvisor evaluation, one folder per dataset. Every file here is small (Markdown, CSV, JSON, PNG); the full Parquet tables and model files stay in `data/processed/` (not tracked by Git) and are identified by the `SHA256SUMS` and manifest copies kept here.
+Final results of the TraceAdvisor evaluation, one folder per dataset. Every file here is small (Markdown, CSV, JSON, PNG, SVG); the full Parquet tables and model files stay in `data/processed/` (not tracked by Git) and are identified by the `SHA256SUMS` and manifest copies kept here.
 
 **Current cross-dataset entry point:** [Task 12 PR 2](cross_dataset_final/report.md),
 with [evidence](cross_dataset_final/evidence_status.md),
