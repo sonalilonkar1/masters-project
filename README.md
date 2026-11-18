@@ -236,6 +236,21 @@ The notebooks below are **(295A, historical)**; their results predate the 295B o
 
 ---
 
+## Task 12 cross-dataset reporting
+
+The current reporting entry point is
+[Task 12 PR 2](reports/results/cross_dataset_final/report.md), with
+[limitations](reports/results/cross_dataset_final/limitations.md),
+[conclusions](reports/results/cross_dataset_final/conclusions.md), and the
+[artifact manifest](reports/results/cross_dataset_final/artifact_manifest.json).
+The bundle validates published bytes and metadata; it does not reproduce model
+inference or historical execution. **Google, Azure and Alibaba 2018 reporting
+outcomes remain decision_pending; project completion is not claimed.**
+
+Follow the [reporting runbook](docs/data/cross_dataset_reporting_runbook.md) for
+generation, integrity validation and deterministic reproduction. Historical
+[PR 1 outputs](reports/results/cross_dataset_pr1/report.md) are preserved unchanged.
+
 ## Implementation Status
 
 ### 295B (current)

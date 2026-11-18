@@ -28,12 +28,27 @@ Produce the final project-level report from frozen, verified artifacts: per-data
 
 ## Current Project State
 
-- **PR 1 (#123) is provisional reporting infrastructure.** The committed Alibaba rendering uses the earlier comparison artifact SHA-256 `de560f38741a60d5e427a4c21c7444debcc8e4a558dc4382fded3a10590b4d27`. The newer Task 8 report references a different comparison (`c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8`), decision manifest `f7cbc314fda18d8a8f0c347f433810983372c6db283b030c50b08c467e917950`, and run `7dd3942e-c2c0-4816-9466-efd32e486cc2`. These are review-reported references, not replacement PR 1 inputs or accepted authoritative evidence. Task 7/8 provenance remains unreconciled; the current rendering is not a final verified finding. PR 2 will regenerate Alibaba outputs after that reconciliation.
-- **Verification status:** PR 1 can check a supplied manifest for consistency but keeps all pipeline results provisional. PR 2 must establish authoritative upstream verification, artifact-chain linkage and the limits of upstream execution evidence before introducing verified reporting status; matching checksums and self-reported passing checks alone are insufficient. Google additionally retains its Task 10 dependency.
-- `scripts/report_summary.py` reads `reports/eval/GoogleCluster2019/summary_<split>.csv` and prints legacy columns (`vr_any`, `vr_cpu`, `vr_mem`, slack reduction); it does not read the current Google or Alibaba GPU 2020 artifacts.
-- Alibaba GPU 2020 final verified reporting depends on reconciled Task 7/8 artifacts; PR 1's current copies remain provisional.
-- Google leakage-safe results come from Task 10, or the earlier results with their contamination disclosed (F3, F4).
-- Alibaba 2018 (Task 9) and Azure (Task 11) produce scope statements or feasibility decisions.
+- PR 1 (#123) and Task 8 (#121) are merged. `cross_dataset_pr1/` is historical;
+  its original comparison digest `de560f…` is not the current Alibaba input.
+- PR #129 is open on `task12-final-reporting-pr2-integrated`. The review is
+  recorded in [the PR #129 review](pr129_task12_review.md). The separate
+  `cross_dataset_final/` bundle uses
+  decision `d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac`,
+  run `4fdc7e96-789b-43a9-990f-20f189e9598b`, execution
+  `ea6aa08458aace364cd33529ce77de894bcd76ad`.
+- Reporting validates dataset/stage/logical-artifact/path/hash/run linkage,
+  scientific aggregate contracts, accessible published bytes and metadata.
+- Reporting does not reproduce model inference, reopen test target values or
+  independently observe historical execution. Task 8's UNVERIFIED disclosures,
+  earlier-run history and environment follow-ups remain explicit.
+- Google retention/correction, Azure go/stop and Alibaba 2018 scope outcomes are
+  `decision_pending`; no undocumented team decision is treated as approved.
+- Final-format generation succeeds with `project_completion: false`;
+  `--require-complete` refuses completion while those decisions are pending.
+- Issue #117 remains open while dataset decisions and the Task 10 before/after
+  comparison await evidence.
+- See `docs/data/cross_dataset_reporting_runbook.md` for reporting-only commands,
+  evidence access, reproducibility and remaining limitations.
 
 ## Relationship to PR #70 and Tasks 1–5
 

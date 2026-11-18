@@ -1,0 +1,22 @@
+| dataset_id | claim | status |
+| --- | --- | --- |
+| google_clusterdata2019 | published_metadata_consistency | verified |
+| google_clusterdata2019 | published_artifact_bytes | verified |
+| google_clusterdata2019 | external_physical_artifact_bytes | UNVERIFIED: not inspected by reporting |
+| google_clusterdata2019 | historical_exactly_once_execution | not independently observed |
+| google_clusterdata2019 | scientific_inference_reproduction | UNVERIFIED |
+| alibaba_gpu_v2020 | published_metadata_consistency | verified |
+| alibaba_gpu_v2020 | published_artifact_bytes | verified |
+| alibaba_gpu_v2020 | external_physical_artifact_bytes | UNVERIFIED: not inspected by reporting |
+| alibaba_gpu_v2020 | historical_exactly_once_execution | recorded integer-one counters; not independently observed |
+| alibaba_gpu_v2020 | scientific_inference_reproduction | UNVERIFIED |
+| alibaba_clustertrace2018 | published_metadata_consistency | not applicable: no scientific results |
+| alibaba_clustertrace2018 | published_artifact_bytes | not applicable: no scientific results |
+| alibaba_clustertrace2018 | external_physical_artifact_bytes | not applicable: no scientific results |
+| alibaba_clustertrace2018 | historical_exactly_once_execution | not applicable: no scientific results |
+| alibaba_clustertrace2018 | scientific_inference_reproduction | not applicable: no scientific results |
+| azure_public_vm_v2 | published_metadata_consistency | not applicable: no scientific results |
+| azure_public_vm_v2 | published_artifact_bytes | not applicable: no scientific results |
+| azure_public_vm_v2 | external_physical_artifact_bytes | not applicable: no scientific results |
+| azure_public_vm_v2 | historical_exactly_once_execution | not applicable: no scientific results |
+| azure_public_vm_v2 | scientific_inference_reproduction | not applicable: no scientific results |
