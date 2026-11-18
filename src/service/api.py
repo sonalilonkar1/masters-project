@@ -40,7 +40,7 @@ PERCENTILE_NAMES = {"P90": "90th", "P95": "95th", "P99": "99th"}
 
 ERROR_RESPONSES = {
     400: {"model": schemas.ErrorResponse, "description": "Invalid or conflicting query parameters"},
-    404: {"model": schemas.ErrorResponse, "description": "Unknown dataset, workload or route"},
+    404: {"model": schemas.ErrorResponse, "description": "Unknown dataset, workload or route, or a policy the dataset does not have"},
     405: {"model": schemas.ErrorResponse, "description": "Only GET is supported"},
     500: {"model": schemas.ErrorResponse, "description": "Unexpected server error"},
 }
@@ -150,10 +150,12 @@ def _add_error_handlers(app: FastAPI) -> None:
 
 
 def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
-    available_datasets = {
-        policy: [d for d in bundle.datasets if any(row["policy"] == policy for row in bundle.datasets[d].policy_metrics["policies"])]
-        for policy in POLICY_NAMES
+    # Policies each dataset has, in display order; load_bundle checks recommendations and metrics agree.
+    dataset_policies = {
+        d: [p for p in POLICY_NAMES if any(row["policy"] == p for row in dataset.policy_metrics["policies"])]
+        for d, dataset in bundle.datasets.items()
     }
+    available_datasets = {policy: [d for d in bundle.datasets if policy in dataset_policies[d]] for policy in POLICY_NAMES}
 
     def dataset_or_404(dataset_id: str) -> LoadedDataset:
         if dataset_id not in bundle.datasets:
@@ -173,8 +175,11 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
         if policy is not None:
             if policy not in POLICY_BY_ID:
                 raise ApiError(400, "invalid_parameter", f"Unknown policy {policy!r}; expected one of {sorted(POLICY_BY_ID)}")
+            if POLICY_BY_ID[policy] not in dataset_policies[dataset_id]:
+                raise ApiError(404, "not_found", f"Policy {POLICY_BY_ID[policy]} is not available for {dataset_id}")
             return None, POLICY_BY_ID[policy]
-        risk = risk or bundle.risk_levels["default_risk_level"]
+        if risk is None:
+            risk = bundle.risk_levels["default_risk_level"]
         if risk not in mapping:
             raise ApiError(400, "invalid_parameter", f"Unknown risk level {risk!r}; expected one of {list(mapping)}")
         return risk, mapping[risk]["policy"]
@@ -446,5 +451,5 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
         return {
             "dataset_id": dataset_id,
             "source": dataset.policy_metrics["source"],
-            "policies": [policy_metrics(dataset_id, dataset, rows[name]) for name in POLICY_NAMES],
+            "policies": [policy_metrics(dataset_id, dataset, rows[name]) for name in dataset_policies[dataset_id]],
         }

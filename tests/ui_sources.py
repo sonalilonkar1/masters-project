@@ -191,11 +191,10 @@ def fixture_contents(repo):
     for dataset_id, (result, source_counts, safeguard, summary_csv) in sources.items():
         reference = SourceReference(dataset_id, (), (), None, None)
         bundle = export._assemble(
-            reference, [], "development", result, repo / summary_csv, {}, source_counts, safeguard,
+            reference, [], "development", result, repo, summary_csv, {}, source_counts, safeguard,
             export._default_policy(risk_levels, dataset_id),
         )
         bundle.metadata["notes"]["fixture"] = FIXTURE_NOTE
-        bundle.policy_metrics["source"] = summary_csv  # relative, so the fixture does not depend on the checkout path
         datasets[dataset_id] = bundle
     manifest = export.build_manifest(datasets, {})
     manifest["export"] = dict(FIXTURE_EXPORT_INFO)

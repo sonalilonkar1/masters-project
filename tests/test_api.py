@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 from urllib.parse import quote
 
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
@@ -61,6 +62,7 @@ def test_datasets_units_semantics_and_order(client):
     assert alibaba["min_runs"] == 10 and datasets[GOOGLE]["min_runs"] == 1
     assert [r["resource"] for r in datasets[GOOGLE]["resources"]] == ["cpu", "memory"]
     assert datasets[GOOGLE]["population"]["workloads"] == 2
+    assert any("F3 and F4" in caveat for caveat in datasets[GOOGLE]["caveats"])
 
 
 def test_risk_levels(client):
@@ -173,6 +175,8 @@ def test_recommendation_missing_values_are_null(client):
         ({"risk": "reckless"}, "invalid_parameter", 400),
         ({"policy": "p80"}, "invalid_parameter", 400),
         ({"risk": "balanced", "policy": "p99"}, "invalid_parameter", 400),
+        ({"risk": ""}, "invalid_parameter", 400),  # empty is not the default
+        ({"policy": ""}, "invalid_parameter", 400),
     ],
 )
 def test_recommendation_invalid_choice(client, params, code, status):
@@ -230,19 +234,45 @@ def test_policies_all_seven_with_risk_levels(client):
         assert policy["available_datasets"] == [GOOGLE, ALIBABA]
 
 
-def test_available_datasets_follow_the_bundle(tmp_path):
+def bundle_without(tmp_path, dataset, policy, *, metrics=True, recommendations=True):
+    """A copy of the fixture bundle with one policy removed from a dataset, checksums rewritten."""
     bundle = tmp_path / "ui"
     shutil.copytree(FIXTURE_DIR, bundle)
-    metrics_path = bundle / ALIBABA / "policy_metrics.json"
-    metrics = json.loads(metrics_path.read_text())
-    metrics["policies"] = [row for row in metrics["policies"] if row["policy"] != "ML"]
-    metrics_path.write_text(json.dumps(metrics))
+    if metrics:
+        metrics_path = bundle / dataset / "policy_metrics.json"
+        content = json.loads(metrics_path.read_text())
+        content["policies"] = [row for row in content["policies"] if row["policy"] != policy]
+        metrics_path.write_text(json.dumps(content))
+    if recommendations:
+        path = bundle / dataset / "recommendations.parquet"
+        frame = pd.read_parquet(path)
+        frame[frame["policy"] != policy].reset_index(drop=True).to_parquet(path, index=False)
     write_checksums(bundle)
+    return bundle
 
-    policies = TestClient(api.create_app(bundle)).get(url(GOOGLE) + "/policies").json()["policies"]
 
-    available = {p["policy"]: p["available_datasets"] for p in policies}
-    assert available["ML"] == [GOOGLE] and available["Hybrid"] == [GOOGLE, ALIBABA]
+def test_policy_missing_from_one_dataset(tmp_path):
+    client = TestClient(api.create_app(bundle_without(tmp_path, ALIBABA, "ML")))
+
+    google = {p["policy"]: p["available_datasets"] for p in client.get(url(GOOGLE) + "/policies").json()["policies"]}
+    assert google["ML"] == [GOOGLE] and google["Hybrid"] == [GOOGLE, ALIBABA]
+    alibaba = client.get(url(ALIBABA) + "/policies")
+    assert alibaba.status_code == 200
+    assert [p["policy"] for p in alibaba.json()["policies"]] == ["Request", "Mean", "P90", "P95", "P99", "Hybrid"]
+    for endpoint in ("recommendation", "history"):
+        assert_error(client.get(url(ALIBABA, "G||A", endpoint), params={"policy": "ml"}), 404, "not_found")
+        assert client.get(url(ALIBABA, "G||A", endpoint)).status_code == 200
+        assert client.get(url(GOOGLE, "u||A", endpoint), params={"policy": "ml"}).status_code == 200
+
+
+def test_policy_metrics_and_recommendations_must_agree(tmp_path):
+    with pytest.raises(BundleIntegrityError, match="recommendations cover"):
+        api.create_app(bundle_without(tmp_path, ALIBABA, "ML", recommendations=False))
+
+
+def test_risk_level_policy_must_be_in_the_bundle(tmp_path):
+    with pytest.raises(BundleIntegrityError, match="risk level 'efficient' maps to P90"):
+        api.create_app(bundle_without(tmp_path, ALIBABA, "P90"))
 
 
 # --- routes, errors and startup ------------------------------------------------------

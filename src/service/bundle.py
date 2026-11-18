@@ -19,6 +19,7 @@ from src.service.contract import (
     BUNDLE_SCHEMA_VERSION,
     BUNDLE_STATUSES,
     DATASET_IDS,
+    POLICY_NAMES,
     RECOMMENDATION_COLUMNS,
     WORKLOAD_COLUMNS,
     BundleContractError,
@@ -166,11 +167,31 @@ def load_bundle(bundle_dir: Path) -> LoadedBundle:
     if set(manifest.get("datasets", {})) != set(DATASET_IDS):
         raise BundleIntegrityError(f"bundle datasets {sorted(manifest.get('datasets', {}))}, expected {list(DATASET_IDS)}")
 
+    risk_levels = _read_json(bundle_dir / "risk_levels.json")
+    datasets = {dataset_id: _load_dataset(bundle_dir / dataset_id, dataset_id) for dataset_id in DATASET_IDS}
+    for dataset_id, dataset in datasets.items():
+        _check_policies(dataset_id, dataset, risk_levels)
+
     return LoadedBundle(
         path=bundle_dir,
         checksum=checksum,
         manifest=manifest,
-        risk_levels=_read_json(bundle_dir / "risk_levels.json"),
+        risk_levels=risk_levels,
         rules=_read_json(bundle_dir / "rules.json"),
-        datasets={dataset_id: _load_dataset(bundle_dir / dataset_id, dataset_id) for dataset_id in DATASET_IDS},
+        datasets=datasets,
     )
+
+
+def _check_policies(dataset_id: str, dataset: LoadedDataset, risk_levels: dict) -> None:
+    """Recommendations and policy metrics cover the same known policies, and every risk level maps to one of them."""
+    metric_policies = [row["policy"] for row in dataset.policy_metrics["policies"]]
+    recommended = set(dataset.recommendations["policy"].unique())
+    if not metric_policies or set(metric_policies) - set(POLICY_NAMES) or len(set(metric_policies)) != len(metric_policies):
+        raise BundleIntegrityError(f"{dataset_id}: policy_metrics.json lists {metric_policies}, expected policies from {list(POLICY_NAMES)}")
+    if recommended != set(metric_policies):
+        raise BundleIntegrityError(
+            f"{dataset_id}: recommendations cover {sorted(recommended)} but policy_metrics.json lists {sorted(metric_policies)}"
+        )
+    for risk_level, mapping in risk_levels["datasets"][dataset_id].items():
+        if mapping["policy"] not in recommended:
+            raise BundleIntegrityError(f"{dataset_id}: risk level {risk_level!r} maps to {mapping['policy']}, which is not in the bundle")

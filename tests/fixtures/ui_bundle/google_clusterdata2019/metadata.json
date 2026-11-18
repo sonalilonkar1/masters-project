@@ -41,6 +41,7 @@
       "memory": 1
     },
     "target_occurrence_id": "next run of the same workload by start time, checked against the stored target start time and peak",
+    "exceeded": "stored final-test flags, checked against actual > recommended (src/evaluation/metrics.py) and final_test_policy_comparison.csv",
     "fixture": "Synthetic test fixture (tests/ui_sources.py); not pipeline results."
   }
 }

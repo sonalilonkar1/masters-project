@@ -321,8 +321,11 @@ def _google_policy_rows(frame: pd.DataFrame, policy: str) -> tuple[pd.DataFrame,
     return pd.DataFrame(columns, index=frame.index), missing_safeguard
 
 
+VIOLATION_RULES = {"cpu": cpu_violation, "memory": memory_violation}
+
+
 def _attach_exceeded(recommendations: pd.DataFrame, row_level: pd.DataFrame) -> pd.DataFrame:
-    """Copy the stored violation flags; check every scored recommendation equals the stored one."""
+    """Copy the stored violation flags; check every scored recommendation and flag equals the stored one."""
     _require_unique(row_level, ["occurrence_id", "policy_name"], "final_test_row_level")
     stored = row_level.rename(columns={"policy_name": "policy"})[
         ["occurrence_id", "policy", "recommended_cpu", "recommended_memory", "cpu_violation", "memory_violation"]
@@ -344,6 +347,14 @@ def _attach_exceeded(recommendations: pd.DataFrame, row_level: pd.DataFrame) -> 
         if differs.any():
             policies = sorted(merged.loc[scored].loc[differs, "policy"].unique())
             raise ExportValidationError(f"{resource} recommendations differ from the stored final test for {policies}")
+        stored_flag = merged.loc[scored, f"{resource}_violation"].to_numpy(dtype=float)
+        recomputed = VIOLATION_RULES[resource](
+            merged.loc[scored, f"actual_{resource}"].to_numpy(dtype=float), merged.loc[scored, f"recommended_{resource}"].to_numpy(dtype=float)
+        )
+        differs = ~((stored_flag == recomputed) | (np.isnan(stored_flag) & np.isnan(recomputed)))
+        if differs.any():
+            policies = sorted(merged.loc[scored].loc[differs, "policy"].unique())
+            raise ExportValidationError(f"stored {resource} violation flags differ from actual > recommended for {policies}")
         merged[f"{resource}_exceeded"] = merged[f"{resource}_violation"].map({1.0: True, 0.0: False}).astype("boolean")
     return merged
 
@@ -367,8 +378,13 @@ def _finish(recommendations: pd.DataFrame, dataset_id: str) -> pd.DataFrame:
     return order.drop(columns="_policy_rank").reset_index(drop=True)
 
 
-def export_google(occurrences: pd.DataFrame, ml_predictions: pd.DataFrame, row_level: pd.DataFrame) -> DatasetExport:
-    """Google recommendations in the bundle format: one row per test occurrence and policy."""
+def export_google(
+    occurrences: pd.DataFrame, ml_predictions: pd.DataFrame, row_level: pd.DataFrame, summary: pd.DataFrame | None = None
+) -> DatasetExport:
+    """Google recommendations in the bundle format: one row per test occurrence and policy.
+
+    With ``summary`` (the committed policy comparison), the exceeded flags must also reproduce its rates.
+    """
     frame = _google_occurrences(occurrences, ml_predictions)
 
     base = pd.DataFrame(
@@ -397,11 +413,15 @@ def export_google(occurrences: pd.DataFrame, ml_predictions: pd.DataFrame, row_l
     recommendations = pd.concat(parts, ignore_index=True)
 
     recommendations = _finish(_attach_exceeded(recommendations, row_level), GOOGLE)
+    if summary is not None:
+        _check_against_summary(recommendations, summary, GOOGLE)
 
     notes = {
         "hybrid_safeguard": "P95",
         "hybrid_safeguard_missing": hybrid_safeguard_missing,
         "target_occurrence_id": "next run of the same workload by start time, checked against the stored target start time and peak",
+        "exceeded": "stored final-test flags, checked against actual > recommended (src/evaluation/metrics.py) "
+        "and final_test_policy_comparison.csv",
     }
     return DatasetExport(recommendations=recommendations, notes=notes)
 
@@ -424,7 +444,6 @@ ALIBABA_HYBRID_SAFEGUARD = "p99"
 ALIBABA_TARGET_SOURCE = {"cpu": "observed_cpu", "memory": "peak_memory"}
 # Task 4 total order that defines each run's successor (src/features/target_builder.py).
 ALIBABA_RUN_ORDER = ["recurrence_key", "start_time_us", "occurrence_id", "role_key"]
-VIOLATION_RULES = {"cpu": cpu_violation, "memory": memory_violation}
 
 
 def _same_values(left: pd.Series, right: pd.Series) -> bool:
@@ -519,7 +538,7 @@ def _alibaba_policy_rows(runs: pd.DataFrame, policy: str) -> tuple[pd.DataFrame,
     return pd.DataFrame(columns, index=runs.index), missing_safeguard
 
 
-def _check_against_summary(recommendations: pd.DataFrame, summary: pd.DataFrame) -> None:
+def _check_against_summary(recommendations: pd.DataFrame, summary: pd.DataFrame, dataset_id: str) -> None:
     """Violation rates and valid counts from the exceeded flags must equal the run's summary CSV."""
     summary = summary.set_index("policy")
     for policy, rows in recommendations.groupby("policy", sort=False):
@@ -531,7 +550,7 @@ def _check_against_summary(recommendations: pd.DataFrame, summary: pd.DataFrame)
             expected_rate = float(summary.loc[policy, f"{resource}_violation_pct"])
             if valid != expected_valid or not np.isclose(rate, expected_rate, rtol=1e-12, atol=0):
                 raise ExportValidationError(
-                    f"Alibaba {policy} {resource}: exceeded flags give {rate} over {valid} rows, "
+                    f"{dataset_id} {policy} {resource}: exceeded flags give {rate} over {valid} rows, "
                     f"summary has {expected_rate} over {expected_valid}"
                 )
 
@@ -567,7 +586,7 @@ def export_alibaba(
         hybrid_safeguard_missing.update(missing)
         parts.append(base.assign(policy=pd.Series(policy, index=runs.index, dtype="string")).join(values))
     recommendations = _finish(pd.concat(parts, ignore_index=True), ALIBABA)
-    _check_against_summary(recommendations, summary)
+    _check_against_summary(recommendations, summary, ALIBABA)
 
     notes = {
         "hybrid_safeguard": "P99",
@@ -591,6 +610,12 @@ DATASET_CAVEATS = {
         "CPU and memory are normalized by the trace publisher: values can be compared between policies "
         "but cannot be converted to cores or gigabytes.",
         "User and job names are hashed in the trace, so workload names are identifiers, not readable names.",
+        # The Task 12 limitations for Google (reports/results/cross_dataset_final/limitations.md).
+        "Some test targets come from runs outside the test split and the validation data was contaminated "
+        "(findings F3 and F4), so these are not leakage-safe final results.",
+        "Abnormal or incomplete records and aggregation across machines remain limitations (findings F7 and F8).",
+        "The data is a subset of the trace, which limits how far the results generalize to the full ClusterData2019 trace.",
+        "The validation population is small, which limits confidence in the choice of model and policy.",
     ],
     ALIBABA: [
         "CPU is the average usage of a run, not its peak: a run can stay within a CPU recommendation on "
@@ -695,9 +720,9 @@ def _csv_value(text: str):
     return text
 
 
-def build_policy_metrics(summary_csv: Path, dataset_id: str) -> dict:
+def build_policy_metrics(repo: Path, summary_csv: str, dataset_id: str) -> dict:
     """The committed summary CSV copied field by field; nothing is recomputed."""
-    with open(summary_csv, encoding="utf-8", newline="") as handle:
+    with open(Path(repo) / summary_csv, encoding="utf-8", newline="") as handle:
         rows = list(csv.DictReader(handle))
     policies = [row["policy"] for row in rows]
     if policies != list(POLICY_NAMES):
@@ -710,7 +735,7 @@ def build_policy_metrics(summary_csv: Path, dataset_id: str) -> dict:
                 raise ExportValidationError(f"{summary_csv}: {row['policy']}.{key} did not copy exactly")
     for row in metrics:
         row["policy_id"] = POLICY_IDS[row["policy"]]
-    return {"dataset_id": dataset_id, "source": str(summary_csv), "policies": metrics}
+    return {"dataset_id": dataset_id, "source": summary_csv, "policies": metrics}
 
 
 def build_rules(repo: Path) -> dict:
@@ -854,7 +879,7 @@ def _input_checksums(reference: SourceReference, mismatches: list[Mismatch]) -> 
 
 
 def _assemble(
-    reference, mismatches, status, export, summary_csv, check_files, source_counts, safeguard, default_policy
+    reference, mismatches, status, export, repo, summary_csv, check_files, source_counts, safeguard, default_policy
 ) -> DatasetBundle:
     dataset_id = reference.dataset_id
     workloads = build_workloads(export.recommendations, dataset_id, default_policy)
@@ -865,7 +890,7 @@ def _assemble(
     )
     return DatasetBundle(
         dataset_info=build_dataset_info(dataset_id, export.recommendations, workloads),
-        policy_metrics=build_policy_metrics(summary_csv, dataset_id),
+        policy_metrics=build_policy_metrics(repo, summary_csv, dataset_id),
         workloads=workloads,
         recommendations=export.recommendations,
         metadata=metadata,
@@ -882,9 +907,12 @@ def build_bundle(repo: Path, allow_unverified_source: bool, export_info: dict) -
     reference, mismatches = verify_dataset_sources(GOOGLE, repo)
     status = source_status(mismatches, allow_unverified_source)
     occurrences = pd.read_parquet(repo / GOOGLE_INPUTS[0])
-    google = export_google(occurrences, pd.read_parquet(repo / GOOGLE_INPUTS[1]), pd.read_parquet(repo / GOOGLE_ROW_LEVEL))
+    google = export_google(
+        occurrences, pd.read_parquet(repo / GOOGLE_INPUTS[1]), pd.read_parquet(repo / GOOGLE_ROW_LEVEL),
+        pd.read_csv(repo / GOOGLE_SUMMARY_CSV),
+    )
     datasets[GOOGLE] = _assemble(
-        reference, mismatches, status, google, repo / GOOGLE_SUMMARY_CSV,
+        reference, mismatches, status, google, repo, GOOGLE_SUMMARY_CSV,
         {GOOGLE_ROW_LEVEL: file_sha256(repo / GOOGLE_ROW_LEVEL)},
         google_source_fallback_counts(occurrences), "P95", _default_policy(risk_levels, GOOGLE),
     )
@@ -897,7 +925,7 @@ def build_bundle(repo: Path, allow_unverified_source: bool, export_info: dict) -
         pd.read_parquet(repo / ALIBABA_INPUTS[0]), targets, baselines, pd.read_csv(repo / ALIBABA_FINAL_TEST_SUMMARY)
     )
     datasets[ALIBABA] = _assemble(
-        reference, mismatches, status, alibaba, repo / ALIBABA_SUMMARY_CSV,
+        reference, mismatches, status, alibaba, repo, ALIBABA_SUMMARY_CSV,
         {ALIBABA_FINAL_TEST_SUMMARY: file_sha256(repo / ALIBABA_FINAL_TEST_SUMMARY)},
         alibaba_source_fallback_counts(targets, baselines), "P99", _default_policy(risk_levels, ALIBABA),
     )

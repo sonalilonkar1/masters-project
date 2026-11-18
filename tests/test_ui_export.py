@@ -326,14 +326,46 @@ def test_google_hybrid_without_safeguard_is_ml_with_model_basis():
 
 def test_google_exceeded_copied_and_null_when_unscored():
     occurrences, ml_predictions, row_level = google_sources()
-    # A stored flag that disagrees with actual > recommended proves it is copied, not recomputed.
+    recommendations = export_google(occurrences, ml_predictions, row_level).recommendations
+
+    stored = row_level[(row_level["occurrence_id"] == "a2") & (row_level["policy_name"] == "Mean")]
+    assert row(recommendations, "a2", "Mean")["cpu_exceeded"] == bool(stored["cpu_violation"].iloc[0])
+    assert pd.isna(row(recommendations, "a3", "P95")["cpu_exceeded"])
+
+
+def test_google_stored_flag_that_disagrees_with_actual_is_refused():
+    occurrences, ml_predictions, row_level = google_sources()
     pick = (row_level["occurrence_id"] == "a2") & (row_level["policy_name"] == "Mean")
     row_level.loc[pick, "cpu_violation"] = 1.0 - row_level.loc[pick, "cpu_violation"]
 
-    recommendations = export_google(occurrences, ml_predictions, row_level).recommendations
+    with pytest.raises(ExportValidationError, match=r"cpu violation flags differ .*Mean"):
+        export_google(occurrences, ml_predictions, row_level)
 
-    assert row(recommendations, "a2", "Mean")["cpu_exceeded"] == bool(row_level.loc[pick, "cpu_violation"].iloc[0])
-    assert pd.isna(row(recommendations, "a3", "P95")["cpu_exceeded"])
+
+def google_summary(row_level):
+    """Policy comparison rows as the final test reports them, from the stored flags."""
+    rows = []
+    for policy in POLICY_NAMES:
+        flags = row_level[row_level["policy_name"] == policy]
+        rows.append({"policy": policy, **{
+            column: value
+            for resource in ("cpu", "memory")
+            for column, value in (
+                (f"valid_{resource}_violation_count", int(flags[f"{resource}_violation"].notna().sum())),
+                (f"{resource}_violation_pct", float(flags[f"{resource}_violation"].mean() * 100)),
+            )
+        }})
+    return pd.DataFrame(rows)
+
+
+def test_google_summary_checked_when_given():
+    occurrences, ml_predictions, row_level = google_sources()
+    summary = google_summary(row_level)
+    export_google(occurrences, ml_predictions, row_level, summary)
+
+    summary.loc[summary["policy"] == "P95", "cpu_violation_pct"] += 1.0
+    with pytest.raises(ExportValidationError, match="google_clusterdata2019 P95 cpu"):
+        export_google(occurrences, ml_predictions, row_level, summary)
 
 
 def test_google_null_request_keeps_null_not_zero():
@@ -543,7 +575,7 @@ def write_summary(path: Path, rows: list[str]) -> Path:
 def test_policy_metrics_copy_exactly(tmp_path):
     rows = [f"{name},10,{i}.125,,False" for i, name in enumerate(POLICY_NAMES)]
     rows[-1] = "Hybrid,10,3.621296401407651,3.17799014823054,False"
-    metrics = export.build_policy_metrics(write_summary(tmp_path / "summary.csv", rows), "alibaba_gpu_v2020")
+    metrics = export.build_policy_metrics(tmp_path, write_summary(tmp_path / "summary.csv", rows).name, "alibaba_gpu_v2020")
 
     hybrid = metrics["policies"][-1]
     assert hybrid == {
@@ -557,14 +589,15 @@ def test_policy_metrics_wrong_policies_refused(tmp_path):
     rows = [f"{name},10,1.0,1.0,False" for name in POLICY_NAMES if name != "Mean"]
 
     with pytest.raises(ExportValidationError, match="expected"):
-        export.build_policy_metrics(write_summary(tmp_path / "summary.csv", rows), "google_clusterdata2019")
+        export.build_policy_metrics(tmp_path, write_summary(tmp_path / "summary.csv", rows).name, "google_clusterdata2019")
 
 
 def test_committed_summaries_copy_exactly():
     root = Path(__file__).resolve().parents[1]
     for dataset_id, path in (("google_clusterdata2019", export.GOOGLE_SUMMARY_CSV), ("alibaba_gpu_v2020", export.ALIBABA_SUMMARY_CSV)):
-        metrics = export.build_policy_metrics(root / path, dataset_id)
+        metrics = export.build_policy_metrics(root, path, dataset_id)
         assert [row["policy"] for row in metrics["policies"]] == list(POLICY_NAMES)
+        assert metrics["source"] == path  # repository-relative, never a machine path
 
 
 def test_rules_from_committed_records():
@@ -797,3 +830,22 @@ def test_cli_validation_failure_writes_nothing(tmp_path):
 def test_cli_invalid_arguments_exit_1(argv, expected, capsys):
     assert cli.main(argv) == getattr(cli, expected)
     assert cli.EXIT_INVALID == 1 and cli.EXIT_INVALID != cli.EXIT_REFUSED
+
+
+@pytest.mark.parametrize("bundle", ["tests/fixtures/ui_bundle", "reports/results/ui"])
+def test_bundle_json_has_no_machine_paths(bundle):
+    root = Path(__file__).resolve().parents[1]
+
+    def strings(value):
+        if isinstance(value, dict):
+            for item in value.values():
+                yield from strings(item)
+        elif isinstance(value, list):
+            for item in value:
+                yield from strings(item)
+        elif isinstance(value, str):
+            yield value
+
+    for path in (root / bundle).rglob("*.json"):
+        absolute = [s for s in strings(json.loads(path.read_text())) if s.startswith(("/", "~")) or str(root) in s]
+        assert not absolute, f"{path.relative_to(root)}: {absolute}"
