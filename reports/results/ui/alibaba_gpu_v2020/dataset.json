@@ -1,0 +1,31 @@
+{
+  "dataset_id": "alibaba_gpu_v2020",
+  "display_name": "Alibaba GPU 2020",
+  "resources": {
+    "cpu": {
+      "unit": "percent_of_vcpu",
+      "semantics": "next_occurrence_lifetime_average",
+      "description": "Average CPU usage of the next run, not its peak"
+    },
+    "memory": {
+      "unit": "gb",
+      "semantics": "next_occurrence_lifetime_peak",
+      "description": "Peak memory of the next run, in GB"
+    }
+  },
+  "primary_resource": "memory",
+  "evaluation_scope": "One-time final test: each test run's recommendation is compared with the next run of the same workload.",
+  "population": {
+    "test_runs": 69285,
+    "workloads": 25232,
+    "scored_runs_cpu": 44045,
+    "scored_runs_memory": 44053,
+    "workloads_with_history_latest": 5891
+  },
+  "caveats": [
+    "CPU is the average usage of a run, not its peak: a run can stay within a CPU recommendation on average and still exceed it during short bursts.",
+    "Memory is the peak of a run and is the primary resource.",
+    "Only completed runs with full measurements are included.",
+    "Results replay the historical test period once: each recommendation is compared with what the next run of the same workload actually used. They are not measurements from a live cluster."
+  ]
+}

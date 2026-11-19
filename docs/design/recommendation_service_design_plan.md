@@ -1,6 +1,6 @@
 # Recommendation Service: Design Plan (Tasks 15 and 16)
 
-**Status:** Design, agreed before implementation. Task 15 builds the backend (export and API); Task 16 builds the web UI.
+**Status:** Task 15 (export and API) implemented; the verified bundle is in `reports/results/ui/`. Task 16 builds the web UI.
 **Snapshot:** 2026-11-16, checked against `main` at `d46e282`, a full read of `src/` and `pipelines/google_subset/`, and the local `data/processed/` outputs.
 
 ---
@@ -88,18 +88,19 @@ Two facts follow from this table and shape the design:
 
 ## 6. UI Bundle (Export Output)
 
-Location: `reports/results/ui/` (committed if the total stays under 20 MB; otherwise shared on Drive with checksums, as for the Task 3 data). One folder per dataset:
+Location: `reports/results/ui/` (committed: about 12 MB with zstd-compressed Parquet, under the 20 MB limit). Four files at the top level and one folder per dataset:
 
 | File | Content |
 |---|---|
+| `manifest.json` | Bundle schema version, `bundle_status` (`verified` or `development`), status and source run ID per dataset, export commit, time and library versions |
 | `risk_levels.json` | Level → policy per dataset, with descriptions; copied from `config/ui_risk_levels.json` |
+| `rules.json` | One rule per dataset and policy, copied from the frozen records: description, `min_runs`, Hybrid safeguard, ML model (Google N04 `metadata.json`, N05 `ml_metadata.json`, N06 `decision_manifest.json`; Alibaba Task 6 `baseline_selection.json`, Task 7 `decision_manifest.json`) |
 | `<dataset>/dataset.json` | Display name, units, CPU and memory semantics, scope, primary resource, population sizes, notes (e.g. "historical replay, not a live cluster") |
 | `<dataset>/policy_metrics.json` | Per policy: violation rates, average waste, shortfall and utilization, valid-row counts; copied field by field from the summary CSV |
-| `<dataset>/workloads.parquet` | One row per workload: `workload_id`, `display_name`, `test_run_count`, `scored_run_count`, `first_start`, `last_start`, `latest_occurrence_id`, `latest_uses_history`, `has_scored_history` |
-| `<dataset>/rules.json` | The locked rules copied from the frozen records: `min_runs`, selected baseline, ML model, Hybrid rule and safeguard (Google N04 `metadata.json`, N05 `ml_metadata.json`, N06 `decision_manifest.json`; Alibaba Task 6 `baseline_selection.json`, Task 7 `decision_manifest.json`) |
+| `<dataset>/workloads.parquet` | One row per workload: `workload_id`, `display_name`, `test_run_count`, `scored_run_count`, `first_start_time_us`, `last_start_time_us`, `latest_occurrence_id`, `latest_uses_history`, `has_scored_history` |
 | `<dataset>/recommendations.parquet` | One row per (occurrence, policy), the common long format below |
 | `<dataset>/metadata.json` | Source paths and SHA-256, source run ID, decision-manifest checksum, code commit, export time, row counts |
-| `SHA256SUMS` | Checksums of every file above |
+| `SHA256SUMS` | Checksums of every other file in the bundle; the API refuses to start if a file is missing, changed or unlisted |
 
 Common long format for `recommendations.parquet`:
 
@@ -107,26 +108,27 @@ Common long format for `recommendations.parquet`:
 |---|---|---|
 | `workload_id` | string | `recurrence_key` |
 | `occurrence_id` | string | |
+| `role_key` | string, nullable | Alibaba only; the unique row key used for every join |
 | `start_time_us` | int64 | Run start, for ordering and the history chart |
+| `target_occurrence_id`, `target_start_time_us` | nullable | The next run the recommendation is compared with; null when there is none |
 | `policy` | string | One of the seven policies |
-| `recommended_cpu`, `recommended_memory` | float | |
-| `request_cpu`, `request_memory` | float | The Request policy value of the same run |
+| `recommended_cpu`, `recommended_memory` | float, nullable | Null when the policy has no value (for example Request on a run without a request) |
+| `request_cpu`, `request_memory` | float, nullable | The Request policy value of the same run; null when the run has no request |
 | `actual_cpu`, `actual_memory` | float, nullable | Next-run value; null when there is no next run. Never 0 |
-| `target_status` | string | `available` or `no_next_occurrence` (per resource on Alibaba) |
+| `cpu_target_status`, `memory_target_status` | string | Canonical `TARGET_STATUSES` from `src/canonical/schema.py` (`available`, `no_next_occurrence`, `next_occurrence_ineligible_resource`, …), kept per resource because Alibaba stores them separately |
 | `cpu_exceeded`, `memory_exceeded` | bool, nullable | `actual > recommended`; null when actual is null. Copied from the row-level violation flags where stored |
 | `is_latest` | bool | The workload's last test run |
-| `role_key` | string | Alibaba only; the unique row key used for every join |
-| `cpu_basis`, `memory_basis` | string | `history` or `request_fallback`, copied from the stored `uses_history_*` flag of the policy's safeguard (P95 for Google Hybrid, P99 for Alibaba Hybrid; the policy itself for P90/P95/P99; `request` for Request; `model` for ML) |
-| `cpu_history_count`, `memory_history_count` | int | Earlier completed runs, copied (`occ_hist_peak_*_count` for Google, `*_history_count` for Alibaba) |
+| `cpu_basis`, `memory_basis` | string | `history` or `request_fallback`, copied from the stored `uses_history_*` flag of the policy's safeguard (P95 for Google Hybrid, P99 for Alibaba Hybrid; the policy itself for P90/P95/P99; `request` for Request; `model` for ML, and for Hybrid when its safeguard has no value, which happens on 2 latest Google runs with neither a request nor history) |
+| `cpu_history_run_count`, `memory_history_run_count` | int, nullable | Earlier completed runs, null for Request and ML; copied (`occ_hist_peak_*_count` for Google, `*_history_count` for Alibaba) |
 
-Units and semantics are stored once in `dataset.json`, not repeated per row; the API attaches them to every value it returns.
+Units and semantics are stored once in `dataset.json`, not repeated per row; the API attaches them to every value it returns. Exact column types and nullability are fixed in `src/service/contract.py`.
 
 Export rules:
 
 1. **Copy, reshape, rename, label.** No recalculation except the Google Hybrid case in §5, which is verified against stored values.
 2. **Missing stays missing.** Null actuals stay null; a missing request stays null.
 3. **Use only the agreed inputs.** Every input must match the checksum committed on `main`: Alibaba against `reports/results/alibaba_gpu_2020/verification/artifact_manifest.json` (and the same `run_id` and manifest checksum as `final_test/run_record.json`), Google against `reports/results/google_subset/decision_manifest.json`. References are read at export time, never hard-coded. `--allow-unverified-source` allows other files for development only; the bundle is then marked `development` and must not be published. See Task 15, Source of Truth.
-4. **Self-checks before writing:** per-policy row counts, equality of every copied value with its source, one `is_latest` row per workload, policy metrics equal to the summary CSV, and every Alibaba join on `role_key` validated one-to-one.
+4. **Self-checks before writing:** per-policy row counts, equality of every copied value with its source, one `is_latest` row per workload, policy metrics equal to the summary CSV, Google violation flags (CPU, memory and any-resource, with all three required in the summary) reproducing its rates and valid counts, and every Alibaba join on `role_key` validated one-to-one.
 5. Same command-line conventions as the Alibaba scripts: refuses a dirty tree and an existing output unless `--allow-dirty` or `--force`; `--out-dir`.
 
 ## 7. API Contract
@@ -140,60 +142,61 @@ Read-only JSON over HTTP, served from the bundle. Base path `/api/v1`.
 | `GET /datasets/{dataset}/workloads?search=&has_history=&sort=&limit=&offset=` | Paginated workload list; `search` matches the ID or display name; `has_history=true` (UI default) keeps workloads whose latest recommendation uses history; `sort` = `test_runs` (default, descending) or `id` | Workload lookup |
 | `GET /datasets/{dataset}/workloads/{workload_id}/recommendation?risk=` or `?policy=` | Latest recommendation, request, the rule that produced it, and the policy's test metrics | Recommendation panel |
 | `GET /datasets/{dataset}/workloads/{workload_id}/history?policy=` | All test runs in time order: recommendation, actual, exceeded | History chart |
-| `GET /datasets/{dataset}/policies` | All seven policies' test metrics, with risk levels marked | Policy comparison |
+| `GET /datasets/{dataset}/policies` | Test metrics of every policy the dataset has (all seven in the current bundle), with risk levels marked | Policy comparison |
 | `GET /health` | Status, bundle version, commit, checksum, source run IDs | Footer, monitoring |
 
 Default sort by test-run count matters for the demo: half the workloads in both datasets have a single test run, so the first page should show workloads with a real history.
 
-Example: `GET /api/v1/datasets/alibaba_gpu_v2020/workloads/{id}/recommendation?risk=restrictive`
+The exact request and response schemas are in `docs/design/recommendation_api_openapi.json`, generated from the app; Task 16 codes against that file. A shortened response from the verified bundle:
+
+`GET /api/v1/datasets/alibaba_gpu_v2020/workloads/{id}/recommendation?risk=restrictive`
 
 ```json
 {
-  "dataset": "alibaba_gpu_v2020",
-  "workload": {"id": "7755b2…||xComputeWorker", "display_name": "xComputeWorker (7755b2…)", "test_run_count": "…"},
+  "dataset_id": "alibaba_gpu_v2020",
+  "workload_id": "7755b21b…||xComputeWorker",
+  "display_name": "7755b21b… / xComputeWorker",
   "risk_level": "restrictive",
   "policy": "Hybrid",
-  "occurrence_id": "…",
-  "recommendation": {
-    "memory": {"value": 6.36, "unit": "gb", "semantics": "peak"},
-    "cpu":    {"value": 102.8, "unit": "percent_of_vcpu", "semantics": "average_usage",
-               "label": "Average usage, not peak"}
-  },
-  "request": {
-    "memory": {"value": 19.55, "unit": "gb"},
-    "cpu":    {"value": 1000.0, "unit": "percent_of_vcpu"}
-  },
-  "rule": {
-    "description": "Larger of the ML prediction and the P99 of the workload's earlier runs (needs 10 earlier runs; otherwise the request)",
-    "min_runs": 10,
-    "inputs": {"ml": {"memory": 5.46, "cpu": 91.2}, "safeguard_policy": "P99", "safeguard": {"memory": 6.36, "cpu": 102.8}}
-  },
-  "basis": {
-    "memory": {"type": "history", "earlier_runs": "…"},
-    "cpu":    {"type": "history", "earlier_runs": "…"}
-  },
-  "same_for_all_risk_levels": false,
-  "policy_test_metrics": {
-    "memory": {"violation_pct": 3.15, "average_waste": 8.71, "unit": "gb", "valid_rows": 44053},
-    "cpu":    {"violation_pct": "…", "average_waste": "…", "unit": "percent_of_vcpu", "valid_rows": 44045}
-  },
+  "policy_id": "hybrid",
+  "latest_run": {"occurrence_id": "…", "role_key": "…", "start_time_us": 6450729000000},
   "primary_resource": "memory",
-  "source": {"run_id": "…", "bundle_sha256": "…"}
+  "resources": [
+    {"resource": "memory", "unit": "gb", "semantics": "peak", "label": "Peak usage",
+     "recommended": 6.36, "request": 19.55, "basis": {"type": "history", "history_run_count": 17289}},
+    {"resource": "cpu", "unit": "percent_of_vcpu", "semantics": "average_usage", "label": "Average usage, not peak",
+     "recommended": 102.76, "request": 1000.0, "basis": {"type": "history", "history_run_count": 17289}}
+  ],
+  "same_for_all_risk_levels": false,
+  "rule": {"policy": "Hybrid", "description": "Larger of the ML prediction and the P99 of the workload's earlier runs …",
+           "min_runs": 10, "safeguard_policy": "P99", "ml_model": {"cpu": "hist_gradient_boosting", "memory": "hist_gradient_boosting"}, "source": "…"},
+  "policy_evidence": {
+    "policy": "Hybrid", "risk_levels": ["restrictive"], "available_datasets": ["google_clusterdata2019", "alibaba_gpu_v2020"], "row_count": 44053,
+    "resources": [
+      {"resource": "memory", "unit": "gb", "semantics": "peak", "label": "Peak usage", "violation_pct": 3.18, "valid_violation_count": 44053, "average_waste": 8.70, "…": "…"},
+      {"resource": "cpu", "unit": "percent_of_vcpu", "semantics": "average_usage", "label": "Average usage, not peak", "violation_pct": 3.62, "valid_violation_count": 44045, "average_waste": 327.47, "…": "…"}
+    ],
+    "any_resource": null
+  },
+  "bundle": {"bundle_status": "verified", "dataset_status": "verified", "source_run_id": "4fdc7e96-…", "bundle_checksum": "6dec37c4…"}
 }
 ```
+
+`policy_evidence` is the policy's dataset-wide final-test result, not a score for this workload. The history endpoint returns one item per test run with `occurrence_id`, `start_time_us`, `target_occurrence_id`, `target_start_time_us` and, per resource, `unit`, `semantics`, `label`, `recommended`, `actual`, `exceeded` and `target_status`. Every policy in `/policies` and in `policy_evidence` lists its `available_datasets`, computed from the bundle. `primary_resource` is `memory` on Alibaba and null on Google.
 
 API rules:
 
 - Only `GET`. No endpoint writes files or runs pipeline code.
 - Every numeric value travels with `unit`; every CPU value on Alibaba with `semantics: average_usage` and its label. A value without a unit is a bug.
 - Missing values are `null`, never 0, never omitted.
-- Errors: unknown dataset, workload or policy → `404`; invalid or conflicting query (`risk` and `policy` together, unknown risk level, bad pagination) → `400`. Body: `{"error": {"code": "...", "message": "..."}}`.
+- Errors share one body, `{"error": {"code": "...", "message": "..."}}`: unknown dataset, workload or route, or a `?policy=` the dataset does not have → `404 not_found`; invalid or conflicting query (`risk` and `policy` together, unknown or empty risk level or policy, bad sort or pagination) → `400 invalid_parameter` (FastAPI's default 422 is replaced); any method other than `GET` → `405 method_not_allowed`; unexpected failure → `500 internal_error`.
 - Memory is listed before CPU on Alibaba (primary resource), matching the report.
 - No response combines datasets.
-- At start-up the API verifies every bundle file against `SHA256SUMS` and refuses to start on a mismatch.
+- At start-up the API verifies every bundle file against `SHA256SUMS` and refuses to start on a mismatch. It also refuses a dataset whose recommendations and policy metrics list different policies, or whose risk level maps to a policy it does not have. It also refuses a `risk_levels.json` with an undefined default risk level, an incomplete mapping or a `policy_id` that is not the policy's canonical ID, using the exporter's `validate_risk_level_config`. It refuses Google policy metrics without the any-resource fields.
+- Google `caveats` in `dataset.json` include the Task 12 limitations (F3/F4, F7/F8, subset scale, small validation population); the UI shows them.
 - The API publishes its contract as OpenAPI; Task 16 develops against it.
 
-Performance: the largest table is about 485,000 rows (69,285 Alibaba runs × 7 policies). It is loaded once into memory and indexed by `(workload_id, policy)`; every endpoint is a dictionary lookup or a slice. No database is needed.
+Performance: the largest table is about 485,000 rows (69,285 Alibaba runs × 7 policies). It is loaded once into memory and indexed by `(dataset, workload_id, policy)`; every endpoint is a dictionary lookup or a slice. No database is needed.
 
 ## 8. Risk Levels
 
@@ -238,7 +241,7 @@ src/service/
     api.py                              # FastAPI app and routes
     schemas.py                          # response models
 web/                                    # Task 16 frontend
-reports/results/ui/                     # the bundle (or a pointer to Drive)
+reports/results/ui/                     # the bundle
 tests/test_ui_export.py
 tests/test_api.py
 tests/fixtures/ui_bundle/               # tiny hand-built bundle for API and UI tests
@@ -249,7 +252,7 @@ tests/fixtures/ui_bundle/               # tiny hand-built bundle for API and UI 
 | Layer | Tests |
 |---|---|
 | Export | Every copied value equals its source per policy; row counts; nulls preserved; one latest row per workload; Google recomputed Hybrid equals stored Hybrid on the 259 scored rows; policy metrics equal the CSVs; refuses a run without verified provenance, a dirty tree or an existing output |
-| API | Response shape per endpoint against the schema; units on every value; risk mapping per dataset; metrics equal the bundle; 400 and 404 cases; no non-GET routes; start-up refuses a checksum mismatch; runs on the fixture bundle, so tests need no local data |
+| API | Response shape per endpoint against the schema; units on every value; risk mapping per dataset; metrics equal the bundle; 400, 404 and 405 cases; no non-GET routes; start-up refuses a checksum mismatch; runs on the fixture bundle, so tests need no local data |
 | UI (Task 16) | Smoke test that each view loads against the fixture-backed API; unit labels and "not available" rendering |
 | Whole repo | Existing `pytest` suite still passes in the locked environment |
 
@@ -271,5 +274,5 @@ tests/fixtures/ui_bundle/               # tiny hand-built bundle for API and UI 
 | Alibaba bundle size | Over 20 MB cannot be committed | Measure after step 1; Drive with checksums otherwise |
 | Google results may be corrected (Task 10) | Bundle becomes stale | Re-run the export only; no code change |
 | Google Hybrid for unscored rows is re-applied, not stored | Could be read as a new result | Verified equality on scored rows; recorded in `metadata.json`; stated in the About view |
-| Most workloads have one test run | History chart is empty for half of them | Default sort by test runs; the UI says when a workload has no scored run yet |
+| Most workloads have no scored run (Google 389 of 472, Alibaba 15,512 of 25,232 on the Oct 30 files) | History chart is empty for most workloads | Default sort by test runs; the UI says when a workload has no scored run yet |
 | UI framework | Affects Task 16 only | Team decision at the start of Task 16 |

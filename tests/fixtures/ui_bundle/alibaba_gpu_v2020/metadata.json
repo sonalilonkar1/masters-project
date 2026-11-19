@@ -1,0 +1,47 @@
+{
+  "dataset_id": "alibaba_gpu_v2020",
+  "bundle_status": "development",
+  "source_mismatches": [],
+  "reference_files": [],
+  "source_run_id": null,
+  "decision_manifest_sha256": null,
+  "inputs": {},
+  "check_files": {},
+  "row_counts": {
+    "recommendations": 28,
+    "workloads": 2,
+    "test_runs": 4
+  },
+  "latest_run_fallback_counts": {
+    "Mean": {
+      "cpu": 1,
+      "memory": 1
+    },
+    "P90": {
+      "cpu": 1,
+      "memory": 1
+    },
+    "P95": {
+      "cpu": 1,
+      "memory": 1
+    },
+    "P99": {
+      "cpu": 1,
+      "memory": 1
+    },
+    "Hybrid": {
+      "cpu": 1,
+      "memory": 1
+    }
+  },
+  "notes": {
+    "hybrid_safeguard": "P99",
+    "hybrid_safeguard_missing": {
+      "cpu": 0,
+      "memory": 0
+    },
+    "target_occurrence_id": "next run of the same workload in the Task 4 order (recurrence_key, start_time_us, occurrence_id, role_key), checked against the stored targets",
+    "exceeded": "actual > recommended (src/evaluation/metrics.py), checked against final_test_policy_comparison.csv",
+    "fixture": "Synthetic test fixture (tests/ui_sources.py); not pipeline results."
+  }
+}

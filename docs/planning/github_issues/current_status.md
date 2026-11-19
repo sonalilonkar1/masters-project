@@ -1,6 +1,6 @@
 # Current Status of Tasks and Issues
 
-**Snapshot:** 2026-11-16, checked against `main` at `ea6aa08` (PR #124 merged), the open GitHub issues and pull requests, and the task files in this folder. Task 15 was split into Tasks 15 (backend) and 16 (web UI) the same day, and Task 8 rows were updated after PR #121 merged (`7eb48a7`). GitHub is the live record; check it before acting on any row here.
+**Snapshot:** 2026-11-18, checked against `main` at `a4db373` (PR #129 merged), the open GitHub issues and pull requests, and the task files in this folder. Task 15 was split into Tasks 15 (backend) and 16 (web UI) the same day, and Task 8 rows were updated after PR #121 merged (`7eb48a7`). GitHub is the live record; check it before acting on any row here.
 
 ---
 
@@ -19,10 +19,11 @@
 | Task | Issue | Priority | Status | What is left |
 |---|---|---|---|---|
 | Task 8: Alibaba GPU 2020 final verification | #113 | P1 | **PR #121 merged 2026-11-16.** `main` now holds the Nov 15 run (`4fdc7e96…`), which re-ran Tasks 4–7 and the final test in a different environment and replaced the Oct 30 results and run log | Follow-ups: record the rerun, update the report's Alibaba ML/Hybrid numbers, check the environment against the lock file; close #113 (table 4.1) |
-| Task 12: final cross-dataset reporting | #117 | P1 | **PR 1 merged (#123)**; outputs in `reports/results/cross_dataset_pr1/` are provisional | PR 2: verified status, final manifest, limitations, conclusions, README and reproducibility (table 4.2) |
-| Task 15: recommendation backend (UI export and read-only API) | #120 | P1 | **Not started**; no API code on `main`. Design in `docs/design/recommendation_service_design_plan.md` | Risk-level config, UI export, API, tests (table 4.3) |
+| Task 8 follow-up: share the Nov 15 Alibaba run artifacts | #130 | P1 | **Done** (2026-11-16): uploaded to Drive `CMPE 295A_B/alibaba_gpu_v2020_run_4fdc7e96/`; 31/31 checksums matched on the uploader's machine and again on a second machine | Close #130 |
+| Task 12: final cross-dataset reporting | #117 (open) | P1 | **PR 1 (#123) and PR 2 (#129) merged**; final bundle in `reports/results/cross_dataset_final/` is `DECISION_PENDING` | Google, Azure and Alibaba 2018 decisions; Task 10 before/after comparison (table 4.2) |
+| Task 15: recommendation backend (UI export and read-only API) | #120 | P1 | **Done on `feature/task15-backend`** (2026-11-16); verified bundle from the Nov 15 run in `reports/results/ui/` | Merge PR #131; close #120 (table 4.3) |
 | Task 16: recommendation web UI | *new; file the issue* | P1 | **Not started**; split from Task 15 | Framework choice, views, tests, report Figures 8.1 and 8.2 (table 4.4) |
-| Task 10: Google subset corrections and rerun | #115 | P3 | **Not started** | Targets after split assignment, reselection, rerun of Notebooks 04–06, or a recorded decision to keep the current results with limitations (table 4.6) |
+| Task 10: Google subset corrections and rerun | #115 | P3 | **PR 1 in progress** on `task10-google-split-isolation` (`3c964ba`): split-isolated targets, Notebooks 04–05 rerun, before/after audit. Notebook 06 waits on D-3 | Review and merge PR 1; record D-3; then the downstream updates in [task10_downstream_updates.md](task10_downstream_updates.md) (table 4.6) |
 | Task 14: Google evaluation follow-ups | #119 | P3 | **Not started** | Cross-split targets (through Task 10), confidence intervals, feature importance (table 4.5) |
 | Task 9: Alibaba 2018 adapter demonstration | #114 | P2 | Adapter updated for 0.2.0 (PR #92); **no outcome recorded** | Framework run, validated output, one recorded outcome (table 4.7) |
 | Task 11: Azure VM dataset integration | #116 | P4 | Stage 1 study in `docs/data/azure_vm_traceadvisor_feasibility.md` (2026-10-29); old `src/adapters/azure_vm.py` (2026-10-14) | Record the go or stop decision; Stage 2 only on go (table 4.8) |
@@ -57,35 +58,46 @@
 
 ### 4.2 Task 12 PR 2: Final Cross-Dataset Reporting (#117)
 
+PR #129 merged on 2026-11-18 (`a4db373`). It adds the separate
+`cross_dataset_final/` bundle with published Task 8 provenance, limitations,
+conclusions and reporting-only reproduction instructions.
+This status file is no longer pinned as Task 12 evidence (it changes with every
+update); the bundle was regenerated in PR #131 with only checksum changes.
+Google retention, Azure go/stop and Alibaba 2018 outcomes remain `decision_pending`.
+Issue #117 remains open while those decisions and the Task 10 before/after
+comparison await evidence.
+Task 8 history/environment repairs and manuscript updates remain separate work.
+
+
 | # | Item (task file section) | Status | Note |
 |---|---|---|---|
 | 1 | Reporting script, configuration, input-integrity and provenance checks | Done in PR 1 | `scripts/build_final_cross_dataset_report.py` |
 | 2 | Per-dataset results tables and figures (§3) | Done in PR 1, provisional | Alibaba memory first; CPU labeled average usage |
 | 3 | Contract comparison and comparable/non-comparable table (§2, §4) | Done in PR 1 | `contract_comparison`, `comparability` |
 | 4 | Dataset completion status (§1) | Provisional in PR 1 | Final once Tasks 9, 10 and 11 have recorded outcomes |
-| 5 | Move from provisional to verified status for Alibaba | **Remaining** | Needs Task 8 merged; checksums alone are not enough (task file, Current Project State) |
+| 5 | Link Alibaba reporting to the accepted Task 8 run | Done in PR #129 | Task 8 (#121) is merged. The bundle preserves its verification limits |
 | 6 | Google results final, or kept with documented limitations | **Remaining** | Needs Task 10 decision |
 | 7 | Alibaba 2018 and Azure scope statements (§3) | **Remaining** | Needs Task 9 and Task 11 outcomes |
-| 8 | Limitations per dataset (§5) | **Remaining** | |
+| 8 | Limitations per dataset (§5) | Done in PR #129 | Included in the final bundle |
 | 9 | Adapter integration evidence: same contract, framework and evaluator per dataset (§6) | **Remaining** | Task 13 adapter can be cited for Google |
-| 10 | Final artifact manifest covering every reported artifact (§7) | **Remaining** | Extends the Task 8 manifest |
-| 11 | Fresh-environment reproduction from `requirements.txt` (§7) | **Remaining** | |
-| 12 | Conclusions per dataset and overall; README and runbook (§8) | **Remaining** | |
-| 13 | Required tests: traceability, identical regeneration, CPU label check, no cross-dataset ranking, full `pytest` | Partly done in PR 1 | Recheck after PR 2 changes |
+| 10 | Final artifact manifest covering the reporting bundle (§7) | Done in PR #129 | Includes the published Task 8 evidence linkage |
+| 11 | Reproduction in the locked Python 3.12 environment (§7) | Done in PR #129 | Use `requirements-lock.txt` |
+| 12 | Conclusions per dataset and overall; README and runbook (§8) | Done in PR #129 | Dataset decisions remain pending |
+| 13 | Required tests: traceability, identical regeneration, CPU label check, no cross-dataset ranking, full `pytest` | Done in PR #129 | Full suite passes in the locked environment |
 
 ### 4.3 Task 15: Recommendation Backend (#120)
 
 | # | Item | Status | Note |
 |---|---|---|---|
-| 1 | Design plan agreed | **Remaining** | `docs/design/recommendation_service_design_plan.md` |
-| 2 | Part A: `config/ui_risk_levels.json` (Restrictive → Hybrid, Balanced → P95, Efficient → P90) | **Remaining** | |
-| 3 | Part B: `scripts/export_ui_artifacts.py` writes the UI bundle with checksums and metadata | **Remaining** | Copy and reshape only; Google Hybrid re-applied by the existing rule and checked against stored values |
-| 4 | Part B: measure the bundle; commit if under 20 MB, else Drive with checksums | **Remaining** | |
-| 5 | Part C: read-only API under `/api/v1`, checksum check at start-up | **Remaining** | FastAPI proposed |
-| 6 | Part C: OpenAPI contract committed for Task 16 | **Remaining** | Unblocks Task 16 |
-| 7 | Part D: export tests, fixture bundle, API tests; dependencies in the lock file | **Remaining** | |
-| 8 | Final export from the Nov 15 Alibaba run now on `main` | **Remaining** | Needs the Nov 15 outputs locally (Drive) |
-| 9 | README: run the export and the API | **Remaining** | |
+| 1 | Design plan agreed | **Done** | `docs/design/recommendation_service_design_plan.md` |
+| 2 | Part A: `config/ui_risk_levels.json` (Restrictive → Hybrid, Balanced → P95, Efficient → P90) | **Done** | |
+| 3 | Part B: `scripts/export_ui_artifacts.py` writes the UI bundle with checksums and metadata | **Done** | Copy and reshape only; Google Hybrid re-applied by the existing rule and checked against stored values |
+| 4 | Part B: measure the bundle; commit if under 20 MB, else Drive with checksums | **Done** | 12 MB with zstd Parquet; committed |
+| 5 | Part C: read-only API under `/api/v1`, checksum check at start-up | **Done** | FastAPI |
+| 6 | Part C: OpenAPI contract committed for Task 16 | **Done** | Unblocks Task 16 |
+| 7 | Part D: export tests, fixture bundle, API tests; dependencies in the lock file | **Done** | |
+| 8 | Final export from the Nov 15 Alibaba run now on `main` | **Done** | 31/31 checksums matched; both datasets `verified` |
+| 9 | README: run the export and the API | **Done** | |
 
 ### 4.4 Task 16: Recommendation Web UI (no issue yet)
 
@@ -109,6 +121,8 @@
 | 5 | Label all new results as post-report follow-ups | **Remaining** | Published results and manifests unchanged |
 
 ### 4.6 Task 10: Google Subset Corrections and Rerun (#115)
+
+After Task 10, the Google results in Task 12, the Task 15 UI bundle, Task 16 and the report must be updated. The steps for each D-3 outcome are in [task10_downstream_updates.md](task10_downstream_updates.md).
 
 | # | Item (task file section) | Status | Note |
 |---|---|---|---|

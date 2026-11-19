@@ -1,0 +1,1789 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TraceAdvisor recommendation API",
+    "description": "Read-only CPU and memory recommendations from the TraceAdvisor final-test bundle.",
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or conflicting query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown dataset, workload or route, or a policy the dataset does not have",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET is supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/datasets": {
+      "get": {
+        "summary": "Datasets",
+        "operationId": "datasets_api_v1_datasets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or conflicting query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown dataset, workload or route, or a policy the dataset does not have",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET is supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/risk-levels": {
+      "get": {
+        "summary": "Risk Levels",
+        "operationId": "risk_levels_api_v1_risk_levels_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskLevelList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or conflicting query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown dataset, workload or route, or a policy the dataset does not have",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET is supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/workloads": {
+      "get": {
+        "summary": "Workloads",
+        "operationId": "workloads_api_v1_datasets__dataset_id__workloads_get",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dataset Id"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive match on workload ID or display name",
+              "title": "Search"
+            },
+            "description": "Case-insensitive match on workload ID or display name"
+          },
+          {
+            "name": "has_history",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter on whether the latest recommendation uses history",
+              "title": "Has History"
+            },
+            "description": "Filter on whether the latest recommendation uses history"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "test_runs (most runs first) or id",
+              "default": "test_runs",
+              "title": "Sort"
+            },
+            "description": "test_runs (most runs first) or id"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkloadPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or conflicting query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown dataset, workload or route, or a policy the dataset does not have",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET is supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/workloads/{workload_id}/recommendation": {
+      "get": {
+        "summary": "Recommendation",
+        "operationId": "recommendation_api_v1_datasets__dataset_id__workloads__workload_id__recommendation_get",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dataset Id"
+            }
+          },
+          {
+            "name": "workload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workload Id"
+            }
+          },
+          {
+            "name": "risk",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "restrictive, balanced or efficient (default: the default risk level)",
+              "title": "Risk"
+            },
+            "description": "restrictive, balanced or efficient (default: the default risk level)"
+          },
+          {
+            "name": "policy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Policy ID instead of a risk level, e.g. p99",
+              "title": "Policy"
+            },
+            "description": "Policy ID instead of a risk level, e.g. p99"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recommendation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or conflicting query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown dataset, workload or route, or a policy the dataset does not have",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET is supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/workloads/{workload_id}/history": {
+      "get": {
+        "summary": "History",
+        "operationId": "history_api_v1_datasets__dataset_id__workloads__workload_id__history_get",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dataset Id"
+            }
+          },
+          {
+            "name": "workload_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workload Id"
+            }
+          },
+          {
+            "name": "risk",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Risk"
+            }
+          },
+          {
+            "name": "policy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Policy"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/History"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or conflicting query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown dataset, workload or route, or a policy the dataset does not have",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET is supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/policies": {
+      "get": {
+        "summary": "Policies",
+        "operationId": "policies_api_v1_datasets__dataset_id__policies_get",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dataset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or conflicting query parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown dataset, workload or route, or a policy the dataset does not have",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET is supported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnyResourceMetrics": {
+        "properties": {
+          "violation_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Violation Pct"
+          },
+          "valid_violation_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Violation Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "violation_pct",
+          "valid_violation_count"
+        ],
+        "title": "AnyResourceMetrics"
+      },
+      "Basis": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "history, request_fallback, request or model"
+          },
+          "history_run_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Run Count",
+            "description": "Earlier runs available; null for Request and ML"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "history_run_count"
+        ],
+        "title": "Basis"
+      },
+      "BundleRef": {
+        "properties": {
+          "bundle_status": {
+            "type": "string",
+            "title": "Bundle Status"
+          },
+          "dataset_status": {
+            "type": "string",
+            "title": "Dataset Status"
+          },
+          "source_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Run Id"
+          },
+          "bundle_checksum": {
+            "type": "string",
+            "title": "Bundle Checksum"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bundle_status",
+          "dataset_status",
+          "source_run_id",
+          "bundle_checksum"
+        ],
+        "title": "BundleRef"
+      },
+      "DatasetHealth": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "bundle_status": {
+            "type": "string",
+            "title": "Bundle Status"
+          },
+          "source_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Run Id"
+          },
+          "source_mismatch_count": {
+            "type": "integer",
+            "title": "Source Mismatch Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "bundle_status",
+          "source_run_id",
+          "source_mismatch_count"
+        ],
+        "title": "DatasetHealth"
+      },
+      "DatasetList": {
+        "properties": {
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetSummary"
+            },
+            "type": "array",
+            "title": "Datasets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "datasets"
+        ],
+        "title": "DatasetList"
+      },
+      "DatasetSummary": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "bundle_status": {
+            "type": "string",
+            "title": "Bundle Status"
+          },
+          "source_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Run Id"
+          },
+          "primary_resource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Resource"
+          },
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/ResourceInfo"
+            },
+            "type": "array",
+            "title": "Resources"
+          },
+          "evaluation_scope": {
+            "type": "string",
+            "title": "Evaluation Scope"
+          },
+          "population": {
+            "$ref": "#/components/schemas/Population"
+          },
+          "min_runs": {
+            "type": "integer",
+            "title": "Min Runs",
+            "description": "Earlier runs needed before a history policy is used"
+          },
+          "caveats": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Caveats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "display_name",
+          "bundle_status",
+          "source_run_id",
+          "primary_resource",
+          "resources",
+          "evaluation_scope",
+          "population",
+          "min_runs",
+          "caveats"
+        ],
+        "title": "DatasetSummary"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "bundle_status": {
+            "type": "string",
+            "title": "Bundle Status"
+          },
+          "bundle_schema_version": {
+            "type": "string",
+            "title": "Bundle Schema Version"
+          },
+          "bundle_checksum": {
+            "type": "string",
+            "title": "Bundle Checksum"
+          },
+          "export_commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Commit"
+          },
+          "export_timestamp_utc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Export Timestamp Utc"
+          },
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetHealth"
+            },
+            "type": "array",
+            "title": "Datasets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "bundle_status",
+          "bundle_schema_version",
+          "bundle_checksum",
+          "export_commit",
+          "export_timestamp_utc",
+          "datasets"
+        ],
+        "title": "Health"
+      },
+      "History": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "workload_id": {
+            "type": "string",
+            "title": "Workload Id"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level"
+          },
+          "policy": {
+            "type": "string",
+            "title": "Policy"
+          },
+          "policy_id": {
+            "type": "string",
+            "title": "Policy Id"
+          },
+          "comparison": {
+            "type": "string",
+            "title": "Comparison"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "workload_id",
+          "risk_level",
+          "policy",
+          "policy_id",
+          "comparison",
+          "items"
+        ],
+        "title": "History"
+      },
+      "HistoryItem": {
+        "properties": {
+          "occurrence_id": {
+            "type": "string",
+            "title": "Occurrence Id"
+          },
+          "role_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Key"
+          },
+          "start_time_us": {
+            "type": "integer",
+            "title": "Start Time Us",
+            "description": "Start of the run the recommendation was made for"
+          },
+          "target_occurrence_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Occurrence Id",
+            "description": "The next run the recommendation is compared with"
+          },
+          "target_start_time_us": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Start Time Us"
+          },
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryResource"
+            },
+            "type": "array",
+            "title": "Resources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "occurrence_id",
+          "role_key",
+          "start_time_us",
+          "target_occurrence_id",
+          "target_start_time_us",
+          "resources"
+        ],
+        "title": "HistoryItem"
+      },
+      "HistoryResource": {
+        "properties": {
+          "resource": {
+            "type": "string",
+            "title": "Resource"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "semantics": {
+            "type": "string",
+            "title": "Semantics",
+            "description": "peak or average_usage"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "recommended": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended"
+          },
+          "actual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual",
+            "description": "Usage of the next run; null when not observed"
+          },
+          "exceeded": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exceeded"
+          },
+          "target_status": {
+            "type": "string",
+            "title": "Target Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource",
+          "unit",
+          "semantics",
+          "label",
+          "recommended",
+          "actual",
+          "exceeded",
+          "target_status"
+        ],
+        "title": "HistoryResource"
+      },
+      "LatestRun": {
+        "properties": {
+          "occurrence_id": {
+            "type": "string",
+            "title": "Occurrence Id"
+          },
+          "role_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Key"
+          },
+          "start_time_us": {
+            "type": "integer",
+            "title": "Start Time Us"
+          }
+        },
+        "type": "object",
+        "required": [
+          "occurrence_id",
+          "role_key",
+          "start_time_us"
+        ],
+        "title": "LatestRun"
+      },
+      "PolicyList": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "policies": {
+            "items": {
+              "$ref": "#/components/schemas/PolicyMetrics"
+            },
+            "type": "array",
+            "title": "Policies"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "source",
+          "policies"
+        ],
+        "title": "PolicyList"
+      },
+      "PolicyMapping": {
+        "properties": {
+          "policy": {
+            "type": "string",
+            "title": "Policy"
+          },
+          "policy_id": {
+            "type": "string",
+            "title": "Policy Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "policy",
+          "policy_id"
+        ],
+        "title": "PolicyMapping"
+      },
+      "PolicyMetrics": {
+        "properties": {
+          "policy": {
+            "type": "string",
+            "title": "Policy"
+          },
+          "policy_id": {
+            "type": "string",
+            "title": "Policy Id"
+          },
+          "risk_levels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Risk Levels"
+          },
+          "available_datasets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Datasets",
+            "description": "Datasets in the bundle whose final-test results include this policy"
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count"
+          },
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/ResourceMetrics"
+            },
+            "type": "array",
+            "title": "Resources"
+          },
+          "any_resource": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnyResourceMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Google only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "policy",
+          "policy_id",
+          "risk_levels",
+          "available_datasets",
+          "row_count",
+          "resources",
+          "any_resource"
+        ],
+        "title": "PolicyMetrics"
+      },
+      "Population": {
+        "properties": {
+          "test_runs": {
+            "type": "integer",
+            "title": "Test Runs"
+          },
+          "workloads": {
+            "type": "integer",
+            "title": "Workloads"
+          },
+          "scored_runs_cpu": {
+            "type": "integer",
+            "title": "Scored Runs Cpu"
+          },
+          "scored_runs_memory": {
+            "type": "integer",
+            "title": "Scored Runs Memory"
+          },
+          "workloads_with_history_latest": {
+            "type": "integer",
+            "title": "Workloads With History Latest"
+          }
+        },
+        "type": "object",
+        "required": [
+          "test_runs",
+          "workloads",
+          "scored_runs_cpu",
+          "scored_runs_memory",
+          "workloads_with_history_latest"
+        ],
+        "title": "Population"
+      },
+      "Recommendation": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "workload_id": {
+            "type": "string",
+            "title": "Workload Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level",
+            "description": "Null when a policy was requested directly"
+          },
+          "policy": {
+            "type": "string",
+            "title": "Policy"
+          },
+          "policy_id": {
+            "type": "string",
+            "title": "Policy Id"
+          },
+          "latest_run": {
+            "$ref": "#/components/schemas/LatestRun"
+          },
+          "primary_resource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Resource",
+            "description": "Resource to emphasize (memory on Alibaba); null when the dataset has none"
+          },
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendedResource"
+            },
+            "type": "array",
+            "title": "Resources"
+          },
+          "same_for_all_risk_levels": {
+            "type": "boolean",
+            "title": "Same For All Risk Levels"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/Rule"
+          },
+          "policy_evidence": {
+            "$ref": "#/components/schemas/PolicyMetrics",
+            "description": "Dataset-wide final-test results of this policy, not of this workload"
+          },
+          "bundle": {
+            "$ref": "#/components/schemas/BundleRef"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "workload_id",
+          "display_name",
+          "risk_level",
+          "policy",
+          "policy_id",
+          "latest_run",
+          "primary_resource",
+          "resources",
+          "same_for_all_risk_levels",
+          "rule",
+          "policy_evidence",
+          "bundle"
+        ],
+        "title": "Recommendation"
+      },
+      "RecommendedResource": {
+        "properties": {
+          "resource": {
+            "type": "string",
+            "title": "Resource"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "semantics": {
+            "type": "string",
+            "title": "Semantics"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "recommended": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request"
+          },
+          "basis": {
+            "$ref": "#/components/schemas/Basis"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource",
+          "unit",
+          "semantics",
+          "label",
+          "recommended",
+          "request",
+          "basis"
+        ],
+        "title": "RecommendedResource"
+      },
+      "ResourceInfo": {
+        "properties": {
+          "resource": {
+            "type": "string",
+            "title": "Resource",
+            "description": "cpu or memory"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "semantics": {
+            "type": "string",
+            "title": "Semantics",
+            "description": "peak or average_usage"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Short display label, e.g. 'Average usage, not peak'"
+          },
+          "target_semantics": {
+            "type": "string",
+            "title": "Target Semantics",
+            "description": "What the next run's value means, from the capability profile"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource",
+          "unit",
+          "semantics",
+          "label",
+          "target_semantics",
+          "description"
+        ],
+        "title": "ResourceInfo"
+      },
+      "ResourceMetrics": {
+        "properties": {
+          "resource": {
+            "type": "string",
+            "title": "Resource"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "semantics": {
+            "type": "string",
+            "title": "Semantics",
+            "description": "peak or average_usage"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Short display label, e.g. 'Average usage, not peak'"
+          },
+          "violation_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Violation Pct"
+          },
+          "valid_violation_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Violation Count"
+          },
+          "average_utilization": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Utilization",
+            "description": "Ratio of actual to recommended usage"
+          },
+          "valid_utilization_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Utilization Count"
+          },
+          "average_waste": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Waste",
+            "description": "In the resource unit"
+          },
+          "average_shortfall": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Shortfall",
+            "description": "In the resource unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource",
+          "unit",
+          "semantics",
+          "label",
+          "violation_pct",
+          "valid_violation_count",
+          "average_utilization",
+          "valid_utilization_count",
+          "average_waste",
+          "average_shortfall"
+        ],
+        "title": "ResourceMetrics"
+      },
+      "RiskLevelInfo": {
+        "properties": {
+          "risk_level": {
+            "type": "string",
+            "title": "Risk Level"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default"
+          },
+          "policies": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PolicyMapping"
+            },
+            "type": "object",
+            "title": "Policies",
+            "description": "Policy for each dataset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "risk_level",
+          "label",
+          "description",
+          "is_default",
+          "policies"
+        ],
+        "title": "RiskLevelInfo"
+      },
+      "RiskLevelList": {
+        "properties": {
+          "default_risk_level": {
+            "type": "string",
+            "title": "Default Risk Level"
+          },
+          "risk_levels": {
+            "items": {
+              "$ref": "#/components/schemas/RiskLevelInfo"
+            },
+            "type": "array",
+            "title": "Risk Levels"
+          }
+        },
+        "type": "object",
+        "required": [
+          "default_risk_level",
+          "risk_levels"
+        ],
+        "title": "RiskLevelList"
+      },
+      "Rule": {
+        "properties": {
+          "policy": {
+            "type": "string",
+            "title": "Policy"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "min_runs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Runs",
+            "description": "Earlier runs needed; null when the policy does not use history"
+          },
+          "safeguard_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safeguard Policy",
+            "description": "Hybrid only"
+          },
+          "ml_model": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ml Model",
+            "description": "ML and Hybrid only"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "policy",
+          "description",
+          "min_runs",
+          "safeguard_policy",
+          "ml_model",
+          "source"
+        ],
+        "title": "Rule"
+      },
+      "WorkloadPage": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Workloads matching the filters, before paging"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkloadSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "total",
+          "limit",
+          "offset",
+          "items"
+        ],
+        "title": "WorkloadPage"
+      },
+      "WorkloadSummary": {
+        "properties": {
+          "workload_id": {
+            "type": "string",
+            "title": "Workload Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "test_run_count": {
+            "type": "integer",
+            "title": "Test Run Count"
+          },
+          "scored_run_count": {
+            "type": "integer",
+            "title": "Scored Run Count"
+          },
+          "first_start_time_us": {
+            "type": "integer",
+            "title": "First Start Time Us"
+          },
+          "last_start_time_us": {
+            "type": "integer",
+            "title": "Last Start Time Us"
+          },
+          "latest_uses_history": {
+            "type": "boolean",
+            "title": "Latest Uses History"
+          },
+          "has_scored_history": {
+            "type": "boolean",
+            "title": "Has Scored History"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workload_id",
+          "display_name",
+          "test_run_count",
+          "scored_run_count",
+          "first_start_time_us",
+          "last_start_time_us",
+          "latest_uses_history",
+          "has_scored_history"
+        ],
+        "title": "WorkloadSummary"
+      }
+    }
+  }
+}

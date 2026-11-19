@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "dataset_id": "google_clusterdata2019",
+  "status": "decision_pending",
+  "outcome": "pending",
+  "summary": "No documented team approval supplied. Decision remains pending.",
+  "evidence_path": "config/reporting_decisions/google_clusterdata2019.evidence.json",
+  "evidence_sha256": "b209a7b45ca0abb0e64906a956b79c6ff7f766f4cc52ca8b323d787c7492de9c"
+}
