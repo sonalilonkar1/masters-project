@@ -6,7 +6,7 @@
 **Related design:** `docs/design/recommendation_service_design_plan.md`
 **Related summary:** `docs/design/discussion_summary_2026-11-16.md`
 **Related planning document:** `docs/planning/295b_scope_and_done.md`
-**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `23da3d73…`), built from the Nov 15 Alibaba run shared through #130. Second and third review rounds fixed on 2026-11-18. All acceptance criteria are met.
+**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `6dec37c4…`), built from the Nov 15 Alibaba run shared through #130. Second, third and fourth review rounds fixed on 2026-11-18. All acceptance criteria are met.
 
 ## Objective
 
@@ -323,7 +323,7 @@ Google Hybrid may be applied to latest unscored rows because stored Hybrid value
 
 The export must verify that recomputed Hybrid values equal the stored Hybrid values for all 259 scored rows.
 
-Stored Google violation flags are copied only after checking that each equals actual > recommended (`src/evaluation/metrics.py`), and that the flags reproduce the violation rates and valid counts in the committed summary CSV. The any-resource rate and valid count are recomputed from the same rows with `any_resource_violation` and checked the same way.
+Stored Google violation flags are copied only after checking that each equals actual > recommended (`src/evaluation/metrics.py`), and that the flags reproduce the violation rates and valid counts in the committed summary CSV. The any-resource rate and valid count are recomputed from the same rows with `any_resource_violation` and checked the same way. Both any-resource columns are required in the Google summary.
 
 No other recommendations or metrics may be recalculated.
 
@@ -590,7 +590,8 @@ At startup:
 - Verify every listed bundle file.
 - Fail startup if any file is missing or modified, or if the bundle folder contains a file that is not listed.
 - Fail startup if a dataset's recommendations and policy metrics list different policies, or a risk level maps to a policy the dataset does not have.
-- Fail startup if `risk_levels.json` fails the exporter's checks (`validate_risk_level_config`): the default risk level must be defined, and every dataset must map every risk level to an allowed policy.
+- Fail startup if `risk_levels.json` fails the exporter's checks (`validate_risk_level_config`): the default risk level must be defined, and every dataset must map every risk level to an allowed policy. Each mapping must be exactly the policy name and its canonical `policy_id`.
+- Fail startup if a Google `policy_metrics.json` row lacks the any-resource rate or valid count.
 - Report bundle version, status and checksum through `/health`.
 
 #### OpenAPI Contract
@@ -640,7 +641,7 @@ Test:
 - Existing output is rejected unless `--force` is provided.
 - Missing source files are rejected.
 - Checksums and metadata are generated.
-- A stored Google violation flag that differs from actual > recommended, or flags that disagree with the summary CSV (CPU, memory or any-resource rate or valid count), are rejected.
+- A stored Google violation flag that differs from actual > recommended, or flags that disagree with the summary CSV (CPU, memory or any-resource rate or valid count), or a Google summary without the any-resource columns, are rejected.
 - No bundle file contains a machine-local path.
 
 Verification tests use small synthetic inputs and reference files, so they run without the real pipeline outputs.
@@ -689,7 +690,8 @@ Test:
 - Empty `risk=` and `policy=` return `400`.
 - A policy missing from one dataset: `/policies` lists only that dataset's policies and `?policy=` returns `404`.
 - Start-up fails when policies are inconsistent within a dataset.
-- Start-up fails for an undefined default risk level, a missing dataset or risk-level mapping, an excluded policy, or a malformed mapping.
+- Start-up fails for an undefined default risk level, a missing dataset or risk-level mapping, an excluded policy, a malformed mapping, or a missing or wrong `policy_id`.
+- Start-up fails when Google policy metrics lack the any-resource fields.
 
 #### Dependencies
 
