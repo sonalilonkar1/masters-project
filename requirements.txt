@@ -12,3 +12,8 @@ gcsfs>=2023.0.0
 # Optional: for notebooks, simulations, etc.
 jupyter>=1.0.0
 seaborn>=0.12.0
+
+# Recommendation API (Task 15)
+fastapi>=0.115.0
+uvicorn>=0.30.0
+httpx2>=2.16.0  # test client used by tests/test_api.py

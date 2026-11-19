@@ -52,8 +52,7 @@
         "reports/results/alibaba_gpu_2020/final_test/SHA256SUMS",
         "docs/data/alibaba_gpu_2020_evidence_and_limitations.md",
         "docs/planning/github_issues/task8_alibaba_gpu_2020_final_verification.md",
-        "docs/design/discussion_summary_2026-11-16.md",
-        "docs/planning/github_issues/current_status.md"
+        "docs/design/discussion_summary_2026-11-16.md"
       ],
       "decision_status": "accepted_published_run",
       "verification_manifest": "reports/results/alibaba_gpu_2020/verification/artifact_manifest.json",
@@ -109,8 +108,7 @@
         }
       ],
       "followup_evidence": [
-        "docs/design/discussion_summary_2026-11-16.md",
-        "docs/planning/github_issues/current_status.md"
+        "docs/design/discussion_summary_2026-11-16.md"
       ],
       "run_log_sha256": "dfb98d2e6807ce4d444218e13a238e723ac510acf857ed5cb8779386b7678f33",
       "decision_record": "config/reporting_decisions/alibaba_gpu_v2020.json",

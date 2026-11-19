@@ -1,0 +1,68 @@
+{
+  "dataset_id": "alibaba_gpu_v2020",
+  "bundle_status": "verified",
+  "source_mismatches": [],
+  "reference_files": [
+    "reports/results/alibaba_gpu_2020/verification/artifact_manifest.json",
+    "reports/results/alibaba_gpu_2020/final_test/run_record.json"
+  ],
+  "source_run_id": "4fdc7e96-789b-43a9-990f-20f189e9598b",
+  "decision_manifest_sha256": "d36964c09c903af646f29929d363d0ccb6ccf60674f31054ed8dfac9dff527ac",
+  "inputs": {
+    "data/processed/alibaba_gpu_v2020_final_test/final_test_predictions.parquet": {
+      "expected_sha256": "f01df084e317381325010698554f08d50f22b8b3731198c4c176a2615dab06e5",
+      "sha256": "f01df084e317381325010698554f08d50f22b8b3731198c4c176a2615dab06e5"
+    },
+    "data/processed/alibaba_gpu_v2020_final_test/run_record.json": {
+      "expected_sha256": "9221362f1cf51aa2eaea3958b1bbc234eb3f9019667067ea8ba43210ef21b6eb",
+      "sha256": "9221362f1cf51aa2eaea3958b1bbc234eb3f9019667067ea8ba43210ef21b6eb"
+    },
+    "data/processed/alibaba_gpu_v2020_targets/test.parquet": {
+      "expected_sha256": "daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f",
+      "sha256": "daaea11a67420e91b9c5cb6d2c54b96eedf0944b3bafe99b5cbb137ca8ec6b1f"
+    },
+    "data/processed/alibaba_gpu_v2020_baselines/recommendations_test.parquet": {
+      "expected_sha256": "1e3361f68224d6565c00ab92820cf38bcbdeda703843647c5ef96fd820046e1b",
+      "sha256": "1e3361f68224d6565c00ab92820cf38bcbdeda703843647c5ef96fd820046e1b"
+    }
+  },
+  "check_files": {
+    "data/processed/alibaba_gpu_v2020_final_test/final_test_policy_comparison.csv": "c5e6ed9a3237a0e7dd5e6d932366b1131172ce5e1c363d3c6d9a224a6af4e5d8"
+  },
+  "row_counts": {
+    "recommendations": 484995,
+    "workloads": 25232,
+    "test_runs": 69285
+  },
+  "latest_run_fallback_counts": {
+    "Mean": {
+      "cpu": 19342,
+      "memory": 19341
+    },
+    "P90": {
+      "cpu": 19342,
+      "memory": 19341
+    },
+    "P95": {
+      "cpu": 19342,
+      "memory": 19341
+    },
+    "P99": {
+      "cpu": 19342,
+      "memory": 19341
+    },
+    "Hybrid": {
+      "cpu": 19342,
+      "memory": 19341
+    }
+  },
+  "notes": {
+    "hybrid_safeguard": "P99",
+    "hybrid_safeguard_missing": {
+      "cpu": 0,
+      "memory": 0
+    },
+    "target_occurrence_id": "next run of the same workload in the Task 4 order (recurrence_key, start_time_us, occurrence_id, role_key), checked against the stored targets",
+    "exceeded": "actual > recommended (src/evaluation/metrics.py), checked against final_test_policy_comparison.csv"
+  }
+}

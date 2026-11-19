@@ -211,6 +211,7 @@ The notebooks below are **(295A, historical)**; their results predate the 295B o
 - [pipelines/google_subset/](pipelines/google_subset/) - Current Google pipeline notebooks
 - [src/evaluation/](src/evaluation/) - Shared evaluator and metrics
 - [src/features/](src/features/) - Chronological split utility, feature configuration, and ML preparation helpers
+- [src/service/](src/service/) - Recommendation bundle export, bundle loader and read-only API (Task 15)
 - [tests/](tests/) - Unit tests (`pytest`)
 - [scripts/](scripts/) - Data processing and utility scripts
   - `verify_data_setup.py` - Data validation utilities (295A, historical; it checks an older data path)
@@ -326,6 +327,18 @@ The full dataset is not included in this repository due to its large size. See [
 2. **Data setup**: place the Kaggle subset at `subset/borg_traces_data.csv` (see [docs/data/subsetSetup.md](docs/data/subsetSetup.md))
 3. **Run the notebooks in order**: [pipelines/google_subset/](pipelines/google_subset/) `00` → `04` (**Snapshot (2026-10-14):** `05` is an empty placeholder on `main`; see PR #61). Artifacts are written to `data/processed/google_subset_v1/`.
 4. **Run tests**: `pip install pytest`, then `pytest` (configured by `pytest.ini`)
+
+### 🚀 Recommendation Export and API (Task 15)
+The export turns the agreed final-test outputs into a checksummed bundle, and a read-only API serves it at `/api/v1` for the recommendation UI (Task 16). Use the locked environment (`~/venvs/traceadvisor-lock`, see `requirements-lock.txt`).
+
+1. **Inputs**: Google needs `data/processed/google_subset_v1/` from the Google pipeline. Alibaba needs the four `data/processed/alibaba_gpu_v2020_{targets,baselines,ml,final_test}/` folders of the agreed run `4fdc7e96…` (shared through issue #130 on the team Drive in `CMPE 295A_B/alibaba_gpu_v2020_run_4fdc7e96/`; download the four folders unchanged into `data/processed/`). The export checks every input against the checksums committed on `main` (Alibaba `verification/artifact_manifest.json` and `final_test/run_record.json`, Google `decision_manifest.json`).
+2. **Verified bundle** (clean Git checkout, all inputs match): `python scripts/export_ui_artifacts.py --force`, written to `reports/results/ui/`. `--force` replaces the committed bundle; without it the export refuses because the folder already exists.
+3. **Development bundle** (local inputs that differ from `main`, such as older copies): `python scripts/export_ui_artifacts.py --allow-unverified-source`, written to `data/processed/ui_dev/` (git-ignored). It lists every mismatch, cannot be written inside `reports/`, and **must not be committed or used for screenshots or report figures**. Other flags: `--out-dir`, `--force` (replace an existing bundle), `--allow-dirty` (local review only).
+4. **Start the API**: `uvicorn --factory src.service.api:create_app` serves the committed verified bundle in `reports/results/ui/` at `http://127.0.0.1:8000/api/v1`; set `TRACEADVISOR_UI_BUNDLE=data/processed/ui_dev` to serve a development bundle instead. It refuses to start if any bundle file fails its checksum. `GET /api/v1/health` shows the bundle status; interactive docs are at `/docs`. To try it without pipeline data, point the variable at `tests/fixtures/ui_bundle`.
+5. **Tests**: `pytest tests/test_ui_contract.py tests/test_ui_risk_levels.py tests/test_ui_export.py tests/test_ui_fixture_bundle.py tests/test_api.py` (no pipeline data needed).
+6. **After changing the export or the API**: rebuild the fixture with `python tests/fixtures/make_ui_bundle.py` and the API contract with `python scripts/export_openapi.py` ([docs/design/recommendation_api_openapi.json](docs/design/recommendation_api_openapi.json)); the tests fail while either is stale.
+
+Risk levels are set in [config/ui_risk_levels.json](config/ui_risk_levels.json): Restrictive → Hybrid (default), Balanced → P95, Efficient → P90. Design: [docs/design/recommendation_service_design_plan.md](docs/design/recommendation_service_design_plan.md).
 
 ### 🚀 Running Experiments (295A, historical)
 1. **Data Setup**: Follow [docs/data/subsetSetup.md](docs/data/subsetSetup.md)

@@ -70,8 +70,7 @@
           "reports/results/alibaba_gpu_2020/final_test/SHA256SUMS",
           "docs/data/alibaba_gpu_2020_evidence_and_limitations.md",
           "docs/planning/github_issues/task8_alibaba_gpu_2020_final_verification.md",
-          "docs/design/discussion_summary_2026-11-16.md",
-          "docs/planning/github_issues/current_status.md"
+          "docs/design/discussion_summary_2026-11-16.md"
         ],
         "expected_identity": {
           "code_commit": "ea6aa08458aace364cd33529ce77de894bcd76ad",
@@ -80,8 +79,7 @@
         },
         "final_metadata": "reports/results/alibaba_gpu_2020/final_test/metadata.json",
         "followup_evidence": [
-          "docs/design/discussion_summary_2026-11-16.md",
-          "docs/planning/github_issues/current_status.md"
+          "docs/design/discussion_summary_2026-11-16.md"
         ],
         "limitations": [
           "Eligibility rules introduce selection bias by restricting evaluation to roles that meet recurrence, telemetry and other inclusion requirements.",
@@ -191,7 +189,7 @@
     "numpy": "2.5.4",
     "pandas": "2.3.3",
     "pyarrow": "23.0.1",
-    "python": "3.12.13"
+    "python": "3.12.9"
   },
   "executable_code": {
     "capability_registry": {
@@ -554,11 +552,11 @@
     },
     {
       "path": "report_provenance.json",
-      "sha256": "17a82f676817ee147ed03a1555682f0f476dd2bf1eef77b47ba1541b315751d5"
+      "sha256": "39b4e987ea2e67c9a329800b2e03d6e94e38f5b55c53b2130b293a2f27408c12"
     },
     {
       "path": "report_sources.csv",
-      "sha256": "639d7241ac3b3b7c879246e87330077dcac698720ea118c5adeab7b47fa90892"
+      "sha256": "f1294977b36be184a925d4c7dadc9239dcc73f2c2d54ed93ac9684ec33d82ea8"
     },
     {
       "path": "reporting_decisions.csv",
@@ -633,11 +631,6 @@
       "path": "docs/design/discussion_summary_2026-11-16.md",
       "path_base": "input_artifact_root",
       "sha256": "66dcac66545e90faa86e027303304755b66a7cb4d4b9a6f3ed6187647942973b"
-    },
-    {
-      "path": "docs/planning/github_issues/current_status.md",
-      "path_base": "input_artifact_root",
-      "sha256": "d84c1b70796153a15c1e0ab2f56a9c39513a9f24fa21c1717bdac27a9b8c5323"
     },
     {
       "path": "docs/planning/github_issues/task10_google_subset_corrections_and_rerun.md",

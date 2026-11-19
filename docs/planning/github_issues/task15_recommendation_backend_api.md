@@ -6,6 +6,7 @@
 **Related design:** `docs/design/recommendation_service_design_plan.md`
 **Related summary:** `docs/design/discussion_summary_2026-11-16.md`
 **Related planning document:** `docs/planning/295b_scope_and_done.md`
+**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `6dec37c4…`), built from the Nov 15 Alibaba run shared through #130. Second, third and fourth review rounds fixed on 2026-11-18. All acceptance criteria are met.
 
 ## Objective
 
@@ -17,7 +18,7 @@ Build the backend that allows a developer to:
 4. View the CPU and memory recommendation for the workload's next run.
 5. View the evidence behind the recommendation:
    - Original request values.
-   - Recommendation basis: history or request fallback per resource.
+   - Recommendation basis per resource: history, request fallback, or model (ML alone).
    - Policy test metrics.
    - Historical recommendation-versus-actual results.
 
@@ -37,7 +38,7 @@ The service presents existing results only. It must not train models, select pol
   - `reports/results/alibaba_gpu_2020/final_test/final_test_policy_comparison.csv`
 
 - Per-run recommendation outputs are stored locally under `data/processed/`, which is git-ignored. Only their checksums are committed.
-- No recommendation service API currently exists.
+- The recommendation service is built in PR #131: export in `scripts/export_ui_artifacts.py` and `src/service/export.py`, API in `src/service/api.py`. Before that PR, no recommendation API existed.
 - **Agreed Alibaba run:** PR #121 (Task 8, merged 2026-11-16) re-ran Tasks 4–7 and the final test on 2026-11-15. The agreed results are the ones committed on `main`:
 
   | What `main` records | Where | Value |
@@ -46,7 +47,7 @@ The service presents existing results only. It must not train models, select pol
   | Decision manifest | same file | `d36964c0…` |
   | Input checksums | `reports/results/alibaba_gpu_2020/verification/artifact_manifest.json` | `final_test_predictions.parquet` `f01df084…`, `targets/test.parquet` `daaea11a…`, `baselines/recommendations_test.parquet` `1e3361f6…` |
 
-  Local copies made before 2026-11-15 hold the Oct 30 run and do **not** match these checksums. The matching files must be obtained from the teammate who ran Task 8 (shared drive).
+  Local copies made before 2026-11-15 hold the Oct 30 run and do **not** match these checksums. The matching files were shared through #130 on the team Drive (`CMPE 295A_B/alibaba_gpu_v2020_run_4fdc7e96/`) and verified 31 of 31 on a second machine.
 
 - **Agreed Google run:** the frozen manifest committed at `reports/results/google_subset/decision_manifest.json` (status `final`) pins every Google input by SHA-256, including `test_occurrences.parquet` and `test_ml_predictions.parquet`.
 
@@ -66,7 +67,8 @@ The service presents existing results only. It must not train models, select pol
 | Unique row key | `occurrence_id` | `role_key` |
 | CPU semantics | Peak CPU in normalized `ncu` | Average usage in `percent_of_vcpu` |
 | Memory semantics | Peak normalized memory | Peak memory in `gb` |
-| Latest run falls back to request for memory | 233 of 472 | 19,341 of 25,232 |
+| Latest run falls back to request: CPU | 231 of 472 | 19,342 of 25,232 (Oct 30 files; re-check on Nov 15) |
+| Latest run falls back to request: memory | 233 of 472 | 19,341 of 25,232 (Oct 30 files; re-check on Nov 15) |
 
 ### Why the recommendation basis matters
 
@@ -110,8 +112,11 @@ Implement:
 
 ```text
 scripts/export_ui_artifacts.py
+src/service/contract.py
 src/service/export.py
 ```
+
+`contract.py` fixes the bundle format in one place before any export code: column names, types and nullability, target-status and basis values, policy names, dataset IDs, units and semantics, and the API error format. The export validates against it and the API reads from it.
 
 The export must produce:
 
@@ -156,7 +161,7 @@ Include:
 - Primary resource.
 - Evaluation scope.
 - Population sizes.
-- Dataset caveats.
+- Dataset caveats, including the Task 12 Google limitations (F3/F4, F7/F8, subset scale, small validation population).
 - Notes explaining that the data represents historical test replay, not live execution.
 
 #### `policy_metrics.json`
@@ -170,6 +175,7 @@ Copy the committed summary CSVs field by field, including:
 - Valid-row denominators.
 - Per-resource units.
 - Metric definitions where needed.
+- The source CSV path, repository-relative.
 
 Metrics must not be recomputed.
 
@@ -235,13 +241,17 @@ Requirements:
 - There is exactly one latest occurrence per workload.
 - Recommendation time and target time must not be confused in the history view.
 
-Target status values:
+Target status values: the canonical vocabulary `TARGET_STATUSES` in `src/canonical/schema.py`, imported rather than copied:
 
 ```text
 available
 no_next_occurrence
-next_occurrence_missing_value
+next_occurrence_in_other_split
+next_occurrence_ineligible_resource
+unsupported_resource
 ```
+
+Alibaba test data uses `available`, `no_next_occurrence` and, for 8 CPU targets, `next_occurrence_ineligible_resource`.
 
 For Alibaba, copy resource-specific target statuses from the verified source.
 
@@ -249,7 +259,7 @@ For Google, derive target status as follows and document the derivation in `meta
 
 - `available` when the target value is present.
 - `no_next_occurrence` when no next occurrence exists.
-- `next_occurrence_missing_value` when a next occurrence exists but its target value is missing.
+- `next_occurrence_ineligible_resource` when a next occurrence exists but its target value is missing (no current Google test row; 259 are `available` and 472 `no_next_occurrence`).
 
 #### Target occurrence alignment
 
@@ -282,7 +292,7 @@ Copy the basis from stored flags. Do not recompute it.
 | Request | Always `request` |
 | Mean, P90, P95, P99 | Corresponding stored history flag |
 | ML | Always `model` |
-| Hybrid | Safeguard history flag: P95 for Google, P99 for Alibaba |
+| Hybrid | Safeguard history flag: P95 for Google, P99 for Alibaba; `model` when the safeguard has no value (Google runs with neither a request nor history, where Hybrid is the ML value alone) |
 
 Earlier-run counts must also be copied from the stored source fields.
 
@@ -312,6 +322,8 @@ Use:
 Google Hybrid may be applied to latest unscored rows because stored Hybrid values exist only for scored rows.
 
 The export must verify that recomputed Hybrid values equal the stored Hybrid values for all 259 scored rows.
+
+Stored Google violation flags are copied only after checking that each equals actual > recommended (`src/evaluation/metrics.py`), and that the flags reproduce the violation rates and valid counts in the committed summary CSV. The any-resource rate and valid count are recomputed from the same rows with `any_resource_violation` and checked the same way. Both any-resource columns are required in the Google summary.
 
 No other recommendations or metrics may be recalculated.
 
@@ -345,8 +357,9 @@ Each `metadata.json` must include:
 - Bundle version.
 - Schema version.
 - Bundle status: `verified` or `development`.
+- `source_mismatches`: every input whose checksum or run fields differ from the reference (empty for a `verified` bundle).
 - Row counts.
-- Latest-run fallback counts.
+- Latest-run fallback counts, separately for CPU and memory, each compared with the count from the source `uses_history_*` flags.
 - Note explaining the Google Hybrid re-application.
 - Note explaining derived fields.
 
@@ -366,6 +379,8 @@ Default behavior:
 - Refuse to run when any input checksum or the Alibaba `run_id` does not match the committed reference (see Source of Truth).
 - `--allow-unverified-source` (development only) allows non-matching inputs, such as older local copies. The bundle is then marked `development` in `manifest.json` and every `metadata.json`, and lists every mismatch.
 - A `development` bundle must never be committed or published; the API reports its status through `/health`.
+- With `--allow-unverified-source`, the default output is `data/processed/ui_dev/` (git-ignored), and any `--out-dir` inside `reports/` is refused.
+- Write to a hidden staging folder next to the output (same parent, so the final rename is atomic), validate, write checksums, then rename into place. On any failure the staging folder is deleted and no partial output remains. With `--force`, the old output is removed only after the new one is in place.
 - Refuse to run with a dirty Git tree unless `--allow-dirty` is supplied.
 - Refuse to overwrite an existing output directory unless `--force` is supplied.
 - Refuse to run when required source files are missing.
@@ -396,8 +411,10 @@ Serve the API under:
 The bundle must be loaded once at startup and indexed by:
 
 ```text
-(workload_id, policy)
+(dataset, workload_id, policy)
 ```
+
+The dataset is part of the key even though workload IDs do not currently repeat across datasets.
 
 The API must never read pipeline outputs directly.
 
@@ -410,7 +427,7 @@ The API must never read pipeline outputs directly.
 | `GET /api/v1/datasets/{dataset}/workloads` | Return a paginated workload list |
 | `GET /api/v1/datasets/{dataset}/workloads/{workload_id}/recommendation` | Return the latest recommendation and evidence |
 | `GET /api/v1/datasets/{dataset}/workloads/{workload_id}/history` | Return recommendation-versus-next-run history |
-| `GET /api/v1/datasets/{dataset}/policies` | Return all seven policy metrics |
+| `GET /api/v1/datasets/{dataset}/policies` | Return the metrics of every policy the dataset has (all seven in the current bundle) |
 | `GET /api/v1/health` | Return service, bundle status (`verified` or `development`), checksum, commit, and source-run status |
 
 #### Workload Endpoint
@@ -449,7 +466,8 @@ Rules:
 - Exactly one of `risk` or `policy` may be supplied.
 - If neither is supplied, use the default risk level.
 - Supplying both returns `400`.
-- Unknown risk levels or policies return `400`.
+- Unknown or empty risk levels or policies return `400`; an empty `risk=` does not fall back to the default.
+- A known policy the dataset does not have returns `404`.
 
 The response must include:
 
@@ -506,7 +524,7 @@ The response must make clear that the recommendation from one occurrence is eval
 
 #### Policy Comparison Endpoint
 
-Return all seven policies:
+Return every policy the dataset has; the current bundle has all seven for both datasets:
 
 ```text
 request
@@ -561,16 +579,19 @@ Return:
 Use:
 
 - `400` for invalid or conflicting query parameters.
-- `404` for unknown datasets, workloads, or policies.
+- `404` for unknown datasets or workloads, or a `?policy=` the dataset does not have.
 - `500` only for unexpected server errors.
 
 #### Checksum Verification
 
 At startup:
 
-- Read `SHA256SUMS`.
+- Read `SHA256SUMS`, which lists every bundle file except itself (`manifest.json`, `risk_levels.json`, `rules.json`, and every dataset's JSON and Parquet files).
 - Verify every listed bundle file.
-- Fail startup if any file is missing or modified.
+- Fail startup if any file is missing or modified, or if the bundle folder contains a file that is not listed.
+- Fail startup if a dataset's recommendations and policy metrics list different policies, or a risk level maps to a policy the dataset does not have.
+- Fail startup if `risk_levels.json` fails the exporter's checks (`validate_risk_level_config`): the default risk level must be defined, and every dataset must map every risk level to an allowed policy. Each mapping must be exactly the policy name and its canonical `policy_id`.
+- Fail startup if a Google `policy_metrics.json` row lacks the any-resource rate or valid count.
 - Report bundle version, status and checksum through `/health`.
 
 #### OpenAPI Contract
@@ -608,16 +629,20 @@ Test:
 - Target occurrence and timestamp are correct where available.
 - CPU and memory target statuses are independent.
 - Basis per resource and policy matches the stored flags.
-- Latest-run fallback counts match the source data.
+- Latest-run fallback counts match the source data, separately for CPU and memory.
 - Alibaba one-to-one joins on `role_key` are enforced.
 - An input whose checksum differs from the committed reference is rejected.
 - An Alibaba `run_record.json` whose `run_id` or manifest checksum differs from `main`'s is rejected.
-- `--allow-unverified-source` produces a bundle marked `development` that lists every mismatch.
+- `--allow-unverified-source` produces a bundle marked `development` that lists every mismatch in `source_mismatches`.
+- `--allow-unverified-source` with an output folder inside `reports/` is refused.
+- A failed validation leaves no output folder and no staging folder.
 - Reference checksums are read from the committed files, not hard-coded.
 - Dirty-tree export is rejected unless `--allow-dirty` is provided.
 - Existing output is rejected unless `--force` is provided.
 - Missing source files are rejected.
 - Checksums and metadata are generated.
+- A stored Google violation flag that differs from actual > recommended, or flags that disagree with the summary CSV (CPU, memory or any-resource rate or valid count), or a Google summary without the any-resource columns, are rejected.
+- No bundle file contains a machine-local path.
 
 Verification tests use small synthetic inputs and reference files, so they run without the real pipeline outputs.
 
@@ -662,6 +687,11 @@ Test:
 - `/health` reports the bundle status.
 - No non-GET routes.
 - No cross-dataset responses.
+- Empty `risk=` and `policy=` return `400`.
+- A policy missing from one dataset: `/policies` lists only that dataset's policies and `?policy=` returns `404`.
+- Start-up fails when policies are inconsistent within a dataset.
+- Start-up fails for an undefined default risk level, a missing dataset or risk-level mapping, an excluded policy, a malformed mapping, or a missing or wrong `policy_id`.
+- Start-up fails when Google policy metrics lack the any-resource fields.
 
 #### Dependencies
 
@@ -688,7 +718,7 @@ Update the README with:
 
 - Required dependencies.
 - How to obtain the agreed source files and check them against `main`.
-- Final export instructions, and development export with `--allow-unverified-source`.
+- Final export instructions (`--force` replaces the committed bundle), and development export with `--allow-unverified-source`.
 - API startup instructions.
 - API base URL.
 - Bundle location.
@@ -720,47 +750,46 @@ This task does not include:
 
 ## Dependencies
 
-- The agreed Alibaba files (Nov 15 run, matching the checksums on `main`) must be available locally before producing the final bundle. Development can start now with `--allow-unverified-source`.
+- The agreed Alibaba files (Nov 15 run, matching the checksums on `main`) must be available locally before producing the final bundle. They were shared through #130 (Drive `CMPE 295A_B/alibaba_gpu_v2020_run_4fdc7e96/`); `--allow-unverified-source` remains for development with other local copies.
 - The local Google inputs already match the committed Google manifest.
-- Corrected Google outputs must be exported again when Tasks 10 or 14 change published results; the new reference is then whatever is committed on `main`.
+- Corrected Google outputs must be exported again when Tasks 10 or 14 change published results; the new reference is then whatever is committed on `main`. The steps are in `task10_downstream_updates.md`.
 - Task 16 depends on the committed OpenAPI contract and fixture bundle.
 
-## Suggested Pull Requests
+## Pull Request
 
-| PR | Scope |
-|---|---|
-| PR 1 | Risk configuration, bundle schema, source verification, export implementation, validation, and export tests |
-| PR 2 | Bundle loader, FastAPI API, schemas, fixture bundle, API tests, and OpenAPI contract |
-| PR 3, if needed | Final verified bundle, README instructions, and integration verification |
+One PR covers Parts A–E (team decision, 2026-11-16): PR #131 from branch `feature/task15-backend`.
 
 ## Acceptance Criteria
 
-- [ ] The export produces a bundle for both datasets from inputs that match the checksums committed on `main`.
-- [ ] The final bundle is marked `verified`; a `development` bundle is never committed or published.
-- [ ] Reference checksums and the Alibaba `run_id` are read from committed files, not hard-coded.
-- [ ] The bundle includes version metadata, provenance, checksums, risk levels, policy rules, dataset metadata, workloads, recommendations, and policy metrics.
-- [ ] Every copied recommendation and metric equals its source.
-- [ ] Google Hybrid for unscored rows is generated only through the existing Hybrid rule.
-- [ ] Google Hybrid equals stored Hybrid values on all 259 scored rows.
-- [ ] CPU and memory target statuses are represented independently.
-- [ ] History identifies both the recommendation occurrence and the next target occurrence where available.
-- [ ] Recommendation basis is preserved per resource and policy from stored flags and counts.
-- [ ] Latest-run fallback counts match the source data.
-- [ ] The API loads only the bundle and does not read pipeline outputs.
-- [ ] The API verifies bundle checksums before starting and reports the bundle status.
-- [ ] All endpoints are read-only `GET` endpoints.
-- [ ] Every resource value includes a unit.
-- [ ] Alibaba CPU values are labelled as average usage, not peak.
-- [ ] Missing values are returned as `null`.
-- [ ] Invalid requests return structured `400` errors.
-- [ ] Unknown resources return structured `404` errors.
-- [ ] Policy metrics returned by the API equal the committed summary CSVs.
-- [ ] The OpenAPI contract is committed for Task 16.
-- [ ] Export tests pass.
-- [ ] API tests pass using the fixture bundle.
-- [ ] The full existing test suite passes.
-- [ ] README instructions allow another developer to obtain the agreed files, export the bundle and run the API locally.
-- [ ] The design document is updated if implementation decisions change.
+- [x] The export produces a bundle for both datasets from inputs that match the checksums committed on `main`.
+- [x] The final bundle is marked `verified`; a `development` bundle is never committed or published.
+- [x] Reference checksums and the Alibaba `run_id` are read from committed files, not hard-coded.
+- [x] The bundle includes version metadata, provenance, checksums, risk levels, policy rules, dataset metadata, workloads, recommendations, and policy metrics.
+- [x] Every copied recommendation and metric equals its source.
+- [x] Google Hybrid for unscored rows is generated only through the existing Hybrid rule.
+- [x] Google Hybrid equals stored Hybrid values on all 259 scored rows.
+- [x] CPU and memory target statuses are represented independently.
+- [x] History identifies both the recommendation occurrence and the next target occurrence where available.
+- [x] Recommendation basis is preserved per resource and policy from stored flags and counts.
+- [x] Latest-run fallback counts match the source data, separately for CPU and memory.
+- [x] The API loads only the bundle and does not read pipeline outputs.
+- [x] The API verifies bundle checksums before starting and reports the bundle status.
+- [x] All endpoints are read-only `GET` endpoints.
+- [x] Every resource value includes a unit.
+- [x] Alibaba CPU values are labelled as average usage, not peak.
+- [x] Missing values are returned as `null`.
+- [x] Invalid requests return structured `400` errors.
+- [x] Unknown resources return structured `404` errors.
+- [x] A policy a dataset does not have returns a structured `404`, never a `500`.
+- [x] Google violation flags are checked against actual > recommended and the summary CSV, including the any-resource rate and valid count.
+- [x] Google dataset caveats include the Task 12 limitations.
+- [x] Policy metrics returned by the API equal the committed summary CSVs.
+- [x] The OpenAPI contract is committed for Task 16.
+- [x] Export tests pass.
+- [x] API tests pass using the fixture bundle.
+- [x] The full existing test suite passes.
+- [x] README instructions allow another developer to obtain the agreed files, export the bundle and run the API locally.
+- [x] The design document is updated if implementation decisions change.
 
 ## Completion Definition
 

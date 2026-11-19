@@ -1,0 +1,23 @@
+{
+  "bundle_schema_version": "1.0",
+  "bundle_status": "development",
+  "datasets": {
+    "google_clusterdata2019": {
+      "bundle_status": "development",
+      "source_run_id": null
+    },
+    "alibaba_gpu_v2020": {
+      "bundle_status": "development",
+      "source_run_id": null
+    }
+  },
+  "export": {
+    "code_commit": null,
+    "code_dirty": null,
+    "timestamp_utc": "2026-11-16T00:00:00Z",
+    "python_version": "fixture",
+    "pandas_version": "fixture",
+    "pyarrow_version": "fixture"
+  },
+  "fixture": "Synthetic test fixture (tests/ui_sources.py); not pipeline results."
+}
