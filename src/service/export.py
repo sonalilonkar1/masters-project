@@ -33,6 +33,7 @@ from src.service.contract import (
     POLICY_IDS,
     POLICY_NAMES,
     RECOMMENDATION_COLUMNS,
+    VIOLATION_METRICS,
     WORKLOAD_COLUMNS,
     validate_frame,
 )
@@ -541,14 +542,19 @@ def _alibaba_policy_rows(runs: pd.DataFrame, policy: str) -> tuple[pd.DataFrame,
 def _check_against_summary(recommendations: pd.DataFrame, summary: pd.DataFrame, dataset_id: str) -> None:
     """Violation rates and valid counts from the exceeded flags must equal the run's summary CSV.
 
-    When the summary reports the any-resource metric (Google), it is recomputed with the
-    evaluator's ``any_resource_violation`` and checked the same way.
+    Every metric in ``VIOLATION_METRICS`` for the dataset is checked, so a summary that drops
+    one is refused. Google's any-resource metric is recomputed with the evaluator's
+    ``any_resource_violation``.
     """
+    metrics = VIOLATION_METRICS[dataset_id]
+    required = [column for metric in metrics for column in (f"{metric}_violation_pct", f"valid_{metric}_violation_count")]
+    missing = [column for column in required if column not in summary.columns]
+    if missing:
+        raise ExportValidationError(f"{dataset_id}: summary is missing columns {missing}")
     summary = summary.set_index("policy")
-    with_any = "any_resource_violation_pct" in summary.columns
     for policy, rows in recommendations.groupby("policy", sort=False):
         results = {resource: rows[f"{resource}_exceeded"].astype("float64").to_numpy() for resource in RESOURCES}
-        if with_any:
+        if "any_resource" in metrics:
             results["any_resource"] = any_resource_violation(
                 rows["actual_cpu"].to_numpy("float64", na_value=np.nan),
                 rows["recommended_cpu"].to_numpy("float64", na_value=np.nan),

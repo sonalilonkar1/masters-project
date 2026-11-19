@@ -308,6 +308,10 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
             )
         return {"datasets": items}
 
+    def policy_ref(name: str) -> dict:
+        """A policy name with its ID, built from the name like every other response."""
+        return {"policy": name, "policy_id": POLICY_IDS[name]}
+
     @app.get("/api/v1/risk-levels", response_model=schemas.RiskLevelList, responses=ERROR_RESPONSES)
     def risk_levels():
         config = bundle.risk_levels
@@ -317,7 +321,7 @@ def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:
                 {
                     **level,
                     "is_default": level["risk_level"] == config["default_risk_level"],
-                    "policies": {d: config["datasets"][d][level["risk_level"]] for d in bundle.datasets},
+                    "policies": {d: policy_ref(config["datasets"][d][level["risk_level"]]["policy"]) for d in bundle.datasets},
                 }
                 for level in config["risk_levels"]
             ],

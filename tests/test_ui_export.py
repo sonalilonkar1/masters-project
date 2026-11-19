@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -374,6 +375,22 @@ def test_google_summary_checked_when_given(column, change):
     metric = column.removeprefix("valid_").removesuffix("_violation_pct").removesuffix("_violation_count")
     summary.loc[summary["policy"] == "P95", column] += change
     with pytest.raises(ExportValidationError, match=f"google_clusterdata2019 P95 {metric}:"):
+        export_google(occurrences, ml_predictions, row_level, summary)
+
+
+@pytest.mark.parametrize(
+    "dropped",
+    [
+        ["any_resource_violation_pct", "valid_any_resource_violation_count"],
+        ["any_resource_violation_pct"],
+        ["valid_any_resource_violation_count"],
+    ],
+)
+def test_google_summary_without_any_resource_is_refused(dropped):
+    occurrences, ml_predictions, row_level = google_sources()
+    summary = google_summary(row_level).drop(columns=dropped)
+
+    with pytest.raises(ExportValidationError, match=re.escape(f"google_clusterdata2019: summary is missing columns {dropped}")):
         export_google(occurrences, ml_predictions, row_level, summary)
 
 

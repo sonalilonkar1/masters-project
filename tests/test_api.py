@@ -296,12 +296,32 @@ def bundle_with_risk_levels(tmp_path, change):
         (lambda c: c["datasets"][ALIBABA].pop("balanced"), f"{ALIBABA}: must map exactly the risk levels"),
         (lambda c: c["datasets"][GOOGLE]["efficient"].update(policy="Mean"), "Mean may not be a risk level"),
         (lambda c: c["datasets"][GOOGLE]["efficient"].pop("policy"), "risk_levels.json"),
+        (lambda c: c["datasets"][ALIBABA]["balanced"].pop("policy_id"), f"{ALIBABA}.balanced is"),
+        (lambda c: c["datasets"][ALIBABA]["balanced"].update(policy_id="ml"), f"{ALIBABA}.balanced is"),
+        (lambda c: c["datasets"][ALIBABA]["balanced"].update(note="x"), f"{ALIBABA}.balanced is"),
     ],
-    ids=["undefined-default", "missing-dataset", "missing-level", "excluded-policy", "malformed-mapping"],
+    ids=[
+        "undefined-default", "missing-dataset", "missing-level", "excluded-policy", "malformed-mapping",
+        "missing-policy-id", "wrong-policy-id", "extra-key",
+    ],
 )
 def test_invalid_risk_levels_refuse_to_start(tmp_path, change, message):
     with pytest.raises(BundleIntegrityError, match=re.escape(message)):
         api.create_app(bundle_with_risk_levels(tmp_path, change))
+
+
+@pytest.mark.parametrize("column", ["any_resource_violation_pct", "valid_any_resource_violation_count"])
+def test_google_policy_metrics_need_any_resource(tmp_path, column):
+    bundle = tmp_path / "ui"
+    shutil.copytree(FIXTURE_DIR, bundle)
+    path = bundle / GOOGLE / "policy_metrics.json"
+    content = json.loads(path.read_text())
+    content["policies"][0].pop(column)
+    path.write_text(json.dumps(content))
+    write_checksums(bundle)
+
+    with pytest.raises(BundleIntegrityError, match=re.escape(f"lacks ['{column}']")):
+        api.create_app(bundle)
 
 
 # --- routes, errors and startup ------------------------------------------------------

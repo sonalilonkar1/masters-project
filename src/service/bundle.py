@@ -19,6 +19,9 @@ from src.service.contract import (
     BUNDLE_SCHEMA_VERSION,
     BUNDLE_STATUSES,
     DATASET_IDS,
+    GOOGLE,
+    GOOGLE_ANY_RESOURCE_COLUMNS,
+    POLICY_IDS,
     POLICY_NAMES,
     RECOMMENDATION_COLUMNS,
     WORKLOAD_COLUMNS,
@@ -185,7 +188,10 @@ def load_bundle(bundle_dir: Path) -> LoadedBundle:
 
 
 def _check_risk_levels(risk_levels: dict) -> None:
-    """The exporter's checks: a defined default risk level, and every risk level mapped for every dataset."""
+    """The exporter's checks: a defined default risk level, and every risk level mapped for every dataset.
+
+    Each mapping is exactly a policy name and its canonical ID.
+    """
     try:
         datasets = {
             dataset_id: {level: entry["policy"] for level, entry in mapping.items()}
@@ -194,6 +200,11 @@ def _check_risk_levels(risk_levels: dict) -> None:
         validate_risk_level_config({**risk_levels, "datasets": datasets})
     except (RiskLevelConfigError, KeyError, TypeError, AttributeError) as error:
         raise BundleIntegrityError(f"risk_levels.json: {error}") from error
+    for dataset_id, mapping in risk_levels["datasets"].items():
+        for level, entry in mapping.items():
+            expected = {"policy": entry["policy"], "policy_id": POLICY_IDS[entry["policy"]]}
+            if entry != expected:
+                raise BundleIntegrityError(f"risk_levels.json: {dataset_id}.{level} is {entry}, expected {expected}")
 
 
 def _check_policies(dataset_id: str, dataset: LoadedDataset, risk_levels: dict) -> None:
@@ -206,6 +217,11 @@ def _check_policies(dataset_id: str, dataset: LoadedDataset, risk_levels: dict) 
         raise BundleIntegrityError(
             f"{dataset_id}: recommendations cover {sorted(recommended)} but policy_metrics.json lists {sorted(metric_policies)}"
         )
+    if dataset_id == GOOGLE:
+        for row in dataset.policy_metrics["policies"]:
+            missing = [key for key in GOOGLE_ANY_RESOURCE_COLUMNS if key not in row]
+            if missing:
+                raise BundleIntegrityError(f"{dataset_id}: policy_metrics.json {row['policy']} lacks {missing}")
     for risk_level, mapping in risk_levels["datasets"][dataset_id].items():
         if mapping["policy"] not in recommended:
             raise BundleIntegrityError(f"{dataset_id}: risk level {risk_level!r} maps to {mapping['policy']}, which is not in the bundle")

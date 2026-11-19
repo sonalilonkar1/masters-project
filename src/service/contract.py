@@ -63,6 +63,11 @@ POLICY_NAMES = ("Request", "Mean", "P90", "P95", "P99", "ML", "Hybrid")
 POLICY_IDS = {name: name.lower() for name in POLICY_NAMES}
 POLICY_BY_ID = {policy_id: name for name, policy_id in POLICY_IDS.items()}
 
+# Violation metrics each dataset's summary reports and the export checks against
+# the exceeded flags. Only the Google final test reports the any-resource metric.
+VIOLATION_METRICS = {GOOGLE: ("cpu", "memory", "any_resource"), ALIBABA: ("cpu", "memory")}
+GOOGLE_ANY_RESOURCE_COLUMNS = ("any_resource_violation_pct", "valid_any_resource_violation_count")
+
 # history          - the policy used the workload's earlier runs
 # request_fallback - a history policy with too few earlier runs, so the request is kept
 # request          - the Request policy itself
