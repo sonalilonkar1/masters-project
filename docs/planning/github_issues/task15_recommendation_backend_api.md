@@ -6,7 +6,7 @@
 **Related design:** `docs/design/recommendation_service_design_plan.md`
 **Related summary:** `docs/design/discussion_summary_2026-11-16.md`
 **Related planning document:** `docs/planning/295b_scope_and_done.md`
-**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `08b9d529…`), built from the Nov 15 Alibaba run shared through #130. Second review round fixed on 2026-11-18. All acceptance criteria are met.
+**Status:** Implemented in PR #131 (branch `feature/task15-backend`, 2026-11-16). The verified bundle is committed in `reports/results/ui/` (checksum `23da3d73…`), built from the Nov 15 Alibaba run shared through #130. Second and third review rounds fixed on 2026-11-18. All acceptance criteria are met.
 
 ## Objective
 
@@ -323,7 +323,7 @@ Google Hybrid may be applied to latest unscored rows because stored Hybrid value
 
 The export must verify that recomputed Hybrid values equal the stored Hybrid values for all 259 scored rows.
 
-Stored Google violation flags are copied only after checking that each equals actual > recommended (`src/evaluation/metrics.py`), and that the flags reproduce the violation rates and valid counts in the committed summary CSV.
+Stored Google violation flags are copied only after checking that each equals actual > recommended (`src/evaluation/metrics.py`), and that the flags reproduce the violation rates and valid counts in the committed summary CSV. The any-resource rate and valid count are recomputed from the same rows with `any_resource_violation` and checked the same way.
 
 No other recommendations or metrics may be recalculated.
 
@@ -590,6 +590,7 @@ At startup:
 - Verify every listed bundle file.
 - Fail startup if any file is missing or modified, or if the bundle folder contains a file that is not listed.
 - Fail startup if a dataset's recommendations and policy metrics list different policies, or a risk level maps to a policy the dataset does not have.
+- Fail startup if `risk_levels.json` fails the exporter's checks (`validate_risk_level_config`): the default risk level must be defined, and every dataset must map every risk level to an allowed policy.
 - Report bundle version, status and checksum through `/health`.
 
 #### OpenAPI Contract
@@ -639,7 +640,7 @@ Test:
 - Existing output is rejected unless `--force` is provided.
 - Missing source files are rejected.
 - Checksums and metadata are generated.
-- A stored Google violation flag that differs from actual > recommended, or flags that disagree with the summary CSV, are rejected.
+- A stored Google violation flag that differs from actual > recommended, or flags that disagree with the summary CSV (CPU, memory or any-resource rate or valid count), are rejected.
 - No bundle file contains a machine-local path.
 
 Verification tests use small synthetic inputs and reference files, so they run without the real pipeline outputs.
@@ -688,6 +689,7 @@ Test:
 - Empty `risk=` and `policy=` return `400`.
 - A policy missing from one dataset: `/policies` lists only that dataset's policies and `?policy=` returns `404`.
 - Start-up fails when policies are inconsistent within a dataset.
+- Start-up fails for an undefined default risk level, a missing dataset or risk-level mapping, an excluded policy, or a malformed mapping.
 
 #### Dependencies
 
@@ -777,7 +779,7 @@ One PR covers Parts A–E (team decision, 2026-11-16): PR #131 from branch `feat
 - [x] Invalid requests return structured `400` errors.
 - [x] Unknown resources return structured `404` errors.
 - [x] A policy a dataset does not have returns a structured `404`, never a `500`.
-- [x] Google violation flags are checked against actual > recommended and the summary CSV.
+- [x] Google violation flags are checked against actual > recommended and the summary CSV, including the any-resource rate and valid count.
 - [x] Google dataset caveats include the Task 12 limitations.
 - [x] Policy metrics returned by the API equal the committed summary CSVs.
 - [x] The OpenAPI contract is committed for Task 16.

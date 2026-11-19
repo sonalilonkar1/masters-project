@@ -128,7 +128,7 @@ Export rules:
 1. **Copy, reshape, rename, label.** No recalculation except the Google Hybrid case in §5, which is verified against stored values.
 2. **Missing stays missing.** Null actuals stay null; a missing request stays null.
 3. **Use only the agreed inputs.** Every input must match the checksum committed on `main`: Alibaba against `reports/results/alibaba_gpu_2020/verification/artifact_manifest.json` (and the same `run_id` and manifest checksum as `final_test/run_record.json`), Google against `reports/results/google_subset/decision_manifest.json`. References are read at export time, never hard-coded. `--allow-unverified-source` allows other files for development only; the bundle is then marked `development` and must not be published. See Task 15, Source of Truth.
-4. **Self-checks before writing:** per-policy row counts, equality of every copied value with its source, one `is_latest` row per workload, policy metrics equal to the summary CSV, and every Alibaba join on `role_key` validated one-to-one.
+4. **Self-checks before writing:** per-policy row counts, equality of every copied value with its source, one `is_latest` row per workload, policy metrics equal to the summary CSV, Google violation flags (CPU, memory and any-resource) reproducing its rates and valid counts, and every Alibaba join on `role_key` validated one-to-one.
 5. Same command-line conventions as the Alibaba scripts: refuses a dirty tree and an existing output unless `--allow-dirty` or `--force`; `--out-dir`.
 
 ## 7. API Contract
@@ -178,7 +178,7 @@ The exact request and response schemas are in `docs/design/recommendation_api_op
     ],
     "any_resource": null
   },
-  "bundle": {"bundle_status": "verified", "dataset_status": "verified", "source_run_id": "4fdc7e96-…", "bundle_checksum": "08b9d529…"}
+  "bundle": {"bundle_status": "verified", "dataset_status": "verified", "source_run_id": "4fdc7e96-…", "bundle_checksum": "23da3d73…"}
 }
 ```
 
@@ -192,7 +192,7 @@ API rules:
 - Errors share one body, `{"error": {"code": "...", "message": "..."}}`: unknown dataset, workload or route, or a `?policy=` the dataset does not have → `404 not_found`; invalid or conflicting query (`risk` and `policy` together, unknown or empty risk level or policy, bad sort or pagination) → `400 invalid_parameter` (FastAPI's default 422 is replaced); any method other than `GET` → `405 method_not_allowed`; unexpected failure → `500 internal_error`.
 - Memory is listed before CPU on Alibaba (primary resource), matching the report.
 - No response combines datasets.
-- At start-up the API verifies every bundle file against `SHA256SUMS` and refuses to start on a mismatch. It also refuses a dataset whose recommendations and policy metrics list different policies, or whose risk level maps to a policy it does not have.
+- At start-up the API verifies every bundle file against `SHA256SUMS` and refuses to start on a mismatch. It also refuses a dataset whose recommendations and policy metrics list different policies, or whose risk level maps to a policy it does not have. It also refuses a `risk_levels.json` with an undefined default risk level or an incomplete mapping, using the exporter's `validate_risk_level_config`.
 - Google `caveats` in `dataset.json` include the Task 12 limitations (F3/F4, F7/F8, subset scale, small validation population); the UI shows them.
 - The API publishes its contract as OpenAPI; Task 16 develops against it.
 

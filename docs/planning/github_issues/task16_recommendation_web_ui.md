@@ -31,7 +31,7 @@ The UI reads everything from the Task 15 API. It computes no recommendations or 
   - Read-only API under `/api/v1`: `src/service/api.py`.
   - API contract: `docs/design/recommendation_api_openapi.json`, generated from the app. The response schemas in this file are the source of truth for field names.
   - Fixture bundle: `tests/fixtures/ui_bundle/`, which lets the API run without pipeline data. It covers history, request fallback, no scored run, null requests and actuals, differing CPU and memory bases and target statuses, and a workload ID containing `/`.
-  - Verified bundle: `reports/results/ui/` (checksum `08b9d529…`, `bundle_status: verified`), built from the Nov 15 Alibaba run (`4fdc7e96…`) on `main`. Use it for the final screenshots.
+  - Verified bundle: `reports/results/ui/` (checksum `23da3d73…`, `bundle_status: verified`), built from the Nov 15 Alibaba run (`4fdc7e96…`) on `main`. Use it for the final screenshots.
 - Run the API locally:
 
   ```bash

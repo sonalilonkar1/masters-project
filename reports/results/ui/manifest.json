@@ -12,9 +12,9 @@
     }
   },
   "export": {
-    "code_commit": "632785d4b7846dad088a888fd7cf9d076db8ceef",
+    "code_commit": "bd12662189ae894b46002ce53740a4bb001044e5",
     "code_dirty": false,
-    "timestamp_utc": "2026-11-18T21:37:33Z",
+    "timestamp_utc": "2026-11-19T00:07:36Z",
     "python_version": "3.12.9",
     "pandas_version": "2.3.3",
     "pyarrow_version": "23.0.1"
