@@ -347,24 +347,33 @@ def google_summary(row_level):
     rows = []
     for policy in POLICY_NAMES:
         flags = row_level[row_level["policy_name"] == policy]
-        rows.append({"policy": policy, **{
-            column: value
-            for resource in ("cpu", "memory")
-            for column, value in (
-                (f"valid_{resource}_violation_count", int(flags[f"{resource}_violation"].notna().sum())),
-                (f"{resource}_violation_pct", float(flags[f"{resource}_violation"].mean() * 100)),
-            )
-        }})
+        cpu, memory = flags["cpu_violation"], flags["memory_violation"]
+        # Either resource exceeded -> 1; both known and not exceeded -> 0; otherwise unknown.
+        any_resource = (cpu.eq(1) | memory.eq(1)).astype(float).where(cpu.eq(1) | memory.eq(1) | (cpu.notna() & memory.notna()))
+        row = {"policy": policy}
+        for metric, values in (("cpu", cpu), ("memory", memory), ("any_resource", any_resource)):
+            row[f"valid_{metric}_violation_count"] = int(values.notna().sum())
+            row[f"{metric}_violation_pct"] = float(values.mean() * 100)
+        rows.append(row)
     return pd.DataFrame(rows)
 
 
-def test_google_summary_checked_when_given():
+@pytest.mark.parametrize(
+    "column, change",
+    [
+        ("cpu_violation_pct", 1.0),
+        ("any_resource_violation_pct", 1.0),
+        ("valid_any_resource_violation_count", -1),
+    ],
+)
+def test_google_summary_checked_when_given(column, change):
     occurrences, ml_predictions, row_level = google_sources()
     summary = google_summary(row_level)
     export_google(occurrences, ml_predictions, row_level, summary)
 
-    summary.loc[summary["policy"] == "P95", "cpu_violation_pct"] += 1.0
-    with pytest.raises(ExportValidationError, match="google_clusterdata2019 P95 cpu"):
+    metric = column.removeprefix("valid_").removesuffix("_violation_pct").removesuffix("_violation_count")
+    summary.loc[summary["policy"] == "P95", column] += change
+    with pytest.raises(ExportValidationError, match=f"google_clusterdata2019 P95 {metric}:"):
         export_google(occurrences, ml_predictions, row_level, summary)
 
 

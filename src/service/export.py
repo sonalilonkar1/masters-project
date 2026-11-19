@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 import pyarrow
 
-from src.evaluation.metrics import cpu_violation, memory_violation
+from src.evaluation.metrics import any_resource_violation, cpu_violation, memory_violation
 from src.policies.hybrid import hybrid_recommendation
 from src.service.contract import (
     ALIBABA,
@@ -539,18 +539,31 @@ def _alibaba_policy_rows(runs: pd.DataFrame, policy: str) -> tuple[pd.DataFrame,
 
 
 def _check_against_summary(recommendations: pd.DataFrame, summary: pd.DataFrame, dataset_id: str) -> None:
-    """Violation rates and valid counts from the exceeded flags must equal the run's summary CSV."""
+    """Violation rates and valid counts from the exceeded flags must equal the run's summary CSV.
+
+    When the summary reports the any-resource metric (Google), it is recomputed with the
+    evaluator's ``any_resource_violation`` and checked the same way.
+    """
     summary = summary.set_index("policy")
+    with_any = "any_resource_violation_pct" in summary.columns
     for policy, rows in recommendations.groupby("policy", sort=False):
-        for resource in RESOURCES:
-            flags = rows[f"{resource}_exceeded"]
-            valid = int(flags.notna().sum())
-            rate = float(flags.dropna().astype(float).mean() * 100) if valid else float("nan")
-            expected_valid = int(summary.loc[policy, f"valid_{resource}_violation_count"])
-            expected_rate = float(summary.loc[policy, f"{resource}_violation_pct"])
+        results = {resource: rows[f"{resource}_exceeded"].astype("float64").to_numpy() for resource in RESOURCES}
+        if with_any:
+            results["any_resource"] = any_resource_violation(
+                rows["actual_cpu"].to_numpy("float64", na_value=np.nan),
+                rows["recommended_cpu"].to_numpy("float64", na_value=np.nan),
+                rows["actual_memory"].to_numpy("float64", na_value=np.nan),
+                rows["recommended_memory"].to_numpy("float64", na_value=np.nan),
+            )
+        for metric, result in results.items():
+            known = result[~np.isnan(result)]
+            valid = len(known)
+            rate = float(known.mean() * 100) if valid else float("nan")
+            expected_valid = int(summary.loc[policy, f"valid_{metric}_violation_count"])
+            expected_rate = float(summary.loc[policy, f"{metric}_violation_pct"])
             if valid != expected_valid or not np.isclose(rate, expected_rate, rtol=1e-12, atol=0):
                 raise ExportValidationError(
-                    f"{dataset_id} {policy} {resource}: exceeded flags give {rate} over {valid} rows, "
+                    f"{dataset_id} {policy} {metric}: exceeded flags give {rate} over {valid} rows, "
                     f"summary has {expected_rate} over {expected_valid}"
                 )
 
