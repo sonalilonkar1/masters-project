@@ -23,11 +23,34 @@ PR 1 also regenerates `data/processed/google_subset_v1/`, including the test ML 
 
 ### Task 12 (Final Cross-Dataset Report)
 
-- [ ] `config/reporting_decisions/google_clusterdata2019.json` (and its `.evidence.json`): change `decision_pending` to the recorded outcome, with the D-3 decision and the Task 10 comparison as evidence.
-- [ ] `config/cross_dataset_report_final.json` (Google): point `results`, `metadata`, `run_record` and `decision_manifest` at the new files and update their pinned checksums; reword `reason`.
-- [ ] Google limitations: remove the F3/F4 line once the final test is leakage-safe, in both the config and `DATASET_LIMITATIONS` in `src/reporting/artifact_provenance.py` (the validator requires them to match). Keep F7/F8, subset scale and the small validation population.
+Task 12 currently accepts only two Google states: `decision_pending` and a documented `retain_provisional` outcome. F3/F4 is written into the code, not only into the configuration. Path A therefore needs code changes to Task 12, reviewed like any other Task 12 change, as well as new records.
+
+**Decision and approval records.** A documented outcome is accepted only with matching approval evidence (`validate_decision` in `src/reporting/artifact_provenance.py`):
+
+- [ ] Add an approval file for D-3 (for example `config/reporting_decisions/google_clusterdata2019.approval.json`) with exactly `schema_version`, `dataset_id`, `status`, `outcome`, `approval_reference` (its own path) and `summary`.
+- [ ] `google_clusterdata2019.evidence.json`: `status` = `documented_outcome`, the new `outcome`, `basis` equal to the summary, plus `approval_reference` and `approval_sha256`, and no other fields.
+- [ ] `google_clusterdata2019.json` (decision record): the same `status`, `outcome` and `summary`, plus `approval_reference`, `approval_sha256` and the new `evidence_sha256`.
+- [ ] `config/cross_dataset_report_final.json` (Google): `decision_status` = `documented_outcome`, plus `decision_outcome`, `decision_summary`, `approval_reference` and `decision_evidence`, all matching the records.
+
+**Validator** (`src/reporting/artifact_provenance.py`):
+
+- [ ] `validate_decision`: add the new Google outcome (for example `corrected_final_test`) next to `retain_provisional`. If the generic `decision_summary` text is not enough, give it its own summary.
+- [ ] `validate_google_evidence`: its returned `limitations` hard-code the F3/F4 line, and its docstring says it does not certify contamination fixes. Replace both with the corrected-run wording when the outcome is the corrected final test.
+- [ ] `REPORTING_CONTEXT["google_clusterdata2019"]` and the Google `reason` in the configuration both describe the frozen results as F3/F4-contaminated. Reword both. `DATASET_LIMITATIONS` (subset scale, small validation population) stays and must still equal the configuration's `limitations`.
+
+**Renderer** (`scripts/build_final_cross_dataset_report.py`, Google section near line 366):
+
+- [ ] The Google section always ends with "Earlier results may contain cross-split targets and contaminated validation (F3/F4)…". For a documented outcome it prints "Task 10 before/after comparison: not supplied". Render the corrected-run text and link the Task 10 before/after comparison instead.
+
+**Inputs and checksums:**
+
+- [ ] Google spec: point `results`, `metadata`, `run_record` and `decision_manifest` at the Notebook 06 outputs, and update the four `expected_artifacts` checksums. `validate_google_evidence` also requires the run record's `decision_manifest_sha256` to match the decision manifest, the same commit in both, and `test_occurrences ≥ evaluated_occurrences > 0`.
+- [ ] Update the expected strings in `tests/test_cross_dataset_final_reporting.py`, which pins the F3/F4 and `retain_provisional` text. Check whether `config/cross_dataset_report_pr1.json` (the PR 1 configuration) should stay as historical evidence.
+
+**Regenerate and check:**
+
 - [ ] Mark item 6 of Task 12 ("Google results final, or kept with documented limitations") and the Task 10 before/after comparison as done.
-- [ ] Regenerate `cross_dataset_final/` into an empty folder in the locked environment, replace the committed bundle, and run `--validate-bundle`.
+- [ ] Regenerate `cross_dataset_final/` into an empty folder in the locked environment, replace the committed bundle, and run `python scripts/build_final_cross_dataset_report.py --validate-bundle reports/results/cross_dataset_final`. Run the Task 12 tests and the full suite.
 
 ### Task 15 (UI Bundle and API)
 
@@ -48,7 +71,7 @@ PR 1 also regenerates `data/processed/google_subset_v1/`, including the test ML 
 
 ## Path B: D-3 Declined (Earlier Final Test Kept)
 
-- [ ] Task 12: record the decision to keep the earlier Google results in `config/reporting_decisions/google_clusterdata2019.json`, with the Task 10 comparison as evidence; keep the F3/F4 limitation; regenerate and validate `cross_dataset_final/`.
+- [ ] Task 12: record the decision as `documented_outcome` with outcome `retain_provisional`, which the validator already accepts. It needs the same approval file, evidence, decision record and configuration fields as Path A. No validator or renderer change is needed; the F3/F4 text stays. Regenerate `cross_dataset_final/` and run `--validate-bundle`.
 - [ ] Task 15: no bundle change. The F3/F4 caveat stays. Keep the earlier `data/processed/google_subset_v1/` files (back them up before regenerating), because a verified export needs the inputs that match the committed decision manifest.
 - [ ] Report: state that the Google final-test results predate the correction, and give the corrected validation results from Task 10.
 
