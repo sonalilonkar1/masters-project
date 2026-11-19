@@ -25,6 +25,7 @@ from src.service.contract import (
     BundleContractError,
     validate_frame,
 )
+from src.service.risk_levels import RiskLevelConfigError, validate_risk_level_config
 
 CHECKSUM_FILE = "SHA256SUMS"
 
@@ -168,6 +169,7 @@ def load_bundle(bundle_dir: Path) -> LoadedBundle:
         raise BundleIntegrityError(f"bundle datasets {sorted(manifest.get('datasets', {}))}, expected {list(DATASET_IDS)}")
 
     risk_levels = _read_json(bundle_dir / "risk_levels.json")
+    _check_risk_levels(risk_levels)
     datasets = {dataset_id: _load_dataset(bundle_dir / dataset_id, dataset_id) for dataset_id in DATASET_IDS}
     for dataset_id, dataset in datasets.items():
         _check_policies(dataset_id, dataset, risk_levels)
@@ -180,6 +182,18 @@ def load_bundle(bundle_dir: Path) -> LoadedBundle:
         rules=_read_json(bundle_dir / "rules.json"),
         datasets=datasets,
     )
+
+
+def _check_risk_levels(risk_levels: dict) -> None:
+    """The exporter's checks: a defined default risk level, and every risk level mapped for every dataset."""
+    try:
+        datasets = {
+            dataset_id: {level: entry["policy"] for level, entry in mapping.items()}
+            for dataset_id, mapping in risk_levels["datasets"].items()
+        }
+        validate_risk_level_config({**risk_levels, "datasets": datasets})
+    except (RiskLevelConfigError, KeyError, TypeError, AttributeError) as error:
+        raise BundleIntegrityError(f"risk_levels.json: {error}") from error
 
 
 def _check_policies(dataset_id: str, dataset: LoadedDataset, risk_levels: dict) -> None:

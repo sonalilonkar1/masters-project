@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import re
 import shutil
 from pathlib import Path
 from urllib.parse import quote
@@ -273,6 +274,34 @@ def test_policy_metrics_and_recommendations_must_agree(tmp_path):
 def test_risk_level_policy_must_be_in_the_bundle(tmp_path):
     with pytest.raises(BundleIntegrityError, match="risk level 'efficient' maps to P90"):
         api.create_app(bundle_without(tmp_path, ALIBABA, "P90"))
+
+
+def bundle_with_risk_levels(tmp_path, change):
+    """A copy of the fixture bundle with risk_levels.json changed by ``change``, checksums rewritten."""
+    bundle = tmp_path / "ui"
+    shutil.copytree(FIXTURE_DIR, bundle)
+    path = bundle / "risk_levels.json"
+    content = json.loads(path.read_text())
+    change(content)
+    path.write_text(json.dumps(content))
+    write_checksums(bundle)
+    return bundle
+
+
+@pytest.mark.parametrize(
+    "change, message",
+    [
+        (lambda c: c.update(default_risk_level="cautious"), "default risk level 'cautious' is not defined"),
+        (lambda c: c["datasets"].pop(ALIBABA), "datasets must be exactly"),
+        (lambda c: c["datasets"][ALIBABA].pop("balanced"), f"{ALIBABA}: must map exactly the risk levels"),
+        (lambda c: c["datasets"][GOOGLE]["efficient"].update(policy="Mean"), "Mean may not be a risk level"),
+        (lambda c: c["datasets"][GOOGLE]["efficient"].pop("policy"), "risk_levels.json"),
+    ],
+    ids=["undefined-default", "missing-dataset", "missing-level", "excluded-policy", "malformed-mapping"],
+)
+def test_invalid_risk_levels_refuse_to_start(tmp_path, change, message):
+    with pytest.raises(BundleIntegrityError, match=re.escape(message)):
+        api.create_app(bundle_with_risk_levels(tmp_path, change))
 
 
 # --- routes, errors and startup ------------------------------------------------------
