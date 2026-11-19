@@ -6,6 +6,8 @@
 
 **Status:** final. The decisions were frozen in `decision_manifest.json` (status `final`) before any test target was read, and the final test was run once.
 
+> **Superseded in part (Task 10, #115).** This run used targets built before split assignment, so 104 validation targets came from the test period and 338 training targets from later periods. With split-isolated targets, the validation numbers in this record (329 occurrences) and the final-test ML and Hybrid rows are superseded. Corrected validation results and the changed-row audit are in `task10_correction/README.md`. A corrected final test needs the approved Notebook 06 rerun, reported as a new run. This record and its files are kept unchanged.
+
 ---
 
 ## 1. Run details

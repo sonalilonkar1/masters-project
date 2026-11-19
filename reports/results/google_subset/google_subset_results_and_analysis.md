@@ -6,6 +6,8 @@
 
 **Status:** final. Run details, frozen decisions and how to reproduce are in `googlepipeline_finalrun.md`; this report analyses the same committed tables and adds figures. Every number below is read from `tables/*.csv` or `n05_ml_metadata.json`.
 
+> **Superseded in part (Task 10, #115).** This report describes the 29 Oct 2026 run, whose targets crossed split boundaries. With split-isolated targets, the validation numbers below (329 occurrences) and the final-test ML and Hybrid rows are superseded. Corrected validation results and the changed-row audit are in `task10_correction/README.md`. A corrected final test needs the approved Notebook 06 rerun, reported as a new run. This report and its tables are kept unchanged as the record of the earlier run.
+
 **Units:** Google's normalized CPU and memory units (not cores or GB). A violation means the recommendation is below the next occurrence's peak usage. Waste, shortfall and utilization are averages per occurrence. The evaluation population is occurrences with both a CPU and a memory next-occurrence target.
 
 ---
