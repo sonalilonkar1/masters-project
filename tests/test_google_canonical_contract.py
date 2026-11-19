@@ -330,6 +330,8 @@ def test_google_target_nulls_match_global_final_occurrences():
     be updated. It now checks that null CPU targets are exactly the last
     occurrence of each recurrence within each split.
     """
+    _require_task10_artifacts()
+
     train = pd.read_parquet(
         SPLIT_PATHS["train"]
     )
@@ -505,6 +507,31 @@ def _load_google_metadata():
         return json.load(handle)
 
 
+TASK10_TARGET_POLICY_VERSION = (
+    "next_distinct_full_workload_occurrence_v4_split_isolated"
+)
+
+
+def _require_task10_artifacts():
+    """Skip, with the reason, when the local Google artifacts predate Task 10.
+
+    Local copies of data/processed/google_subset_v1/ made before Task 10 (#115)
+    hold targets built before splitting. The split-isolation tests do not apply
+    to them. The synthetic tests in test_google_task10_split_isolation.py cover
+    the corrected logic without local data.
+    """
+    metadata = _load_google_metadata()
+    version = metadata.get("target_policy_version")
+
+    if version != TASK10_TARGET_POLICY_VERSION:
+        pytest.skip(
+            "Local Google artifacts predate Task 10 (target_policy_version "
+            f"{version!r}); rerun Notebooks 04 and 05 to run this test."
+        )
+
+    return metadata
+
+
 def _in_split_period(times, split_name, boundaries):
     if split_name == "train":
         return times <= boundaries["train_end"]
@@ -518,7 +545,7 @@ def _in_split_period(times, split_name, boundaries):
 
 
 def test_google_metadata_records_target_split_isolation():
-    metadata = _load_google_metadata()
+    metadata = _require_task10_artifacts()
 
     assert metadata["target_split_isolation"] is True
     assert metadata["target_null_reason_field"] == "target_null_reason"
@@ -566,7 +593,7 @@ def test_google_metadata_records_target_split_isolation():
 
 @pytest.mark.parametrize("split_name", ["train", "validation", "test"])
 def test_google_targets_never_come_from_another_split(split_name):
-    boundaries = _load_google_metadata()["split_boundaries"]
+    boundaries = _require_task10_artifacts()["split_boundaries"]
     frame = load_google_occurrence_split(split_name)
 
     has_target = frame[TARGET_TIME_COL].notna()
@@ -585,6 +612,7 @@ def test_google_targets_never_come_from_another_split(split_name):
 
 
 def test_google_targets_point_to_a_later_occurrence_of_the_same_recurrence():
+    _require_task10_artifacts()
     splits = _load_all_google_splits()
 
     for split_name, frame in splits.items():
@@ -654,6 +682,7 @@ def test_google_targets_point_to_a_later_occurrence_of_the_same_recurrence():
 
 @pytest.mark.parametrize("split_name", ["train", "validation", "test"])
 def test_google_missing_memory_stays_nan(split_name):
+    _require_task10_artifacts()
     frame = load_google_occurrence_split(split_name)
     has_target = frame[TARGET_TIME_COL].notna()
 

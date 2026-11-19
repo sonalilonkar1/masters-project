@@ -138,6 +138,78 @@ def ml_before_after(before: pd.DataFrame, after: pd.DataFrame) -> pd.DataFrame:
     return merged
 
 
+def _same_value(left: pd.Series, right: pd.Series) -> pd.Series:
+    """Element-wise equality that treats two missing values as equal."""
+    left_values = left.to_numpy(dtype=float, na_value=float("nan"))
+    right_values = right.to_numpy(dtype=float, na_value=float("nan"))
+    equal = (left_values == right_values) | (
+        pd.isna(left_values) & pd.isna(right_values)
+    )
+    return pd.Series(equal, index=left.index)
+
+
+def validate_split_isolated_targets(combined: pd.DataFrame) -> None:
+    """Check every row's target and null reason against the true next occurrence.
+
+    combined holds the three splits together, sorted by recurrence_key and
+    start time, with _split, _true_next_start, _true_next_period,
+    _true_next_cpu and _true_next_memory already added. The expected null
+    reason is derived here and stored in _expected_null_reason. Any
+    disagreement with the artifacts raises RuntimeError.
+    """
+    has_next = combined["_true_next_start"].notna()
+    next_in_same_split = has_next & (combined["_true_next_period"] == combined["_split"])
+    has_target = combined[TARGET_TIME_COL].notna()
+
+    # Expected reason, derived without reading target_null_reason.
+    expected = pd.Series(pd.NA, index=combined.index, dtype="object")
+    expected[~has_next] = NO_NEXT
+    expected[has_next & ~next_in_same_split] = OTHER_SPLIT
+    combined["_expected_null_reason"] = expected
+
+    problems = []
+
+    # A target exists exactly when the next occurrence is in the same split.
+    missing_target = next_in_same_split & ~has_target
+    unexpected_target = ~next_in_same_split & has_target
+    if missing_target.any():
+        problems.append(f"{int(missing_target.sum())} rows lost a same-split target")
+    if unexpected_target.any():
+        problems.append(f"{int(unexpected_target.sum())} rows keep a target from another split or without a next occurrence")
+
+    # Kept targets are the true next occurrence and its full-workload peaks.
+    kept = next_in_same_split & has_target
+    for column, reference in [
+        (TARGET_TIME_COL, "_true_next_start"),
+        (TARGET_CPU_COL, "_true_next_cpu"),
+        (TARGET_MEMORY_COL, "_true_next_memory"),
+    ]:
+        wrong = kept & ~_same_value(combined[column], combined[reference])
+        if wrong.any():
+            problems.append(f"{int(wrong.sum())} rows have {column} different from the true next occurrence")
+
+    # Rows without a target carry no CPU or memory target value.
+    for column in [TARGET_CPU_COL, TARGET_MEMORY_COL]:
+        stray = ~has_target & combined[column].notna()
+        if stray.any():
+            problems.append(f"{int(stray.sum())} rows have {column} without a target occurrence")
+
+    # The recorded reason must equal the derived reason on every row.
+    recorded = combined[NULL_REASON_COL].astype("object").where(combined[NULL_REASON_COL].notna(), None)
+    derived = expected.where(expected.notna(), None)
+    mismatch = recorded.ne(derived) & ~(recorded.isna() & derived.isna())
+    if mismatch.any():
+        examples = (
+            combined.loc[mismatch, ["_split", "occurrence_key", NULL_REASON_COL, "_expected_null_reason"]]
+            .head(3)
+            .to_dict(orient="records")
+        )
+        problems.append(f"{int(mismatch.sum())} rows have a wrong {NULL_REASON_COL}, for example {examples}")
+
+    if problems:
+        raise RuntimeError("Split-isolated targets failed validation: " + "; ".join(problems))
+
+
 def leakage_audit(
     occurrences: dict[str, pd.DataFrame],
     boundaries: dict,
@@ -167,13 +239,26 @@ def leakage_audit(
         return labels
 
     combined["_true_next_period"] = period(combined["_true_next_start"])
+    next_rows = combined.groupby("recurrence_key", sort=False)
+    combined["_true_next_cpu"] = next_rows["occurrence_peak_cpu_ncu"].shift(-1)
+    combined["_true_next_memory"] = next_rows["occurrence_peak_memory_normalized"].shift(-1)
+
+    # Every row's target and null reason are checked against the
+    # independently derived true next occurrence. The recorded
+    # target_null_reason is never trusted.
+    validate_split_isolated_targets(combined)
 
     rows = []
     for split_name in SPLIT_FILES:
         part = combined[combined["_split"] == split_name]
-        removed = part[part[NULL_REASON_COL] == OTHER_SPLIT]
-        if (removed["_true_next_period"] == split_name).any():
-            raise RuntimeError(f"[{split_name}] a removed target came from its own split.")
+        removed = part[part["_expected_null_reason"] == OTHER_SPLIT]
+        to_validation = int((removed["_true_next_period"] == "validation").sum())
+        to_test = int((removed["_true_next_period"] == "test").sum())
+        if to_validation + to_test != len(removed):
+            raise RuntimeError(
+                f"[{split_name}] removed targets by destination ({to_validation} validation + "
+                f"{to_test} test) do not add up to {len(removed)} removed targets."
+            )
         both_targets = part[[TARGET_CPU_COL, TARGET_MEMORY_COL]].notna().all(axis=1)
         rows.append(
             {
@@ -182,9 +267,9 @@ def leakage_audit(
                 "targets_before": int(part["_true_next_start"].notna().sum()),
                 "targets_after": int(part[TARGET_TIME_COL].notna().sum()),
                 "targets_nulled_cross_split": len(removed),
-                "nulled_target_was_in_validation_period": int((removed["_true_next_period"] == "validation").sum()),
-                "nulled_target_was_in_test_period": int((removed["_true_next_period"] == "test").sum()),
-                "null_no_next_occurrence": int((part[NULL_REASON_COL] == NO_NEXT).sum()),
+                "nulled_target_was_in_validation_period": to_validation,
+                "nulled_target_was_in_test_period": to_test,
+                "null_no_next_occurrence": int((part["_expected_null_reason"] == NO_NEXT).sum()),
                 "rows_with_both_targets_after": int(both_targets.sum()),
             }
         )

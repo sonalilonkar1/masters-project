@@ -2,7 +2,7 @@
 
 **Question:** What changes when Google next-occurrence targets are built after split assignment, inside each split, instead of on the full occurrence table?
 
-**Short answer:** 442 targets that came from a later split are now null: 338 in train, 104 in validation and none in test. The common validation population shrinks from 329 to 225 occurrences. The validation-only baseline selection is unchanged (**P99, `min_runs = 1`**), and its any-resource violation rate moves from 21.95% to **18.30%**. The ML model choice and hyperparameters are unchanged (Random Forest for CPU and memory). The locked models are refit on fewer rows, so the test ML predictions change.
+**Short answer:** 442 targets that came from a later split are now null: 338 in train, 104 in validation and none in test. The common validation population shrinks from 329 to 225 occurrences. The validation-only baseline selection is unchanged (**P99, `min_runs = 1`**), and its any-resource violation rate moves from 21.95% to **18.30%**. That drop does not mean P99 got better: its recommendations are the same as before. Only the scored population changed. The 104 occurrences that left had targets in the test period and a higher violation rate (29.81%, finding F4 in `docs/data/google_subset_pipeline_analysis.md`). The ML model choice and hyperparameters are unchanged (Random Forest for CPU and memory). The locked models are refit on fewer rows, so the test ML predictions change.
 
 **Status:** corrected Notebook 04 and Notebook 05 outputs. No test metric was computed and nothing was scored on test (Notebook 06 was not run). Test target columns were read only to count how many exist and to confirm that the correction did not change them. The earlier Google validation numbers, and the earlier ML and Hybrid final-test numbers, are **superseded** (see section 6).
 
@@ -69,6 +69,10 @@ All policies at `min_runs = 1` (any-resource / CPU / memory violation %):
 | P95 | 25.30 / 18.60 / 19.82 | 23.21 / 15.62 / 19.20 |
 | **P99** | **21.95 / 16.77 / 17.07** | **18.30 / 12.95 / 15.62** |
 
+- **The before and after rates are not a performance comparison.** Every `rec_*` recommendation is identical before and after (section 1). The rates differ only because 104 occurrences left the scored population.
+  - Those 104 are the validation occurrences whose earlier target came from the test period.
+  - On them, P99 at `min_runs = 1` had a 29.81% any-resource violation rate (finding F4), against 18.30% on the 225 that remain.
+  - In counts: 72 violations out of 328 valid rows before, and 41 out of 224 after. The 31 violations that left were among the 104 removed rows.
 - The top three configurations are unchanged: P99 at `min_runs` 1, 3 and 5. Six of the 20 configurations change rank. For example, P95 at `min_runs = 3` (22.97%) now ranks just above P95 at `min_runs = 1` (23.21%).
 - The corrected `min_runs = 1` rows equal, to 1e-12, the earlier "targets within the validation period" sensitivity table (`../tables/validation_policy_comparison_target_period_sensitivity.csv`). That sensitivity table was the same population scored without the correction.
 - With 225 occurrences, one occurrence moves a rate by about 0.45 percentage points. The gap between P99 at `min_runs` 1 and 3 is 0.17 points, which is smaller than one occurrence.
@@ -148,3 +152,11 @@ The earlier files are kept unchanged as the record of the 29 Oct run. The cross-
   - It reproduced the Notebook 04 baseline metrics exactly.
   - It wrote no final-test file.
   - The repository's own `data/processed/` was not written.
+- **The leakage audit checks every row (PR #132 review).** `make_task10_comparison.py` derives each row's expected null reason from the true next occurrence and never trusts the stored `target_null_reason`. It also checks that:
+  - a target exists exactly when the next occurrence is in the same split;
+  - every kept target time, CPU and memory value equals the true next occurrence;
+  - the removals to validation plus those to test add up to the total removed.
+
+  Any disagreement stops the script. `tests/test_google_task10_split_isolation.py` checks that it rejects swapped reasons, a restored cross-split target, a dropped same-split target, a changed target value and an unknown reason.
+- **Tests without local data.** `tests/test_google_task10_split_isolation.py` runs the Notebook 04 target-construction cells on a small made-up table. The table covers all three splits, missing CPU and memory targets, and both null reasons, and the test checks that non-target columns are unchanged.
+- **Older local artifacts.** On local Google files made before Task 10, the split-isolation tests in `tests/test_google_canonical_contract.py` skip with the reason ("local Google artifacts predate Task 10; rerun Notebooks 04 and 05") instead of failing.
