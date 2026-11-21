@@ -189,7 +189,7 @@
     "numpy": "2.5.4",
     "pandas": "2.3.3",
     "pyarrow": "23.0.1",
-    "python": "3.12.9"
+    "python": "3.12.13"
   },
   "executable_code": {
     "capability_registry": {
@@ -372,7 +372,7 @@
         "path": "scripts/build_final_cross_dataset_report.py",
         "path_base": "executing_checkout",
         "role": "generator",
-        "sha256": "186d5a098c97adefaff2d0af491a5dab10aba172d76787e7fbb2b523846291e7"
+        "sha256": "31d39a9e7c723cea09252f94d3c9f27951135e188efc99a8c99ce5e1fc2da805"
       },
       {
         "path": "src/canonical/schema.py",
@@ -424,7 +424,7 @@
     },
     {
       "path": "alibaba_gpu_v2020/01_memory.svg",
-      "sha256": "c0110baabe9729c7348b0a69636c38b6bb1ad8f2746086554716a9cee7c56c0d"
+      "sha256": "b4e8236d067d98a04fc0fbb45877140da37b262a1755bf137d42b00730cf1e79"
     },
     {
       "path": "alibaba_gpu_v2020/02_cpu.csv",
@@ -436,7 +436,7 @@
     },
     {
       "path": "alibaba_gpu_v2020/02_cpu.svg",
-      "sha256": "d54c29162fff41799624b6194a5a9a1575537ffdbe8daa2623a4399c56262e0e"
+      "sha256": "6f560373654b489d2fe7543434bf972ae073b8efaad232f5e336009264c70680"
     },
     {
       "path": "alibaba_gpu_v2020/results.csv",
@@ -552,7 +552,7 @@
     },
     {
       "path": "report_sources.csv",
-      "sha256": "f1294977b36be184a925d4c7dadc9239dcc73f2c2d54ed93ac9684ec33d82ea8"
+      "sha256": "c71409d8b59acadce479966b2e466baf53a029e0cdd396603a96d5eefaea06f7"
     },
     {
       "path": "reporting_decisions.csv",

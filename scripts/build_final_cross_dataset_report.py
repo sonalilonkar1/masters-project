@@ -199,7 +199,8 @@ def figure(table, resource, dataset, status):
         title += f"\n{CPU_LABEL}"
     with matplotlib.rc_context({"svg.hashsalt": "task12-pr1", "font.family": "DejaVu Sans"}):
         fig, ax = plt.subplots(figsize=(9, 4))
-        ax.bar(values.policy, pd.to_numeric(values.value), color="#3274a1")
+        bar_color = "#2E7D32" if dataset == ALIBABA else "#3274a1"
+        ax.bar(values.policy, pd.to_numeric(values.value), color=bar_color)
         ax.set_title(title)
         ax.set_ylabel("Average CPU usage exceedance (%)" if dataset == ALIBABA and resource == "cpu"
                       else "Peak violation (%)")
