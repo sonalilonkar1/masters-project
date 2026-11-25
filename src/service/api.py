@@ -18,7 +18,7 @@ from typing import Optional
 import pandas as pd
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.service import schemas
@@ -27,6 +27,7 @@ from src.service.contract import DATASET_IDS, POLICY_BY_ID, POLICY_IDS, POLICY_N
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BUNDLE_DIR = REPO_ROOT / "reports" / "results" / "ui"
+UI_DIR = REPO_ROOT / "web"
 BUNDLE_ENV = "TRACEADVISOR_UI_BUNDLE"
 MAX_LIMIT = 200
 DEFAULT_LIMIT = 50
@@ -107,6 +108,7 @@ def create_app(bundle_dir: Optional[Path] = None) -> FastAPI:
     app.state.bundle = bundle
     _add_error_handlers(app)
     _add_routes(app, bundle)
+    _add_ui_routes(app)
     _document_errors_as_400(app)
     return app
 
@@ -147,6 +149,34 @@ def _add_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def unexpected(request: Request, error: Exception):
         return JSONResponse(error_body("internal_error", "Unexpected server error"), status_code=500)
+
+
+def _add_ui_routes(app: FastAPI) -> None:
+    """Serve the Task 16 static frontend from the same read-only FastAPI process.
+
+    These GET-only routes are intentionally excluded from the API/OpenAPI contract so
+    Task 15's /api/v1 schema stays frozen. The frontend only calls /api/v1 and does
+    not read bundle files directly.
+    """
+
+    index = UI_DIR / "index.html"
+    assets = {
+        "app.js": UI_DIR / "app.js",
+        "styles.css": UI_DIR / "styles.css",
+    }
+
+    @app.get("/", include_in_schema=False)
+    @app.get("/ui", include_in_schema=False)
+    def ui_index():
+        return FileResponse(index, media_type="text/html")
+
+    @app.get("/ui/{asset_name}", include_in_schema=False)
+    def ui_asset(asset_name: str):
+        path = assets.get(asset_name)
+        if path is None:
+            raise ApiError(404, "not_found", f"Unknown UI asset {asset_name!r}")
+        media_type = "text/javascript" if asset_name.endswith(".js") else "text/css"
+        return FileResponse(path, media_type=media_type)
 
 
 def _add_routes(app: FastAPI, bundle: LoadedBundle) -> None:

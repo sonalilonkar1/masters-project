@@ -226,9 +226,13 @@ Display rules: every value with its unit; null shown as "not available"; Alibaba
 |---|---|---|
 | Export | Python, pandas, pyarrow (already in the lock file) | Same stack and conventions as the pipeline scripts |
 | API | FastAPI with Uvicorn | Typed response models, automatic OpenAPI contract for Task 16, `TestClient` for pytest; small dependency set |
-| UI | Decided in Task 16 (proposal: static HTML/JS with Chart.js, served by the API; no build step) | Keeps the repository Python-only and runnable with one command; React is the alternative if the team wants richer interaction |
+| UI | **Task 16 decision: static HTML/CSS/JavaScript served by the FastAPI process, with native SVG charts** | Keeps the repository Python-only, avoids a Node build/CORS/CDN runtime dependency, and gives the demo one local process. The required history and policy charts are small enough to render directly as accessible SVG plus data tables. |
 
-New dependencies go into `requirements.txt` and `requirements-lock.txt`.
+**Task 16 framework decision (2026-11-24).** PR 1 uses the static approach instead of React/Vite. The UI is served by GET-only routes from the existing FastAPI application and reads only `/api/v1`; it never opens bundle files or pipeline outputs directly. The UI routes are excluded from the OpenAPI schema, so the frozen Task 15 API contract does not change. Charts use repository-owned native SVG rendering rather than a third-party chart library, so there is no external chart runtime to vendor or pin and no CDN request at runtime.
+
+The application is still started with one command: `uvicorn --factory src.service.api:create_app`. Open `http://127.0.0.1:8000/` for the UI. To develop against the fixture bundle, set `TRACEADVISOR_UI_BUNDLE=tests/fixtures/ui_bundle` before the same command.
+
+New Python dependencies go into `requirements.txt` and `requirements-lock.txt`; this UI decision adds none.
 
 ## 11. Repository Layout
 

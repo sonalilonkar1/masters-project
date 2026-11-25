@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TraceAdvisor Recommendation Explorer</title>
+  <link rel="stylesheet" href="/ui/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">TraceAdvisor</p>
+      <h1>Recommendation Explorer</h1>
+      <p class="subtitle">Historical final-test recommendations for recurring cluster workloads.</p>
+    </div>
+    <div id="health-summary" class="status-pill" aria-live="polite">Checking bundle…</div>
+  </header>
+
+  <div id="global-banner" class="banner hidden" role="alert"></div>
+  <div id="development-banner" class="banner warning hidden" role="status">
+    Development data bundle — do not use these values for report figures or final screenshots.
+  </div>
+
+  <nav class="section-nav" aria-label="Page sections">
+    <a href="#choose">Choose</a>
+    <a href="#recommendation">Recommendation</a>
+    <a href="#history">History</a>
+    <a href="#policies">Policy comparison</a>
+    <a href="#about">About the data</a>
+  </nav>
+
+  <main id="main">
+    <section id="choose" class="panel" data-view="dataset-workload-risk">
+      <div class="section-heading">
+        <div>
+          <p class="step">1–3</p>
+          <h2>Choose dataset, workload, and risk level</h2>
+        </div>
+        <div id="choose-loading" class="loading hidden" role="status">Loading…</div>
+      </div>
+
+      <div class="control-grid">
+        <div class="field">
+          <label for="dataset-select">Dataset</label>
+          <select id="dataset-select" disabled></select>
+          <div id="dataset-summary" class="field-help"></div>
+        </div>
+        <div class="field">
+          <label for="workload-search">Workload search</label>
+          <input id="workload-search" type="search" placeholder="Workload ID or display name" autocomplete="off" disabled>
+          <div class="inline-controls">
+            <label class="checkbox-label">
+              <input id="show-all-workloads" type="checkbox" disabled>
+              Show all workloads
+            </label>
+            <span class="field-help">By default, only workloads whose latest recommendation uses history are shown.</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="risk-controls" class="risk-grid" aria-label="Risk level" role="radiogroup"></div>
+
+      <div class="workload-layout">
+        <div>
+          <div class="list-heading">
+            <div>
+              <h3>Workloads</h3>
+              <p id="workload-count" class="muted"></p>
+            </div>
+            <div class="pagination" aria-label="Workload pagination">
+              <label class="muted" for="workload-page-size">Rows</label>
+              <select id="workload-page-size" aria-label="Workloads per page">
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+              </select>
+              <button id="workload-prev" class="secondary" type="button" disabled>Previous</button>
+              <span id="workload-page" class="muted"></span>
+              <button id="workload-next" class="secondary" type="button" disabled>Next</button>
+            </div>
+          </div>
+          <div id="workload-error" class="inline-error hidden" role="alert"></div>
+          <div id="workload-list" class="workload-list" aria-live="polite"></div>
+        </div>
+        <aside class="context-card" aria-label="Selection summary">
+          <h3>Current selection</h3>
+          <dl id="selection-summary" class="summary-list">
+            <div><dt>Dataset</dt><dd>not selected</dd></div>
+            <div><dt>Workload</dt><dd>not selected</dd></div>
+            <div><dt>Risk</dt><dd>not selected</dd></div>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="recommendation" class="panel" data-view="recommendation">
+      <div class="section-heading">
+        <div>
+          <p class="step">4</p>
+          <h2>Recommendation and evidence</h2>
+          <p class="muted">Choose a workload above to see its latest recommendation.</p>
+        </div>
+        <div id="recommendation-loading" class="loading hidden" role="status">Loading…</div>
+      </div>
+      <div id="recommendation-error" class="inline-error hidden" role="alert"></div>
+      <div id="recommendation-empty" class="empty-state">No workload selected.</div>
+      <div id="recommendation-content" class="hidden"></div>
+    </section>
+
+    <section id="history" class="panel" data-view="history">
+      <div class="section-heading">
+        <div>
+          <p class="step">5</p>
+          <h2>Workload history</h2>
+          <p class="muted">Each point compares the recommendation made at run i with what run i + 1 actually used.</p>
+        </div>
+        <div id="history-loading" class="loading hidden" role="status">Loading…</div>
+      </div>
+      <div id="history-error" class="inline-error hidden" role="alert"></div>
+      <div id="history-empty" class="empty-state">No workload selected.</div>
+      <div id="history-content" class="chart-stack hidden"></div>
+    </section>
+
+    <section id="policies" class="panel" data-view="policy-comparison">
+      <div class="section-heading">
+        <div>
+          <p class="step">Compare</p>
+          <h2>Policy comparison</h2>
+          <p class="muted">Dataset-wide final-test evidence. Lower violation and lower waste are both better.</p>
+        </div>
+        <div id="policies-loading" class="loading hidden" role="status">Loading…</div>
+      </div>
+      <div id="policies-error" class="inline-error hidden" role="alert"></div>
+      <div id="policies-content" class="chart-stack"></div>
+    </section>
+
+    <section id="about" class="panel" data-view="about">
+      <div class="section-heading">
+        <div>
+          <p class="step">About</p>
+          <h2>About the data</h2>
+        </div>
+      </div>
+      <div id="about-content"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>TraceAdvisor presents a historical replay of the final test period. It is not a live cluster recommendation service.</p>
+  </footer>
+
+  <script src="/ui/app.js" defer></script>
+</body>
+</html>
