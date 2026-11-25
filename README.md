@@ -340,6 +340,16 @@ The export turns the agreed final-test outputs into a checksummed bundle, and a 
 
 Risk levels are set in [config/ui_risk_levels.json](config/ui_risk_levels.json): Restrictive → Hybrid (default), Balanced → P95, Efficient → P90. Design: [docs/design/recommendation_service_design_plan.md](docs/design/recommendation_service_design_plan.md).
 
+### 🖥️ Recommendation Web UI (Task 16)
+Task 16 PR 1 adds a static HTML/CSS/JavaScript frontend served by the same FastAPI process. It reads only the Task 15 `/api/v1` endpoints; recommendations, policy metrics, units, rules and provenance are never hard-coded in frontend code. History and policy-comparison charts are native SVG with accessible data tables, so no Node build step, CDN, or external chart runtime is required.
+
+- **Verified bundle:** `uvicorn --factory src.service.api:create_app`, then open `http://127.0.0.1:8000/`.
+- **Fixture bundle:** `TRACEADVISOR_UI_BUNDLE=tests/fixtures/ui_bundle uvicorn --factory src.service.api:create_app`, then open the same URL. The fixture intentionally reports a development bundle, so the UI shows the development-data warning.
+- **UI tests:** `python -m pytest -q tests/test_web_ui.py tests/test_api.py`.
+- **Full regression:** `python -m pytest -q`.
+
+The UI defaults to workloads whose latest recommendation uses history. “Show all workloads” includes fallback workloads. Alibaba memory is shown before CPU, Alibaba CPU uses the API label “Average usage, not peak,” and missing values are displayed as “not available” rather than zero.
+
 ### 🚀 Running Experiments (295A, historical)
 1. **Data Setup**: Follow [docs/data/subsetSetup.md](docs/data/subsetSetup.md)
 2. **Verify Installation**: `python scripts/verify_data_setup.py`
