@@ -20,7 +20,7 @@ those manuscript numbers is a separate follow-up.
 
 | Folder | Read first | Run record | Layout |
 |---|---|---|---|
-| `google_subset/` (Google ClusterData 2019, Kaggle subset) | `google_subset_results_and_analysis.md` | `googlepipeline_finalrun.md` (run, frozen decisions, reproduction) | `tables/` (CSV exports of Notebooks 04–06), manifests and notebook metadata at the top level |
+| `google_subset/` (Google ClusterData 2019, Kaggle subset) | `google_subset_results_and_analysis.md` | `googlepipeline_finalrun.md` (run, frozen decisions, reproduction) | `tables/` (CSV exports of Notebooks 04–06), manifests and notebook metadata at the top level; `task10_correction/` (split-isolated targets: before/after comparison and leakage audit, which supersedes the earlier validation numbers and the final-test ML and Hybrid rows) |
 | `alibaba_gpu_2020/` (Alibaba GPU Cluster Trace 2020) | `alibaba_gpu_2020_results_and_analysis.md` | `alibaba_gpu_2020_results_tasks1_6.md` (data, splits, targets, baselines) | One folder per pipeline stage: `canonical/`, `targets/`, `baselines/`, `ml/` (PR1 lock), `final_test/` |
 
 The layouts differ because the Google pipeline is a sequence of notebooks writing one table set, while the Alibaba pipeline is a sequence of scripts, each writing its own checksummed output folder.

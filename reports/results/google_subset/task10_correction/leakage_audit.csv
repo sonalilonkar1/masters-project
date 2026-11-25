@@ -1,0 +1,4 @@
+split,occurrences,targets_before,targets_after,targets_nulled_cross_split,nulled_target_was_in_validation_period,nulled_target_was_in_test_period,null_no_next_occurrence,rows_with_both_targets_after,validation_population_before,validation_population_after,rows_leaving_validation_population
+train,3473,2010,1672,338,210,128,1463,1649,,,
+validation,675,330,226,104,0,104,345,225,329,225,104
+test,731,259,259,0,0,0,472,259,,,
