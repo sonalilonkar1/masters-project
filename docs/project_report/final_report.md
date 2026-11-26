@@ -114,7 +114,7 @@ The rest of the report is organized as follows. Chapters 2 and 3 present the arc
 
 **Artifact-driven workflow.** Each stage reads files written by the previous stage and writes new files. The checksums of the inputs, the code version and the library versions are recorded with the outputs: for every stage of the Alibaba pipeline, and in the decision manifest that governs the final test of the Google pipeline. Any reported number can be traced back to the data, code and environment that produced it.
 
-**Presentation.** A planned REST API will expose the published results, and a web frontend built on it will let developers browse workloads, view their recommendations and compare policies. Figure 2.1 shows the overall architecture.
+**Presentation.** A read-only REST API exposes the published results, and a web frontend built on it lets developers browse workloads, view risk-based recommendations and compare policies. Figure 2.1 shows the overall architecture.
 
 ![](chapter_2_project_architecture/figures/fig_2_1.png)
 
@@ -157,7 +157,7 @@ A single evaluator scores every policy on both datasets with the same formulas: 
 
 ### 2.2.6 Artifact Repository and Presentation Layer
 
-Every stage writes its outputs as files, and the checksums of the inputs, the code version and the library versions are recorded per stage on Alibaba and in the decision manifest on Google, so any result can be traced to the data and code that produced it. The artifact repository holds these outputs, from canonical views to final results. A planned REST API will expose the published recommendations and evaluation results, and a web frontend built on it will let developers browse workloads, view their recommendations and compare policies (Section 8.3). The presentation layer will only read published results; it will not run the pipeline or change any artifact.
+Every stage writes its outputs as files, and the checksums of the inputs, the code version and the library versions are recorded per stage on Alibaba and in the decision manifest on Google, so any result can be traced to the data and code that produced it. The artifact repository holds these outputs, from canonical views to final results. A read-only REST API exposes the published recommendations and evaluation results, and a web frontend built on it lets developers browse workloads, view risk-based recommendations and compare policies (Section 8.3). The presentation layer reads only the verified UI bundle; it does not run the pipeline or change any published artifact.
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
@@ -408,7 +408,7 @@ On Alibaba GPU 2020, every published output folder contains a checksum file list
 
 Tables are stored in Parquet, which preserves column types, including nullable integers and strings, so missing values survive every stage unchanged; CSV would not distinguish a missing value from an empty string. Metadata, selection records and manifests are stored in JSON and reported result tables in CSV. Raw and intermediate data remain local because of their size, while code, documentation, configuration and final results are versioned in the project repository.
 
-The presentation layer is designed but not yet implemented (Section 8.3). A REST API exposes the published recommendations and evaluation results over HTTP in JSON, organized by dataset, workload and policy, and a web frontend built on it lets developers look up a workload, see its recommended CPU and memory under each policy and compare policies. The API is read-only: it serves only published, locked results and never runs the pipeline or modifies an artifact, so developers see exactly what was evaluated. Because it depends only on published files, it is decoupled from the pipeline and can be developed and deployed independently. Units and dataset labels, such as the fact that Alibaba CPU results describe average usage, are returned with each result, so the frontend never presents a value without the information needed to interpret it. Deployment is described in Chapter 8.
+The presentation layer is implemented (Section 8.3). A read-only REST API exposes the published recommendations and evaluation results over HTTP in JSON, organized by dataset, workload and policy, and a static web frontend served by the same FastAPI process lets developers look up a workload, select a risk level, inspect CPU and memory recommendations and compare policies. The API is read-only: it serves only published, locked results and never runs the pipeline or modifies an artifact, so developers see exactly what was evaluated. Because it depends only on published files, it is decoupled from the pipeline and can be developed and deployed independently. Units and dataset labels, such as the fact that Alibaba CPU results describe average usage, are returned with each result, so the frontend never presents a value without the information needed to interpret it. Deployment is described in Chapter 8.
 
 ## 4.5 Summary of Dataset-Specific Design Choices
 
@@ -913,27 +913,29 @@ Code, configuration, documentation and final results are versioned in Git, while
 
 ## 8.3 Developer-Facing API and Web Frontend
 
-The presentation layer is planned as a read-only REST API over the published results and a web frontend built on it (Section 4.4, Figure 4.4). It is not yet implemented; this section describes the planned design, and the figures are placeholders for screenshots of the frontend.
+The presentation layer is implemented as a read-only FastAPI service over a versioned, checksummed UI bundle and a static HTML/CSS/JavaScript frontend served by the same process (Section 4.4, Figure 4.4). The frontend uses native SVG charts with accessible tables and reads only the Task 15 `/api/v1` endpoints; it does not calculate recommendations, policy metrics or result numbers in the browser.
 
-The API will serve the recommendations for each workload, policy and split, together with the evaluation summaries, organized by dataset, workload and policy. Every value will be returned with its unit and dataset label, including the label that Alibaba CPU results describe average usage, so that no client can display a number without the information needed to interpret it. The API will read only published files under `data/processed/` and `reports/results/`. It will not run the pipeline, read raw data or modify any artifact, so developers see exactly the results that were evaluated, and the API can be developed and deployed independently of the pipeline.
+The service loads the exported bundle from `reports/results/ui/` by default, verifies its checksums at startup, and exposes dataset metadata, risk mappings, paginated workload lookup, recommendations, workload history, policy metrics and bundle health. Every resource value is returned with its unit and semantics. In particular, Alibaba CPU is labelled as average usage rather than peak, Alibaba memory is presented before CPU, and missing values remain null and are displayed as not available. The service never runs the evaluation pipeline or modifies published results.
 
-The web frontend will let a developer look up a recurring workload and choose how much risk to accept (Figure 8.1). The evaluated policies form a scale from safe and wasteful to efficient and risky, and the right point on it depends on the job: a job that must not fail justifies extra capacity, while a job that can simply be rerun can trade some risk for less waste. The frontend therefore offers three risk levels, each mapped to an evaluated policy:
+The web frontend lets a developer select Google ClusterData 2019 or Alibaba GPU 2020, search for a recurring workload and choose how much risk to accept (Figure 8.1). It offers three configuration-driven risk levels:
 
-- **Restrictive** shows the Hybrid recommendation, the safest policy on both datasets and the default;
-- **Balanced** shows the P95 recommendation;
-- **Efficient** shows the P90 recommendation.
+- **Restrictive** maps to Hybrid and is the default;
+- **Balanced** maps to P95;
+- **Efficient** maps to P90.
 
-Next to each recommended CPU and memory value, the frontend shows the workload's original request and the violation rate and average waste that the selected policy had in the test period, so the developer sees what each level costs and how often it was exceeded. On Alibaba, for example, memory recommendations were exceeded by 3.18% of test occurrences under Hybrid, 6.04% under P95 and 9.89% under P90, at average waste of 8.70, 7.89 and 7.44 GB (Table 7.3). Mean and ML alone are not offered, because they were exceeded by about a third or more of test occurrences on both datasets; they remain in the policy comparison view (Figure 8.2).
+For the selected workload, the recommendation view places recommended CPU and memory beside the original request and explains the basis of each resource independently: history, request fallback or ML-only. It also shows the history count, the policy rule, the dataset-wide violation and waste evidence returned by the API, and provenance for the loaded bundle. When all risk levels produce the same answer because the workload does not yet have enough history, the interface says so explicitly rather than implying that the control changes the recommendation. The history view compares the recommendation made at run *i* with the observed usage of run *i + 1* and never plots a missing actual value as zero.
 
-**[Placeholder: screenshot of the risk-level recommendation view]**
+![Verified-bundle risk-level recommendation view](chapter_8_operations_and_reproducibility/figures/fig_8_1.png)
 
-**Figure 8.1** Risk-based recommendation: recommended CPU and memory for one workload at the selected risk level, with the policy's test violation rate and waste
+**Figure 8.1** Risk-based recommendation view from the verified bundle: selected workload, risk level, recommended CPU and memory, original request, per-resource basis, rule and dataset-wide policy evidence
 
-**[Placeholder: screenshot of the policy comparison view]**
+A separate policy-comparison view shows all seven evaluated policies for the selected dataset (Figure 8.2). CPU and memory are presented separately; Google also includes the supported any-resource violation view. Restrictive, Balanced and Efficient are marked on the plots and the same values are repeated in accessible tables with valid-row denominators. The two datasets are never combined or ranked against each other.
 
-**Figure 8.2** Policy comparison: violation rate and waste for each policy on one dataset
+![Verified-bundle policy comparison view](chapter_8_operations_and_reproducibility/figures/fig_8_2.png)
 
-Because the API depends only on published files, it can be deployed on any host that can read the results directory, without access to the cluster or the raw traces. For the same reason, results produced by later corrections or reruns appear in the frontend once they are published, without changes to the API or frontend. The same interface could later support a shadow-mode deployment, in which recommendations are returned for new submissions and compared with their observed usage without changing the resources actually allocated (Section 9.3).
+**Figure 8.2** Policy comparison from the verified Google bundle: all seven policies with risk mappings, violation rates and valid-row counts
+
+The UI can be run locally with one command, `uvicorn --factory src.service.api:create_app`, and uses the committed verified bundle for final screenshots and demonstrations. A fixture-backed development mode is available for automated tests and edge-case checks; development bundles are visibly marked and are not used for report figures. Because the presentation layer depends only on the published bundle, it remains decoupled from the raw traces and the evaluation pipeline. A later shadow-mode deployment could reuse the interface while comparing advisory recommendations with observed usage without changing the resources actually allocated (Section 9.3).
 
 ```{=openxml}
 <w:p><w:r><w:br w:type="page"/></w:r></w:p>
