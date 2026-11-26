@@ -3,7 +3,7 @@
 **Purpose:** for each Chapter 8 section, the sources describing how TraceAdvisor is run, reproduced and used. Chapter 8 is about **operating the system**: running the pipelines, reproducing results, the repository layout, and the developer-facing API and frontend. Design reasons for the artifact layer are in Chapter 4 §4.4 and implementation in Chapter 5 §5.6; refer to them.
 
 **Scope rules**
-- The REST API and web frontend are not implemented yet: 8.3 describes the planned design, with image placeholders for frontend screenshots (advisor guidance, 30 Oct 2026); no framework names until chosen.
+- The REST API and web frontend are implemented by Tasks 15 and 16. Section 8.3 describes the verified bundle, read-only `/api/v1` service, static HTML/CSS/JavaScript frontend, native SVG charts, and the final verified-bundle screenshots.
 - Alibaba Task 7 is merged and run (30 Oct 2026); the ML and final-test steps are described from the merged scripts.
 - Style: formal prose; commands may be shown in short code blocks; citations only for the two datasets.
 
@@ -39,15 +39,19 @@
 
 ## 8.3 Developer-Facing API and Web Frontend 
 
-**What the section says:** the planned read-only REST API over the published artifacts and the web frontend built on it, with Figures 8.1 and 8.2 as screenshot placeholders.
+**What the section says:** the implemented read-only FastAPI service over the verified UI bundle and the static web frontend served by the same process, including the risk-based recommendation view and policy comparison shown in Figures 8.1 and 8.2.
 
 | Kind | Source |
 |---|---|
-| Design | Chapter 4 §4.4 (read-only, decoupled from the pipeline, units and dataset labels travel with every value), Figure 4.4; Chapter 2 §2.2.6 |
-| Content served | Recommendations per policy and split, evaluation summaries, units, CPU semantics label, dataset labels; organized by dataset, workload and policy |
-| Data source | Published artifacts under `data/processed/` and `reports/results/` |
-| Deployment | General description: the API reads published files and needs no access to the pipeline or raw data |
-| Not to claim | Framework names, hosting, authentication or endpoints until the implementation exists |
+| Backend/API | `src/service/api.py`, `src/service/bundle.py`, `src/service/schemas.py`; Task 15 PR #131 |
+| API contract | `docs/design/recommendation_api_openapi.json`; `/api/v1` |
+| Verified UI bundle | `reports/results/ui/manifest.json`, `risk_levels.json`, `rules.json`, per-dataset bundle files, `SHA256SUMS` |
+| Frontend | `web/index.html`, `web/styles.css`, `web/app.js`; static HTML/CSS/JavaScript served by FastAPI |
+| Risk mapping | `config/ui_risk_levels.json`: Restrictive → Hybrid, Balanced → P95, Efficient → P90 |
+| Frontend behavior | Task 16 tests in `tests/test_web_ui.py`; fixture bundle in `tests/fixtures/ui_bundle/` |
+| Final screenshots | `chapter_8_operations_and_reproducibility/figures/fig_8_1.png` and `fig_8_2.png`, captured only from `bundle_status: verified` |
+| Local run | `uvicorn --factory src.service.api:create_app`, then `http://127.0.0.1:8000/` |
+
 
 ---
 
@@ -55,7 +59,7 @@
 
 | # | Item | Finding | Effect on Chapter 8 |
 |---|---|---|---|
-| 1 | 8.3 status | No API or frontend code in the repository (30 Oct 2026) | Written as planned, with placeholders; replace them with screenshots once built |
+| 1 | 8.3 status | Task 15 API and Task 16 frontend are implemented and verified locally | Written as implemented; Figures 8.1 and 8.2 use verified-bundle screenshots |
 | 2 | Lock file | `requirements-lock.txt` committed in `02184f2`; header gives the install commands | Quote the commands |
 | 3 | Alibaba scripts | All five scripts on `main` (ML in PR #98, final test in PR #102) | Describe the full run order |
 | 4 | `reports/` layout | `reports/results/` (final) and `reports/eval/` (earlier experiments); kept as is | Describe both |

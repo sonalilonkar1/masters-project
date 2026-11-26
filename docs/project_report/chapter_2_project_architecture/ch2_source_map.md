@@ -102,7 +102,7 @@
 
 ### 2.2.6 Artifact Repository and Presentation Layer
 
-**What the section says:** every stage writes files with checksums and metadata (input hashes, code commit, library versions), built in staging and published only after checks; a decision manifest is locked before the one-time final test; final results go to `reports/results/<dataset>/`. The presentation layer (developer dashboard) is planned, not built.
+**What the section says:** every stage writes files with checksums and metadata (input hashes, code commit, library versions), built in staging and published only after checks; a decision manifest is locked before the one-time final test; final results go to `reports/results/<dataset>/`. The presentation layer is implemented as the read-only Task 15 API plus the Task 16 web frontend over the verified UI bundle.
 
 | Kind | Source |
 |---|---|

@@ -350,6 +350,8 @@ Task 16 PR 1 adds a static HTML/CSS/JavaScript frontend served by the same FastA
 
 The UI defaults to workloads whose latest recommendation uses history. “Show all workloads” includes fallback workloads. Alibaba memory is shown before CPU, Alibaba CPU uses the API label “Average usage, not peak,” and missing values are displayed as “not available” rather than zero.
 
+For final report screenshots and the project demo, start the service without `TRACEADVISOR_UI_BUNDLE` so it loads `reports/results/ui/`, confirm the header reports `Bundle: verified`, and do not use a development bundle. The demo walkthrough is documented in [docs/demo/task16_demo_script.md](docs/demo/task16_demo_script.md).
+
 ### 🚀 Running Experiments (295A, historical)
 1. **Data Setup**: Follow [docs/data/subsetSetup.md](docs/data/subsetSetup.md)
 2. **Verify Installation**: `python scripts/verify_data_setup.py`

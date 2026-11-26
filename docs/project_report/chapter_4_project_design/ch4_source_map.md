@@ -5,7 +5,7 @@
 **Scope rules**
 - Datasets: Google ClusterData 2019 (Kaggle subset) and Alibaba GPU Cluster Trace 2020. Alibaba 2018 is not in the report.
 - The old report draft and `REPORT_TRACEABILITY.md` are not sources; nor are `docs/data/google_clusterdata_2019_analysis.md` (full trace) or `docs/data/alibaba_gpu_2020_evidence_and_limitations.md` (dropped).
-- Task 13 and Alibaba Task 7 are written as implemented; the Task 7 statements were checked against the Task 7 artifacts on 30 Oct 2026. The REST API and web frontend are described as planned (Chapter 8 §8.3; Tasks 15 and 16).
+- Task 13 and Alibaba Task 7 are written as implemented; the Task 7 statements were checked against the Task 7 artifacts on 30 Oct 2026. The REST API and web frontend are implemented (Chapter 8 §8.3; Tasks 15 and 16).
 - Every factual claim is checked against code, committed config or real outputs, not only documents.
 - Line numbers are from the working tree on `docs/issue-17-final-report` (after `0b07fed`).
 
